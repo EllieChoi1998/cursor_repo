@@ -1,0 +1,58 @@
+{
+  "name": "pcm-chat-assistant",
+  "version": "1.0.0",
+  "description": "PCM Chat Assistant - Process Control Monitor data analysis with chat interface",
+  "author": "PCM Analysis Team",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "build:prod": "vue-cli-service build --mode production",
+    "build:dev": "vue-cli-service build --mode development",
+    "lint": "vue-cli-service lint",
+    "lint:fix": "vue-cli-service lint --fix",
+    "preview": "npm run build && npx serve -s dist",
+    "mock-server": "node mock-server.js",
+    "dev": "concurrently \"npm run mock-server\" \"npm run serve\""
+  },
+  "dependencies": {
+    "vue": "^3.3.0",
+    "plotly.js-dist": "^2.27.0"
+  },
+  "devDependencies": {
+    "@vue/cli-service": "^5.0.0",
+    "@vue/compiler-sfc": "^3.3.0",
+    "@vue/eslint-config-standard": "^8.0.0",
+    "eslint": "^8.0.0",
+    "eslint-plugin-import": "^2.25.0",
+    "eslint-plugin-vue": "^9.0.0",
+    "serve": "^14.0.0",
+    "express": "^4.18.0",
+    "cors": "^2.8.5",
+    "concurrently": "^8.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ],
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/pcm-chat-assistant.git"
+  },
+  "keywords": [
+    "vue",
+    "plotly",
+    "data-visualization",
+    "pcm",
+    "process-control",
+    "chat",
+    "api"
+  ]
+} 
