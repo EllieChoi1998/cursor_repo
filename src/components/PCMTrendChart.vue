@@ -14,16 +14,76 @@ export default defineComponent({
     data: {
       type: Array,
       default: () => [
-        [1, 10, 20, 15, 16, 17, 'A', 30, 15, 1, 25, 6],
-        [2, 11, 21, 15, 16, 17, 'A', 30, 15, 1, 25, 6],
-        [3, 11, 19, 15, 16, 17, 'B', 30, 15, 1, 25, 6],
-        [4, 12, 21, 15, 16, 17, 'B', 30, 15, 1, 25, 6],
-        [5, 9, 21, 15, 16, 17, 'C', 30, 15, 1, 25, 6],
-        [6, 11, 21, 15, 16, 17, 'A', 30, 15, 1, 25, 6],
-        [7, 11, 21, 15, 16, 17, 'A', 30, 15, 1, 25, 6],
-        [8, 11, 21, 15, 16, 17, 'A', 30, 15, 1, 25, 6],
-        [9, 12, 21, 15, 16, 17, 'C', 30, 15, 1, 25, 6],
-        [10, 8, 21, 15, 16, 17, 'C', 30, 15, 1, 25, 6]
+        {
+          DATE_WAFER_ID: 1,
+          MIN: 10,
+          MAX: 20,
+          Q1: 15,
+          Q2: 16,
+          Q3: 17,
+          DEVICE: 'A',
+          USL: 30,
+          TGT: 15,
+          LSL: 1,
+          UCL: 25,
+          LCL: 6
+        },
+        {
+          DATE_WAFER_ID: 2,
+          MIN: 11,
+          MAX: 21,
+          Q1: 15,
+          Q2: 16,
+          Q3: 17,
+          DEVICE: 'A',
+          USL: 30,
+          TGT: 15,
+          LSL: 1,
+          UCL: 25,
+          LCL: 6
+        },
+        {
+          DATE_WAFER_ID: 3,
+          MIN: 11,
+          MAX: 19,
+          Q1: 15,
+          Q2: 16,
+          Q3: 17,
+          DEVICE: 'B',
+          USL: 30,
+          TGT: 15,
+          LSL: 1,
+          UCL: 25,
+          LCL: 6
+        },
+        {
+          DATE_WAFER_ID: 4,
+          MIN: 12,
+          MAX: 21,
+          Q1: 15,
+          Q2: 16,
+          Q3: 17,
+          DEVICE: 'B',
+          USL: 30,
+          TGT: 15,
+          LSL: 1,
+          UCL: 25,
+          LCL: 6
+        },
+        {
+          DATE_WAFER_ID: 5,
+          MIN: 9,
+          MAX: 21,
+          Q1: 15,
+          Q2: 16,
+          Q3: 17,
+          DEVICE: 'C',
+          USL: 30,
+          TGT: 15,
+          LSL: 1,
+          UCL: 25,
+          LCL: 6
+        }
       ]
     },
     height: {
@@ -75,14 +135,8 @@ export default defineComponent({
     const createChart = () => {
       if (!chartContainer.value) return
 
-      // Convert data to the format expected by Plotly.js
-      const data = props.data.map(row => {
-        const obj = {}
-        columns.forEach((col, index) => {
-          obj[col] = row[index]
-        })
-        return obj
-      })
+      // Data is already in object format (DataFrame JSON)
+      const data = props.data
 
       // Extract data for control lines
       const dateWaferIds = data.map(row => row.DATE_WAFER_ID)

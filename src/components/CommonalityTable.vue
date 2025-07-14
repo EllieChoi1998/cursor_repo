@@ -18,6 +18,48 @@
       </div>
     </div>
     
+    <!-- Commonality Summary Section -->
+    <div v-if="commonalityData" class="commonality-summary">
+      <div class="summary-header">
+        <h4>Commonality Analysis Summary</h4>
+      </div>
+      <div class="summary-content">
+        <div class="summary-section">
+          <h5>Good Lots ({{ commonalityData.good_lots.length }})</h5>
+          <div class="lot-list good-lots">
+            <span v-for="lot in commonalityData.good_lots" :key="lot" class="lot-badge good">
+              {{ lot }}
+            </span>
+          </div>
+        </div>
+        <div class="summary-section">
+          <h5>Bad Lots ({{ commonalityData.bad_lots.length }})</h5>
+          <div class="lot-list bad-lots">
+            <span v-for="lot in commonalityData.bad_lots" :key="lot" class="lot-badge bad">
+              {{ lot }}
+            </span>
+          </div>
+        </div>
+        <div class="summary-section">
+          <h5>Good Wafers ({{ commonalityData.good_wafers.length }})</h5>
+          <div class="wafer-list good-wafers">
+            <span v-for="wafer in commonalityData.good_wafers" :key="wafer" class="wafer-badge good">
+              {{ wafer }}
+            </span>
+          </div>
+        </div>
+        <div class="summary-section">
+          <h5>Bad Wafers ({{ commonalityData.bad_wafers.length }})</h5>
+          <div class="wafer-list bad-wafers">
+            <span v-for="wafer in commonalityData.bad_wafers" :key="wafer" class="wafer-badge bad">
+              {{ wafer }}
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    
     <div class="table-container">
       <table class="data-table">
         <thead>
@@ -82,6 +124,10 @@ export default defineComponent({
     data: {
       type: Array,
       default: () => []
+    },
+    commonalityData: {
+      type: Object,
+      default: null
     }
   },
   setup(props) {
@@ -108,22 +154,9 @@ export default defineComponent({
       { key: 'LCL', label: 'LCL', type: 'number' }
     ]
 
-    // 데이터를 객체 형태로 변환
+    // 데이터는 이미 객체 형태 (DataFrame JSON)
     const processedData = computed(() => {
-      return props.data.map(row => ({
-        DATE_WAFER_ID: row[0],
-        MIN: row[1],
-        MAX: row[2],
-        Q1: row[3],
-        Q2: row[4],
-        Q3: row[5],
-        DEVICE: row[6],
-        USL: row[7],
-        TGT: row[8],
-        LSL: row[9],
-        UCL: row[10],
-        LCL: row[11]
-      }))
+      return props.data
     })
 
     // 고유 디바이스 목록
@@ -451,6 +484,68 @@ export default defineComponent({
   margin: 0 0.5rem;
 }
 
+/* Commonality Summary Styles */
+.commonality-summary {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.summary-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1rem 1.5rem;
+}
+
+.summary-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.summary-content {
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.summary-section h5 {
+  margin: 0 0 0.75rem 0;
+  color: #333;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.lot-list, .wafer-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lot-badge, .wafer-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.lot-badge.good, .wafer-badge.good {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+  border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.lot-badge.bad, .wafer-badge.bad {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+
+
 /* 반응형 디자인 */
 @media (max-width: 768px) {
   .table-header {
@@ -473,6 +568,11 @@ export default defineComponent({
   
   .table-cell {
     padding: 0.5rem 0.25rem;
+  }
+  
+  .summary-content {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 }
 </style> 
