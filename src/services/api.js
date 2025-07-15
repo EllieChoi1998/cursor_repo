@@ -1,5 +1,80 @@
 // API 서비스
-const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8005/api'
+const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000/api'
+
+// 채팅방 관련 API 함수들
+export const createChatRoom = async (dataType) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chatrooms`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        data_type: dataType
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data  // 직접 반환 (이미 chatroom 객체)
+  } catch (error) {
+    console.error('Error creating chatroom:', error)
+    throw error
+  }
+}
+
+export const getChatRooms = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chatrooms`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.chatrooms
+  } catch (error) {
+    console.error('Error fetching chatrooms:', error)
+    throw error
+  }
+}
+
+export const getChatRoomDetail = async (chatroomId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching chatroom detail:', error)
+    throw error
+  }
+}
+
+export const deleteChatRoom = async (chatroomId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}`, {
+      method: 'DELETE'
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error deleting chatroom:', error)
+    throw error
+  }
+}
 
 // 스트리밍 채팅 API
 export const streamChatAPI = async (choice, message, chatroomId, onData) => {

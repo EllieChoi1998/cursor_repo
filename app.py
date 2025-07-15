@@ -6,9 +6,10 @@ import json
 import asyncio
 import random
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import pandas as pd
 import numpy as np
+import uuid
 
 app = FastAPI(title="Data Analysis Chat API", version="1.0.0")
 
@@ -21,16 +22,133 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 채팅방 모델
+class ChatRoom(BaseModel):
+    id: str
+    created_at: datetime
+    data_type: str  # 'pcm', 'cp', 'rag'
+
+# 메시지 모델
+class Message(BaseModel):
+    id: str
+    chatroom_id: str
+    content: str
+    message_type: str  # 'user', 'bot'
+    timestamp: datetime
+    data_type: str  # 'pcm', 'cp', 'rag'
+
+# 응답 모델
+class BotResponse(BaseModel):
+    id: str
+    message_id: str  # 연결된 사용자 메시지 ID
+    chatroom_id: str
+    content: Dict[str, Any]
+    timestamp: datetime
+
 # 요청 모델
 class ChatRequest(BaseModel):
     choice: str  # 'pcm', 'cp', 'rag'
     message: str
-    chatroom_id: Optional[int] = None
+    chatroom_id: str  # 필수 필드로 변경
 
-# 응답 모델
-class ChatResponse(BaseModel):
-    chat_id: str
-    response: Dict[str, Any]
+# 채팅방 생성 요청 모델
+class CreateChatRoomRequest(BaseModel):
+    data_type: str  # 'pcm', 'cp', 'rag'
+
+# 채팅방 목록 응답 모델
+class ChatRoomListResponse(BaseModel):
+    chatrooms: List[ChatRoom]
+
+# 채팅방 상세 응답 모델
+class ChatRoomDetailResponse(BaseModel):
+    chatroom: ChatRoom
+    messages: List[Message]
+    responses: List[BotResponse]
+
+# 메모리 기반 저장소 (나중에 SQL로 교체 가능)
+class ChatStorage:
+    def __init__(self):
+        self.chatrooms: Dict[str, ChatRoom] = {}
+        self.messages: Dict[str, Message] = {}
+        self.responses: Dict[str, BotResponse] = {}
+    
+    def create_chatroom(self, data_type: str) -> ChatRoom:
+        """새 채팅방 생성"""
+        chatroom_id = str(uuid.uuid4())
+        chatroom = ChatRoom(
+            id=chatroom_id,
+            created_at=datetime.now(),
+            data_type=data_type
+        )
+        self.chatrooms[chatroom_id] = chatroom
+        return chatroom
+    
+    def get_chatroom(self, chatroom_id: str) -> Optional[ChatRoom]:
+        """채팅방 조회"""
+        return self.chatrooms.get(chatroom_id)
+    
+    def get_all_chatrooms(self) -> List[ChatRoom]:
+        """모든 채팅방 조회"""
+        return list(self.chatrooms.values())
+    
+    def delete_chatroom(self, chatroom_id: str) -> bool:
+        """채팅방 삭제"""
+        if chatroom_id in self.chatrooms:
+            del self.chatrooms[chatroom_id]
+            # 관련 메시지와 응답도 삭제
+            self.messages = {k: v for k, v in self.messages.items() if v.chatroom_id != chatroom_id}
+            self.responses = {k: v for k, v in self.responses.items() if v.chatroom_id != chatroom_id}
+            return True
+        return False
+    
+    def add_message(self, chatroom_id: str, content: str, message_type: str, data_type: str) -> Message:
+        """메시지 추가"""
+        message_id = str(uuid.uuid4())
+        message = Message(
+            id=message_id,
+            chatroom_id=chatroom_id,
+            content=content,
+            message_type=message_type,
+            timestamp=datetime.now(),
+            data_type=data_type
+        )
+        self.messages[message_id] = message
+        return message
+    
+    def get_messages_by_chatroom(self, chatroom_id: str) -> List[Message]:
+        """채팅방의 메시지 조회"""
+        return [msg for msg in self.messages.values() if msg.chatroom_id == chatroom_id]
+    
+    def add_response(self, message_id: str, chatroom_id: str, content: Dict[str, Any]) -> BotResponse:
+        """봇 응답 추가"""
+        response_id = str(uuid.uuid4())
+        response = BotResponse(
+            id=response_id,
+            message_id=message_id,
+            chatroom_id=chatroom_id,
+            content=content,
+            timestamp=datetime.now()
+        )
+        self.responses[response_id] = response
+        return response
+    
+    def get_responses_by_chatroom(self, chatroom_id: str) -> List[BotResponse]:
+        """채팅방의 응답 조회"""
+        return [resp for resp in self.responses.values() if resp.chatroom_id == chatroom_id]
+
+# 전역 저장소 인스턴스
+chat_storage = ChatStorage()
+
+# 기본 채팅방 생성
+def initialize_default_chatrooms():
+    """기본 채팅방들을 생성합니다."""
+    if not chat_storage.get_all_chatrooms():
+        # 일반 채팅방 (기본) - choice는 pcm로 유지하되 메시지는 일반적인 내용
+        general_room = chat_storage.create_chatroom('pcm')
+        chat_storage.add_message(general_room.id, '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.', 'bot', 'pcm')
+
+# 앱 시작 시 기본 채팅방 생성
+initialize_default_chatrooms()
 
 # 데이터 타입별 지원되는 명령어
 SUPPORTED_COMMANDS = {
@@ -133,16 +251,26 @@ def generate_rag_search_data() -> dict:
         'search_time': 0.23
     }
 
-async def process_chat_request(choice: str, message: str, chatroom_id: Optional[int]):
+async def process_chat_request(choice: str, message: str, chatroom_id: str):
     """채팅 요청 처리"""
+    # 채팅방 확인
+    chatroom = chat_storage.get_chatroom(chatroom_id)
+    if not chatroom:
+        yield f"data: {json.dumps({'msg': '존재하지 않는 채팅방입니다.'})}\n\n"
+        return
+    
     # 유효성 검사
     is_valid, command_type, error_msg = is_valid_command(choice, message)
     
     if not is_valid:
+        # 실패한 메시지는 저장하지 않고 에러만 반환
         yield f"data: {json.dumps({'msg': error_msg})}\n\n"
         return
     
-    # 처리 중 메시지
+    # 유효한 메시지만 저장
+    user_message = chat_storage.add_message(chatroom_id, message, 'user', choice)
+    
+    # 처리 중 메시지 (저장하지 않고 프론트엔드에서만 표시)
     yield f"data: {json.dumps({'status': 'processing'})}\n\n"
     await asyncio.sleep(0.5)
     
@@ -202,13 +330,76 @@ async def process_chat_request(choice: str, message: str, chatroom_id: Optional[
                 'timestamp': datetime.now().isoformat()
             }
     
+    # 성공한 경우에만 저장
+    bot_response = chat_storage.add_response(user_message.id, chatroom_id, response)
+    
+    # 성공 메시지 저장
+    success_message = f"✅ {choice.upper()} 데이터를 성공적으로 처리했습니다!"
+    chat_storage.add_message(chatroom_id, success_message, 'bot', choice)
+    
     # 최종 응답
     chat_response = {
-        'chat_id': f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{random.randint(1000, 9999)}",
+        'chat_id': chatroom_id,
+        'message_id': user_message.id,
+        'response_id': bot_response.id,
         'response': response
     }
     
     yield f"data: {json.dumps(chat_response)}\n\n"
+
+@app.post("/api/chatrooms")
+async def create_chatroom(request: CreateChatRoomRequest):
+    """새 채팅방 생성"""
+    try:
+        chatroom = chat_storage.create_chatroom(request.data_type)
+        return chatroom  # 직접 chatroom 객체 반환
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"채팅방 생성 실패: {str(e)}")
+
+@app.get("/api/chatrooms")
+async def get_chatrooms():
+    """모든 채팅방 조회"""
+    try:
+        chatrooms = chat_storage.get_all_chatrooms()
+        return {"success": True, "chatrooms": chatrooms}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"채팅방 조회 실패: {str(e)}")
+
+@app.get("/api/chatrooms/{chatroom_id}")
+async def get_chatroom_detail(chatroom_id: str):
+    """채팅방 상세 정보 조회"""
+    try:
+        chatroom = chat_storage.get_chatroom(chatroom_id)
+        if not chatroom:
+            raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+        
+        messages = chat_storage.get_messages_by_chatroom(chatroom_id)
+        responses = chat_storage.get_responses_by_chatroom(chatroom_id)
+        
+        return {
+            "success": True,
+            "chatroom": chatroom,
+            "messages": messages,
+            "responses": responses
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"채팅방 상세 조회 실패: {str(e)}")
+
+@app.delete("/api/chatrooms/{chatroom_id}")
+async def delete_chatroom(chatroom_id: str):
+    """채팅방 삭제"""
+    try:
+        success = chat_storage.delete_chatroom(chatroom_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+        
+        return {"success": True, "message": "채팅방이 삭제되었습니다."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"채팅방 삭제 실패: {str(e)}")
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
@@ -252,4 +443,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8005) 
+    uvicorn.run(app, host="0.0.0.0", port=8000) 
