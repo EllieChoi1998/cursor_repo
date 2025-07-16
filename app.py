@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import json
 import asyncio
@@ -282,6 +283,25 @@ def generate_rag_search_data() -> dict:
         'search_time': 0.23
     }
 
+def generate_rag_answer_data() -> list:
+    return [
+        {
+            "file_name": "example1.pdf",
+            "file_path": "/static/docs/example1.pdf",
+            "similarity": 0.98
+        },
+        {
+            "file_name": "example2.pdf",
+            "file_path": "/static/docs/example2.pdf",
+            "similarity": 0.92
+        },
+        {
+            "file_name": "example3.pdf",
+            "file_path": "/static/docs/example3.pdf",
+            "similarity": 0.89
+        }
+    ]
+
 async def process_chat_request(choice: str, message: str, chatroom_id: str):
     """채팅 요청 처리"""
     # 채팅방 확인
@@ -353,11 +373,11 @@ async def process_chat_request(choice: str, message: str, chatroom_id: str):
     
     elif choice == 'rag':
         if command_type == 'search':
-            data = generate_rag_search_data()
+            answer = generate_rag_answer_data()
             response = {
                 'result': 'rag_search',
-                'real_data': data,
-                'query': message,
+                'answer': answer,
+                'related_slides': [],
                 'timestamp': datetime.now().isoformat()
             }
         elif command_type == 'summary':
@@ -482,4 +502,5 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+    app.mount("/static", StaticFiles(directory="static"), name="static")
     uvicorn.run(app, host="0.0.0.0", port=8000) 

@@ -175,6 +175,11 @@
                       :data="result.data"
                     />
                   </div>
+
+                  <!-- RAG Answer List -->
+                  <div v-else-if="result.type === 'rag_search'" class="chart-section">
+                    <RAGAnswerList :answer="result.answer" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -235,6 +240,11 @@
               :data="fullscreenResult.data"
             />
           </div>
+
+          <!-- RAG Answer List -->
+          <div v-else-if="fullscreenResult?.type === 'rag_search'" class="fullscreen-chart">
+            <RAGAnswerList :answer="fullscreenResult.answer" />
+          </div>
         </div>
       </div>
     </div>
@@ -251,6 +261,7 @@ import PCMTrendChart from './components/PCMTrendChart.vue'
 import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
 import CommonalityTable from './components/CommonalityTable.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
+import RAGAnswerList from './components/RAGAnswerList.vue'
 import { 
   fetchPCMData, 
   refreshPCMData, 
@@ -272,7 +283,8 @@ export default defineComponent({
     PCMTrendChart,
     PCMTrendPointChart,
     CommonalityTable,
-    ChatRoomList
+    ChatRoomList,
+    RAGAnswerList
   },
   setup() {
 
@@ -665,6 +677,24 @@ export default defineComponent({
 • Bad Lots: ${commonalityResult.commonality.bad_lots.join(', ')}
 • Good Wafers: ${commonalityResult.commonality.good_wafers.join(', ')}
 • Bad Wafers: ${commonalityResult.commonality.bad_wafers.join(', ')}`)
+            }
+
+            else if (data.response.result === 'rag_search') {
+              const answer = data.response.answer || []
+              const newResult = {
+                id: Date.now(),
+                type: 'rag_search',
+                title: 'RAG Search Result',
+                answer: answer,
+                isActive: true,
+                timestamp: new Date(),
+                chatId: data.chat_id
+              }
+              const currentResults = chatResults.value[activeChatId.value] || []
+              currentResults.forEach(r => r.isActive = false)
+              currentResults.push(newResult)
+              chatResults.value[activeChatId.value] = currentResults
+              addMessage('bot', `✅ RAG 검색 결과를 성공적으로 받았습니다!`)
             }
             
             // 성공한 응답 후 입력창에 포커스
