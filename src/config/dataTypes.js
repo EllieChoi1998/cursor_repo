@@ -7,13 +7,19 @@ export const DATA_TYPES = {
     name: 'PCM',
     displayName: 'Process Control Monitor',
     description: 'PCM 트렌드 분석 및 데이터 시각화',
-    supportedResults: ['lot_start', 'commonality_start'],
+    supportedResults: ['lot_start', 'commonality_start', 'lot_point'],
     chartTypes: {
       lot_start: {
         type: 'box',
         component: 'PCMTrendChart',
         title: 'PCM Trend Analysis',
         description: 'Box plot showing PCM data distribution by device type'
+      },
+      lot_point: {
+        type: 'line',
+        component: 'PCMTrendPointChart',
+        title: 'PCM Trend Point Chart',
+        description: 'Line+marker chart showing PCM_SITE별 trend by DATE_WAFER_ID'
       },
       commonality_start: {
         type: 'table',

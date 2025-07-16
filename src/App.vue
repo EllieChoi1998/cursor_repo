@@ -152,6 +152,15 @@
                     />
                   </div>
                   
+                  <!-- PCM Trend Point Chart -->
+                  <div v-else-if="result.type === 'pcm_trend_point'" class="chart-section">
+                    <PCMTrendPointChart 
+                      :data="result.data"
+                      :height="chartHeight"
+                      :title="result.title"
+                    />
+                  </div>
+                  
                   <!-- Commonality Table -->
                   <div v-else-if="result.type === 'commonality'" class="chart-section">
                     <CommonalityTable 
@@ -203,6 +212,15 @@
             />
           </div>
           
+          <!-- PCM Trend Point Chart -->
+          <div v-else-if="fullscreenResult?.type === 'pcm_trend_point'" class="fullscreen-chart">
+            <PCMTrendPointChart 
+              :data="fullscreenResult.data"
+              :height="800"
+              :title="fullscreenResult.title"
+            />
+          </div>
+          
           <!-- Commonality Table -->
           <div v-else-if="fullscreenResult?.type === 'commonality'" class="fullscreen-chart">
             <CommonalityTable 
@@ -230,6 +248,7 @@
 <script>
 import { defineComponent, ref, computed, nextTick, onMounted } from 'vue'
 import PCMTrendChart from './components/PCMTrendChart.vue'
+import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
 import CommonalityTable from './components/CommonalityTable.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import { 
@@ -251,6 +270,7 @@ export default defineComponent({
   name: 'App',
   components: {
     PCMTrendChart,
+    PCMTrendPointChart,
     CommonalityTable,
     ChatRoomList
   },
@@ -591,6 +611,27 @@ export default defineComponent({
 • Device Types: ${[...new Set(chartData.map(row => row.DEVICE))].join(', ')}
 • Date Range: ${Math.min(...chartData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...chartData.map(row => row.DATE_WAFER_ID))}`)
               
+            } else if (data.response.result === 'lot_point') {
+              // PCM 트렌드 포인트 데이터 처리
+              const realData = data.response.real_data
+              const newResult = {
+                id: Date.now(),
+                type: 'pcm_trend_point',
+                title: `PCM Trend Point Chart`,
+                data: realData,
+                isActive: true,
+                timestamp: new Date(),
+                chatId: data.chat_id,
+                sql: data.response.sql,
+                realData: realData
+              }
+              // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
+              const currentResults = chatResults.value[activeChatId.value] || []
+              currentResults.forEach(r => r.isActive = false)
+              currentResults.push(newResult)
+              chatResults.value[activeChatId.value] = currentResults
+              addMessage('bot', `✅ PCM 트렌드 포인트 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
+              addMessage('bot', `Chart Summary:\n• Total Records: ${realData.length}\n• PCM_SITE: ${[...new Set(realData.map(row => row.PCM_SITE))].join(', ')}\n• Date Range: ${Math.min(...realData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...realData.map(row => row.DATE_WAFER_ID))}`)
             } else if (data.response.result === 'commonality_start') {
               // Commonality 데이터 처리
               const realData = data.response.real_data

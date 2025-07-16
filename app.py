@@ -154,7 +154,8 @@ initialize_default_chatrooms()
 SUPPORTED_COMMANDS = {
     'pcm': {
         'trend': ['trend', '트렌드', '차트', '그래프', '분석'],
-        'commonality': ['commonality', '커먼', '공통', '분석']
+        'commonality': ['commonality', '커먼', '공통', '분석'],
+        'point': ['point', '포인트', 'site', '사이트']
     },
     'cp': {
         'analysis': ['analysis', '분석', '성능', '모니터링'],
@@ -225,6 +226,36 @@ def generate_commonality_data() -> tuple[list, dict]:
     
     return data, commonality
 
+def generate_pcm_point_data() -> list:
+    """PCM 트렌드 포인트(라인+마커)용 예시 데이터 (고정값)"""
+    return [
+        {'DATE_WAFER_ID': 1, 'PCM_SITE': '1', 'VALUE': 10},
+        {'DATE_WAFER_ID': 1, 'PCM_SITE': '2', 'VALUE': 11},
+        {'DATE_WAFER_ID': 1, 'PCM_SITE': '3', 'VALUE': 12},
+        {'DATE_WAFER_ID': 1, 'PCM_SITE': '4', 'VALUE': 13},
+        {'DATE_WAFER_ID': 1, 'PCM_SITE': '5', 'VALUE': 14},
+        {'DATE_WAFER_ID': 2, 'PCM_SITE': '1', 'VALUE': 11},
+        {'DATE_WAFER_ID': 2, 'PCM_SITE': '2', 'VALUE': 12},
+        {'DATE_WAFER_ID': 2, 'PCM_SITE': '3', 'VALUE': 13},
+        {'DATE_WAFER_ID': 2, 'PCM_SITE': '4', 'VALUE': 14},
+        {'DATE_WAFER_ID': 2, 'PCM_SITE': '5', 'VALUE': 15},
+        {'DATE_WAFER_ID': 3, 'PCM_SITE': '1', 'VALUE': 10},
+        {'DATE_WAFER_ID': 3, 'PCM_SITE': '2', 'VALUE': 11},
+        {'DATE_WAFER_ID': 3, 'PCM_SITE': '3', 'VALUE': 12},
+        {'DATE_WAFER_ID': 3, 'PCM_SITE': '4', 'VALUE': 13},
+        {'DATE_WAFER_ID': 3, 'PCM_SITE': '5', 'VALUE': 14},
+        {'DATE_WAFER_ID': 4, 'PCM_SITE': '1', 'VALUE': 12},
+        {'DATE_WAFER_ID': 4, 'PCM_SITE': '2', 'VALUE': 13},
+        {'DATE_WAFER_ID': 4, 'PCM_SITE': '3', 'VALUE': 14},
+        {'DATE_WAFER_ID': 4, 'PCM_SITE': '4', 'VALUE': 15},
+        {'DATE_WAFER_ID': 4, 'PCM_SITE': '5', 'VALUE': 16},
+        {'DATE_WAFER_ID': 5, 'PCM_SITE': '1', 'VALUE': 14},
+        {'DATE_WAFER_ID': 5, 'PCM_SITE': '2', 'VALUE': 13},
+        {'DATE_WAFER_ID': 5, 'PCM_SITE': '3', 'VALUE': 13},
+        {'DATE_WAFER_ID': 5, 'PCM_SITE': '4', 'VALUE': 12},
+        {'DATE_WAFER_ID': 5, 'PCM_SITE': '5', 'VALUE': 11},
+    ]
+
 def generate_cp_analysis_data() -> list:
     """CP 분석 데이터 생성"""
     data = []
@@ -291,6 +322,14 @@ async def process_chat_request(choice: str, message: str, chatroom_id: str):
                 'real_data': data,
                 'determined': commonality,
                 'SQL': 'SELECT * FROM pcm_data WHERE lot_type IN ("good", "bad")',
+                'timestamp': datetime.now().isoformat()
+            }
+        elif command_type == 'point':
+            data = generate_pcm_point_data()
+            response = {
+                'result': 'lot_point',
+                'real_data': data,
+                'sql': 'SELECT * FROM pcm_data WHERE type = "point"',
                 'timestamp': datetime.now().isoformat()
             }
     
