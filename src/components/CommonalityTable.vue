@@ -135,32 +135,28 @@ export default defineComponent({
     const selectedDevice = ref('')
     const currentPage = ref(1)
     const itemsPerPage = ref(10)
-    const sortColumn = ref('DATE_WAFER_ID')
+    const sortColumn = ref('')
     const sortDirection = ref('asc')
 
-    // 컬럼 정의 (약 10개 컬럼)
-    const columns = [
-      { key: 'DATE_WAFER_ID', label: 'Date Wafer ID', type: 'number' },
-      { key: 'MIN', label: 'Min Value', type: 'number' },
-      { key: 'MAX', label: 'Max Value', type: 'number' },
-      { key: 'Q1', label: 'Q1', type: 'number' },
-      { key: 'Q2', label: 'Q2 (Median)', type: 'number' },
-      { key: 'Q3', label: 'Q3', type: 'number' },
-      { key: 'DEVICE', label: 'Device', type: 'device' },
-      { key: 'USL', label: 'USL', type: 'number' },
-      { key: 'TGT', label: 'Target', type: 'number' },
-      { key: 'LSL', label: 'LSL', type: 'number' },
-      { key: 'UCL', label: 'UCL', type: 'number' },
-      { key: 'LCL', label: 'LCL', type: 'number' }
-    ]
+    // 동적 컬럼 생성: 첫 row의 키를 기준으로
+    const columns = computed(() => {
+      const firstRow = props.data && props.data.length > 0 ? props.data[0] : null
+      if (!firstRow) return []
+      return Object.keys(firstRow).map(key => {
+        // 간단히 숫자 타입 판별
+        const type = typeof firstRow[key] === 'number' ? 'number' : 'text'
+        return { key, label: key, type }
+      })
+    })
 
     // 데이터는 이미 객체 형태 (DataFrame JSON)
     const processedData = computed(() => {
       return props.data
     })
 
-    // 고유 디바이스 목록
+    // 고유 디바이스 목록 (DEVICE 컬럼이 있을 때만)
     const uniqueDevices = computed(() => {
+      if (!columns.value.some(col => col.key === 'DEVICE')) return []
       const devices = processedData.value.map(row => row.DEVICE)
       return [...new Set(devices)]
     })
@@ -169,8 +165,8 @@ export default defineComponent({
     const filteredData = computed(() => {
       let filtered = processedData.value
 
-      // 디바이스 필터
-      if (selectedDevice.value) {
+      // 디바이스 필터 (DEVICE 컬럼이 있을 때만)
+      if (selectedDevice.value && columns.value.some(col => col.key === 'DEVICE')) {
         filtered = filtered.filter(row => row.DEVICE === selectedDevice.value)
       }
 
@@ -179,7 +175,7 @@ export default defineComponent({
         const term = searchTerm.value.toLowerCase()
         filtered = filtered.filter(row => 
           Object.values(row).some(value => 
-            value.toString().toLowerCase().includes(term)
+            value && value.toString().toLowerCase().includes(term)
           )
         )
       }
@@ -189,21 +185,20 @@ export default defineComponent({
 
     // 정렬된 데이터
     const sortedData = computed(() => {
+      if (!sortColumn.value) return filteredData.value
       const sorted = [...filteredData.value].sort((a, b) => {
         const aVal = a[sortColumn.value]
         const bVal = b[sortColumn.value]
-        
         if (typeof aVal === 'number' && typeof bVal === 'number') {
           return sortDirection.value === 'asc' ? aVal - bVal : bVal - aVal
         } else {
-          const aStr = aVal.toString()
-          const bStr = bVal.toString()
+          const aStr = (aVal ?? '').toString()
+          const bStr = (bVal ?? '').toString()
           return sortDirection.value === 'asc' 
             ? aStr.localeCompare(bStr) 
             : bStr.localeCompare(aStr)
         }
       })
-      
       return sorted
     })
 
@@ -217,18 +212,18 @@ export default defineComponent({
     })
 
     // 정렬 함수
-    const sortBy = (column) => {
-      if (sortColumn.value === column) {
+    const sortBy = (columnKey) => {
+      if (sortColumn.value === columnKey) {
         sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
       } else {
-        sortColumn.value = column
+        sortColumn.value = columnKey
         sortDirection.value = 'asc'
       }
     }
 
     // 정렬 아이콘
-    const getSortIcon = (column) => {
-      if (sortColumn.value !== column) return '↕️'
+    const getSortIcon = (columnKey) => {
+      if (sortColumn.value !== columnKey) return '↕️'
       return sortDirection.value === 'asc' ? '↑' : '↓'
     }
 
@@ -257,6 +252,11 @@ export default defineComponent({
     watch([searchTerm, selectedDevice], () => {
       currentPage.value = 1
     })
+
+    // 데이터 변경 시 정렬 컬럼 초기화
+    watch(() => props.data, () => {
+      sortColumn.value = columns.value.length > 0 ? columns.value[0].key : ''
+    }, { immediate: true })
 
     return {
       searchTerm,

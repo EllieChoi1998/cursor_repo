@@ -1098,20 +1098,22 @@ body {
 }
 
 .sidebar {
-  width: 280px;
+  flex: 1 1 0%;
+  /* width: 300px; */
   flex-shrink: 0;
   background: none;
 }
 
 .chat-section {
-  flex: 1;
+  flex: 4 4 0%;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
 .results-sidebar {
-  width: 900px;
+  flex: 5 5 0%;
+  /* width: 1000px; */
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
