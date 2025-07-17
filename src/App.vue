@@ -143,7 +143,7 @@
                 
                 <!-- 항상 펼쳐서 보여주기 -->
                 <div class="result-content">
-                  <!-- PCM Trend Chart -->
+                  <!-- PCM Trend Chart (기존 그래프 로직 유지) -->
                   <div v-if="result.type === 'pcm_trend'" class="chart-section">
                     <PCMTrendChart 
                       :data="result.data"
@@ -152,7 +152,7 @@
                     />
                   </div>
                   
-                  <!-- PCM Trend Point Chart -->
+                  <!-- PCM Trend Point Chart (기존 그래프 로직 유지) -->
                   <div v-else-if="result.type === 'pcm_trend_point'" class="chart-section">
                     <PCMTrendPointChart 
                       :data="result.data"
@@ -160,29 +160,14 @@
                       :title="result.title"
                     />
                   </div>
-                  
-                  <!-- Commonality Table -->
-                  <div v-else-if="result.type === 'commonality'" class="chart-section">
-                    <CommonalityTable 
-                      :data="result.data"
-                      :commonalityData="result.commonalityData"
-                    />
-                  </div>
-                  
-                  <!-- PCM Data Table -->
-                  <div v-else-if="result.type === 'pcm_data'" class="chart-section">
-                    <CommonalityTable 
-                      :data="result.data"
-                    />
-                  </div>
 
-                  <!-- RAG Answer List -->
+                  <!-- RAG Answer List (기존 RAG 로직 유지) -->
                   <div v-else-if="result.type === 'rag_search'" class="chart-section">
                     <RAGAnswerList :answer="result.answer" />
                   </div>
 
-                  <!-- Dynamic Table for any result with real_data -->
-                  <div v-if="result.realData && result.realData.length > 0" class="chart-section">
+                  <!-- 그 외 모든 result는 DynamicTable로 표시 (real_data가 있으면) -->
+                  <div v-else-if="result.realData && result.realData.length > 0" class="chart-section">
                     <DynamicTable 
                       :data="result.realData"
                       :title="result.resultType || result.title || 'Data Table'"
@@ -652,24 +637,21 @@ export default defineComponent({
               chatResults.value[activeChatId.value] = currentResults
               addMessage('bot', `✅ PCM 트렌드 포인트 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
               addMessage('bot', `Chart Summary:\n• Total Records: ${realData.length}\n• PCM_SITE: ${[...new Set(realData.map(row => row.PCM_SITE))].join(', ')}\n• Date Range: ${Math.min(...realData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...realData.map(row => row.DATE_WAFER_ID))}`)
-            } else if (data.response.result === 'commonality_start') {
-              // Commonality 데이터 처리
+            } 
+            // 그래프나 RAG가 아닌 모든 응답은 테이블로 처리
+            else if (data.response.real_data && data.response.real_data.length > 0) {
               const realData = data.response.real_data
-              const determinedData = data.response.determined
-              
-              const commonalityResult = generateCommonalityDataWithRealData(realData, determinedData)
               
               const newResult = {
                 id: Date.now(),
-                type: 'commonality',
-                title: `Commonality Analysis`,
-                data: commonalityResult.data,
-                commonalityData: commonalityResult.commonality,
+                type: 'dynamic_table',
+                title: `${data.response.result.toUpperCase()} Analysis`,
                 isActive: true,
                 timestamp: new Date(),
                 chatId: data.chat_id,
-                sql: data.response.SQL,
-                realData: realData
+                sql: data.response.sql || data.response.SQL,
+                realData: realData,
+                resultType: data.response.result
               }
               
               // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
@@ -678,13 +660,7 @@ export default defineComponent({
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               
-              addMessage('bot', `✅ Commonality 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.SQL}\n• Chat ID: ${data.chat_id}`)
-              
-              addMessage('bot', `Commonality Summary:
-• Good Lots: ${commonalityResult.commonality.good_lots.join(', ')}
-• Bad Lots: ${commonalityResult.commonality.bad_lots.join(', ')}
-• Good Wafers: ${commonalityResult.commonality.good_wafers.join(', ')}
-• Bad Wafers: ${commonalityResult.commonality.bad_wafers.join(', ')}`)
+              addMessage('bot', `✅ ${data.response.result.toUpperCase()} 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`)
             }
 
             else if (data.response.result === 'rag') {
