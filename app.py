@@ -25,14 +25,23 @@ app.add_middleware(
 
 # 채팅방 모델
 class ChatRoom(BaseModel):
-    id: str
+    id: int  # 정수로 변경
     created_at: datetime
     data_type: str  # 'pcm', 'cp', 'rag'
+
+# 채팅 기록 모델 (새로 추가)
+class ChatHistory(BaseModel):
+    chat_id: int
+    chatroom_id: int
+    user_message: str
+    chat_time: datetime
+    bot_response: str
+    response_time: datetime
 
 # 메시지 모델
 class Message(BaseModel):
     id: str
-    chatroom_id: str
+    chatroom_id: int  # 정수로 변경
     content: str
     message_type: str  # 'user', 'bot'
     timestamp: datetime
@@ -42,7 +51,7 @@ class Message(BaseModel):
 class BotResponse(BaseModel):
     id: str
     message_id: str  # 연결된 사용자 메시지 ID
-    chatroom_id: str
+    chatroom_id: int  # 정수로 변경
     content: Dict[str, Any]
     timestamp: datetime
 
@@ -50,15 +59,26 @@ class BotResponse(BaseModel):
 class ChatRequest(BaseModel):
     choice: str  # 'pcm', 'cp', 'rag'
     message: str
-    chatroom_id: str  # 필수 필드로 변경
+    chatroom_id: int  # 정수로 변경
 
 # 채팅방 생성 요청 모델
 class CreateChatRoomRequest(BaseModel):
     data_type: str  # 'pcm', 'cp', 'rag'
 
-# 채팅방 목록 응답 모델
+# 채팅방 목록 응답 모델 (API 명세에 맞게 수정)
+class ChatRoomListItem(BaseModel):
+    id: int
+    message_count: int
+    last_activity: datetime
+
 class ChatRoomListResponse(BaseModel):
-    chatrooms: List[ChatRoom]
+    chatrooms: List[ChatRoomListItem]
+
+# 채팅방 히스토리 응답 모델 (새로 추가)
+class ChatHistoryResponse(BaseModel):
+    chatroom_id: int
+    recent_conversations: List[ChatHistory]
+    count: int
 
 # 채팅방 상세 응답 모델
 class ChatRoomDetailResponse(BaseModel):
@@ -69,40 +89,78 @@ class ChatRoomDetailResponse(BaseModel):
 # 메모리 기반 저장소 (나중에 SQL로 교체 가능)
 class ChatStorage:
     def __init__(self):
-        self.chatrooms: Dict[str, ChatRoom] = {}
+        self.chatrooms: Dict[int, ChatRoom] = {}
         self.messages: Dict[str, Message] = {}
         self.responses: Dict[str, BotResponse] = {}
+        self.chat_histories: Dict[int, List[ChatHistory]] = {}  # 채팅 기록 저장
+        self.next_chatroom_id = 1
+        self.next_chat_id = 1
     
     def create_chatroom(self, data_type: str) -> ChatRoom:
         """새 채팅방 생성"""
-        chatroom_id = str(uuid.uuid4())
+        chatroom_id = self.next_chatroom_id
+        self.next_chatroom_id += 1
+        
         chatroom = ChatRoom(
             id=chatroom_id,
             created_at=datetime.now(),
             data_type=data_type
         )
         self.chatrooms[chatroom_id] = chatroom
+        self.chat_histories[chatroom_id] = []  # 빈 히스토리 초기화
         return chatroom
     
-    def get_chatroom(self, chatroom_id: str) -> Optional[ChatRoom]:
+    def get_chatroom(self, chatroom_id: int) -> Optional[ChatRoom]:
         """채팅방 조회"""
         return self.chatrooms.get(chatroom_id)
     
-    def get_all_chatrooms(self) -> List[ChatRoom]:
-        """모든 채팅방 조회"""
-        return list(self.chatrooms.values())
+    def get_all_chatrooms(self) -> List[ChatRoomListItem]:
+        """모든 채팅방 조회 (API 명세 형식으로)"""
+        result = []
+        for chatroom_id, chatroom in self.chatrooms.items():
+            message_count = len(self.chat_histories.get(chatroom_id, []))
+            last_activity = chatroom.created_at
+            
+            # 가장 최근 활동 시간 찾기
+            histories = self.chat_histories.get(chatroom_id, [])
+            if histories:
+                last_activity = max(history.response_time for history in histories)
+            
+            result.append(ChatRoomListItem(
+                id=chatroom_id,
+                message_count=message_count,
+                last_activity=last_activity
+            ))
+        
+        # 최근 활동 순으로 정렬
+        result.sort(key=lambda x: x.last_activity, reverse=True)
+        return result
     
-    def delete_chatroom(self, chatroom_id: str) -> bool:
+    def get_chatroom_history(self, chatroom_id: int) -> Optional[ChatHistoryResponse]:
+        """채팅방 히스토리 조회"""
+        if chatroom_id not in self.chatrooms:
+            return None
+        
+        histories = self.chat_histories.get(chatroom_id, [])
+        return ChatHistoryResponse(
+            chatroom_id=chatroom_id,
+            recent_conversations=histories,
+            count=len(histories)
+        )
+    
+    def delete_chatroom(self, chatroom_id: int) -> bool:
         """채팅방 삭제"""
         if chatroom_id in self.chatrooms:
             del self.chatrooms[chatroom_id]
-            # 관련 메시지와 응답도 삭제
+            # 관련 메시지와 응답, 히스토리도 삭제
             self.messages = {k: v for k, v in self.messages.items() if v.chatroom_id != chatroom_id}
             self.responses = {k: v for k, v in self.responses.items() if v.chatroom_id != chatroom_id}
+            if chatroom_id in self.chat_histories:
+                del self.chat_histories[chatroom_id]
             return True
         return False
     
-    def add_message(self, chatroom_id: str, content: str, message_type: str, data_type: str) -> Message:
+    def add_message(self, chatroom_id: int, content: str, message_type: str, data_type: str) -> Message:
         """메시지 추가"""
         message_id = str(uuid.uuid4())
         message = Message(
@@ -116,11 +174,32 @@ class ChatStorage:
         self.messages[message_id] = message
         return message
     
-    def get_messages_by_chatroom(self, chatroom_id: str) -> List[Message]:
+    def add_chat_history(self, chatroom_id: int, user_message: str, bot_response: str) -> ChatHistory:
+        """채팅 히스토리 추가"""
+        chat_id = self.next_chat_id
+        self.next_chat_id += 1
+        
+        now = datetime.now()
+        history = ChatHistory(
+            chat_id=chat_id,
+            chatroom_id=chatroom_id,
+            user_message=user_message,
+            chat_time=now,
+            bot_response=bot_response,
+            response_time=now
+        )
+        
+        if chatroom_id not in self.chat_histories:
+            self.chat_histories[chatroom_id] = []
+        
+        self.chat_histories[chatroom_id].append(history)
+        return history
+    
+    def get_messages_by_chatroom(self, chatroom_id: int) -> List[Message]:
         """채팅방의 메시지 조회"""
         return [msg for msg in self.messages.values() if msg.chatroom_id == chatroom_id]
     
-    def add_response(self, message_id: str, chatroom_id: str, content: Dict[str, Any]) -> BotResponse:
+    def add_response(self, message_id: str, chatroom_id: int, content: Dict[str, Any]) -> BotResponse:
         """봇 응답 추가"""
         response_id = str(uuid.uuid4())
         response = BotResponse(
@@ -133,7 +212,7 @@ class ChatStorage:
         self.responses[response_id] = response
         return response
     
-    def get_responses_by_chatroom(self, chatroom_id: str) -> List[BotResponse]:
+    def get_responses_by_chatroom(self, chatroom_id: int) -> List[BotResponse]:
         """채팅방의 응답 조회"""
         return [resp for resp in self.responses.values() if resp.chatroom_id == chatroom_id]
 
@@ -143,10 +222,22 @@ chat_storage = ChatStorage()
 # 기본 채팅방 생성
 def initialize_default_chatrooms():
     """기본 채팅방들을 생성합니다."""
-    if not chat_storage.get_all_chatrooms():
+    if not chat_storage.chatrooms:
         # 일반 채팅방 (기본) - choice는 pcm로 유지하되 메시지는 일반적인 내용
         general_room = chat_storage.create_chatroom('pcm')
         chat_storage.add_message(general_room.id, '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.', 'bot', 'pcm')
+        
+        # 샘플 채팅 히스토리 추가
+        chat_storage.add_chat_history(
+            general_room.id, 
+            "PCM 트렌드를 보여줘", 
+            json.dumps({
+                'result': 'lot_start',
+                'real_data': generate_pcm_trend_data(),
+                'sql': 'SELECT * FROM pcm_data WHERE date >= "2024-01-01" ORDER BY date_wafer_id',
+                'timestamp': datetime.now().isoformat()
+            })
+        )
 
 # 앱 시작 시 기본 채팅방 생성
 initialize_default_chatrooms()
@@ -302,7 +393,7 @@ def generate_rag_answer_data() -> list:
         }
     ]
 
-async def process_chat_request(choice: str, message: str, chatroom_id: str):
+async def process_chat_request(choice: str, message: str, chatroom_id: int):
     """채팅 요청 처리"""
     # 채팅방 확인
     chatroom = chat_storage.get_chatroom(chatroom_id)
@@ -392,6 +483,9 @@ async def process_chat_request(choice: str, message: str, chatroom_id: str):
     # 성공한 경우에만 저장
     bot_response = chat_storage.add_response(user_message.id, chatroom_id, response)
     
+    # 채팅 히스토리에 추가
+    chat_storage.add_chat_history(chatroom_id, message, json.dumps(response))
+    
     # 성공 메시지 저장
     success_message = f"✅ {choice.upper()} 데이터를 성공적으로 처리했습니다!"
     chat_storage.add_message(chatroom_id, success_message, 'bot', choice)
@@ -415,9 +509,32 @@ async def create_chatroom(request: CreateChatRoomRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"채팅방 생성 실패: {str(e)}")
 
-@app.get("/api/chatrooms")
+@app.get("/chatrooms")
 async def get_chatrooms():
-    """모든 채팅방 조회"""
+    """모든 채팅방 조회 (API 명세에 맞는 형식)"""
+    try:
+        chatrooms = chat_storage.get_all_chatrooms()
+        return {"chatrooms": chatrooms}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"채팅방 조회 실패: {str(e)}")
+
+@app.get("/chatrooms/{chatroom_id}/history")
+async def get_chatroom_history(chatroom_id: int):
+    """채팅방 히스토리 조회 (API 명세에 맞는 형식)"""
+    try:
+        history = chat_storage.get_chatroom_history(chatroom_id)
+        if not history:
+            raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+        
+        return history
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"채팅방 히스토리 조회 실패: {str(e)}")
+
+@app.get("/api/chatrooms")
+async def get_chatrooms_legacy():
+    """모든 채팅방 조회 (기존 API 호환)"""
     try:
         chatrooms = chat_storage.get_all_chatrooms()
         return {"success": True, "chatrooms": chatrooms}
@@ -425,7 +542,7 @@ async def get_chatrooms():
         raise HTTPException(status_code=500, detail=f"채팅방 조회 실패: {str(e)}")
 
 @app.get("/api/chatrooms/{chatroom_id}")
-async def get_chatroom_detail(chatroom_id: str):
+async def get_chatroom_detail(chatroom_id: int):
     """채팅방 상세 정보 조회"""
     try:
         chatroom = chat_storage.get_chatroom(chatroom_id)
@@ -447,7 +564,7 @@ async def get_chatroom_detail(chatroom_id: str):
         raise HTTPException(status_code=500, detail=f"채팅방 상세 조회 실패: {str(e)}")
 
 @app.delete("/api/chatrooms/{chatroom_id}")
-async def delete_chatroom(chatroom_id: str):
+async def delete_chatroom(chatroom_id: int):
     """채팅방 삭제"""
     try:
         success = chat_storage.delete_chatroom(chatroom_id)

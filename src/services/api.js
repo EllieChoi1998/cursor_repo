@@ -1,10 +1,10 @@
 // API 서비스
-const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000/api'
+const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000'
 
 // 채팅방 관련 API 함수들
 export const createChatRoom = async (dataType) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/chatrooms`, {
+    const response = await fetch(`${API_BASE_URL}/api/chatrooms`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -26,6 +26,7 @@ export const createChatRoom = async (dataType) => {
   }
 }
 
+// API 명세에 맞는 채팅방 목록 조회
 export const getChatRooms = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/chatrooms`)
@@ -42,9 +43,43 @@ export const getChatRooms = async () => {
   }
 }
 
+// API 명세에 맞는 채팅방 히스토리 조회
+export const getChatRoomHistory = async (chatroomId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}/history`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching chatroom history:', error)
+    throw error
+  }
+}
+
+// 기존 API 호환을 위한 함수들
+export const getChatRoomsLegacy = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/chatrooms`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.chatrooms
+  } catch (error) {
+    console.error('Error fetching chatrooms:', error)
+    throw error
+  }
+}
+
 export const getChatRoomDetail = async (chatroomId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}`)
+    const response = await fetch(`${API_BASE_URL}/api/chatrooms/${chatroomId}`)
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -60,7 +95,7 @@ export const getChatRoomDetail = async (chatroomId) => {
 
 export const deleteChatRoom = async (chatroomId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/chatrooms/${chatroomId}`, {
       method: 'DELETE'
     })
     
@@ -79,7 +114,7 @@ export const deleteChatRoom = async (chatroomId) => {
 // 스트리밍 채팅 API
 export const streamChatAPI = async (choice, message, chatroomId, onData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/chat`, {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
