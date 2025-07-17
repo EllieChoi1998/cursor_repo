@@ -180,6 +180,14 @@
                   <div v-else-if="result.type === 'rag_search'" class="chart-section">
                     <RAGAnswerList :answer="result.answer" />
                   </div>
+
+                  <!-- Dynamic Table for any result with real_data -->
+                  <div v-if="result.realData && result.realData.length > 0" class="chart-section">
+                    <DynamicTable 
+                      :data="result.realData"
+                      :title="result.resultType || result.title || 'Data Table'"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -260,6 +268,7 @@ import { defineComponent, ref, computed, nextTick, onMounted } from 'vue'
 import PCMTrendChart from './components/PCMTrendChart.vue'
 import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
 import CommonalityTable from './components/CommonalityTable.vue'
+import DynamicTable from './components/DynamicTable.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
 import {
@@ -280,6 +289,7 @@ export default defineComponent({
     PCMTrendChart,
     PCMTrendPointChart,
     CommonalityTable,
+    DynamicTable,
     ChatRoomList,
     RAGAnswerList
   },
@@ -604,7 +614,8 @@ export default defineComponent({
                 timestamp: new Date(),
                 chatId: data.chat_id,
                 sql: data.response.sql,
-                realData: realData
+                realData: realData,
+                resultType: data.response.result
               }
               
               // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
