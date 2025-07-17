@@ -260,29 +260,47 @@ SUPPORTED_COMMANDS = {
     }
 }
 
-def is_valid_command(choice: str, message: str) -> tuple[bool, str, str]:
+def analyze_query(message: str) -> tuple[str, str, str]:
     """
-    메시지가 유효한 명령어인지 검사
-    Returns: (is_valid, command_type, error_message)
+    메시지를 분석하여 어떤 타입의 처리가 필요한지 결정
+    Returns: (data_type, command_type, error_message)
     """
     message_lower = message.lower().strip()
     
-    # 데이터 타입이 지원되지 않는 경우
-    if choice not in SUPPORTED_COMMANDS:
-        return False, "", f"지원되지 않는 데이터 타입: {choice}"
-    
     # 빈 메시지 체크
     if not message_lower:
-        return False, "", "메시지를 입력해주세요."
+        return "", "", "메시지를 입력해주세요."
     
-    # 지원되는 명령어 체크
-    for command_type, keywords in SUPPORTED_COMMANDS[choice].items():
-        for keyword in keywords:
-            if keyword in message_lower:
-                return True, command_type, ""
+    # RAG 관련 키워드 우선 검사
+    rag_keywords = ['검색', 'search', '찾기', '조회', '문서', 'document', '파일', 'file', '설명', '요약', 'summary']
+    for keyword in rag_keywords:
+        if keyword in message_lower:
+            return 'rag', 'search', ""
     
-    # 유효하지 않은 메시지
-    return False, "", f"'{choice.upper()}' 데이터 타입에서 지원되지 않는 명령어입니다. 사용 가능한 명령어: {list(SUPPORTED_COMMANDS[choice].keys())}"
+    # PCM 관련 키워드 검사
+    pcm_keywords = ['pcm', 'trend', '트렌드', '차트', '그래프', 'commonality', '커먼', '공통', 'point', '포인트', 'site', '사이트']
+    for keyword in pcm_keywords:
+        if keyword in message_lower:
+            if any(k in message_lower for k in ['trend', '트렌드', '차트', '그래프']):
+                return 'pcm', 'trend', ""
+            elif any(k in message_lower for k in ['commonality', '커먼', '공통']):
+                return 'pcm', 'commonality', ""
+            elif any(k in message_lower for k in ['point', '포인트', 'site', '사이트']):
+                return 'pcm', 'point', ""
+            else:
+                return 'pcm', 'trend', ""  # 기본값
+    
+    # CP 관련 키워드 검사
+    cp_keywords = ['cp', 'critical', 'path', '경로', 'analysis', '분석', 'performance', '성능', '모니터링']
+    for keyword in cp_keywords:
+        if keyword in message_lower:
+            if any(k in message_lower for k in ['performance', '성능', '모니터링']):
+                return 'cp', 'performance', ""
+            else:
+                return 'cp', 'analysis', ""
+    
+    # 기본적으로 RAG로 처리 (질문이나 일반적인 요청)
+    return 'rag', 'general', ""
 
 def generate_pcm_trend_data() -> list:
     """PCM 트렌드 데이터 생성"""
@@ -402,23 +420,23 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
         yield f"data: {json.dumps({'msg': '존재하지 않는 채팅방입니다.'})}\n\n"
         return
     
-    # 유효성 검사
-    is_valid, command_type, error_msg = is_valid_command(choice, message)
+    # 백엔드에서 질의 분석 (choice 파라미터는 무시하고 백엔드가 결정)
+    detected_type, command_type, error_msg = analyze_query(message)
     
-    if not is_valid:
+    if error_msg:
         # 실패한 메시지는 저장하지 않고 에러만 반환
         yield f"data: {json.dumps({'msg': error_msg})}\n\n"
         return
     
     # 유효한 메시지만 저장
-    user_message = chat_storage.add_message(chatroom_id, message, 'user', choice)
+    user_message = chat_storage.add_message(chatroom_id, message, 'user', detected_type)
     
     # 처리 중 메시지 (저장하지 않고 프론트엔드에서만 표시)
     yield f"data: {json.dumps({'status': 'processing'})}\n\n"
     await asyncio.sleep(0.5)
     
-    # 데이터 타입별 처리
-    if choice == 'pcm':
+    # 백엔드가 결정한 데이터 타입별 처리
+    if detected_type == 'pcm':
         if command_type == 'trend':
             data = generate_pcm_trend_data()
             response = {
@@ -445,7 +463,7 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
                 'timestamp': datetime.now().isoformat()
             }
     
-    elif choice == 'cp':
+    elif detected_type == 'cp':
         if command_type == 'analysis':
             data = generate_cp_analysis_data()
             response = {
@@ -463,21 +481,23 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
                 'timestamp': datetime.now().isoformat()
             }
     
-    elif choice == 'rag':
+    elif detected_type == 'rag':
+        # RAG 처리 - 백엔드에서 완전히 결정
         if command_type == 'search':
+            # 파일 검색 결과 반환
             answer = generate_rag_answer_data()
             response = {
-                'result': 'rag_search',
-                'answer': answer,
-                'related_slides': [],
+                'result': 'rag',
+                'files': answer,  # 파일 리스트
+                'response': None,
                 'timestamp': datetime.now().isoformat()
             }
-        elif command_type == 'summary':
-            data = generate_rag_search_data()
+        else:
+            # 일반적인 질문에 대한 텍스트 응답
             response = {
-                'result': 'rag_summary',
-                'real_data': data,
-                'summary': 'PCM 데이터 분석에 대한 종합적인 요약 정보입니다.',
+                'result': 'rag',
+                'files': None,
+                'response': f"'{message}'에 대한 답변입니다. 요청하신 내용을 분석하여 적절한 정보를 제공드립니다.",
                 'timestamp': datetime.now().isoformat()
             }
     
@@ -488,8 +508,8 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
     chat_storage.add_chat_history(chatroom_id, message, json.dumps(response))
     
     # 성공 메시지 저장
-    success_message = f"✅ {choice.upper()} 데이터를 성공적으로 처리했습니다!"
-    chat_storage.add_message(chatroom_id, success_message, 'bot', choice)
+    success_message = f"✅ {detected_type.upper()} 데이터를 성공적으로 처리했습니다!"
+    chat_storage.add_message(chatroom_id, success_message, 'bot', detected_type)
     
     # 최종 응답
     chat_response = {
@@ -501,7 +521,7 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
     
     yield f"data: {json.dumps(chat_response)}\n\n"
 
-@app.post("/api/chatrooms")
+@app.post("/chatrooms")
 async def create_chatroom(request: CreateChatRoomRequest):
     """새 채팅방 생성"""
     try:
@@ -533,16 +553,7 @@ async def get_chatroom_history(chatroom_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"채팅방 히스토리 조회 실패: {str(e)}")
 
-@app.get("/api/chatrooms")
-async def get_chatrooms_legacy():
-    """모든 채팅방 조회 (기존 API 호환)"""
-    try:
-        chatrooms = chat_storage.get_all_chatrooms()
-        return {"success": True, "chatrooms": chatrooms}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"채팅방 조회 실패: {str(e)}")
-
-@app.get("/api/chatrooms/{chatroom_id}")
+@app.get("/chatrooms/{chatroom_id}")
 async def get_chatroom_detail(chatroom_id: int):
     """채팅방 상세 정보 조회"""
     try:
@@ -564,7 +575,7 @@ async def get_chatroom_detail(chatroom_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"채팅방 상세 조회 실패: {str(e)}")
 
-@app.delete("/api/chatrooms/{chatroom_id}")
+@app.delete("/chatrooms/{chatroom_id}")
 async def delete_chatroom(chatroom_id: int):
     """채팅방 삭제"""
     try:
@@ -578,7 +589,7 @@ async def delete_chatroom(chatroom_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"채팅방 삭제 실패: {str(e)}")
 
-@app.post("/api/chat")
+@app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
     """스트리밍 채팅 API 엔드포인트"""
     

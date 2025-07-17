@@ -676,22 +676,29 @@ export default defineComponent({
 • Bad Wafers: ${commonalityResult.commonality.bad_wafers.join(', ')}`)
             }
 
-            else if (data.response.result === 'rag_search') {
-              const answer = data.response.answer || []
-              const newResult = {
-                id: Date.now(),
-                type: 'rag_search',
-                title: 'RAG Search Result',
-                answer: answer,
-                isActive: true,
-                timestamp: new Date(),
-                chatId: data.chat_id
+            else if (data.response.result === 'rag') {
+              // RAG 응답 처리 - 파일이 있으면 파일 리스트, 없으면 텍스트 응답
+              if (data.response.files) {
+                // 파일 검색 결과
+                const answer = data.response.files || []
+                const newResult = {
+                  id: Date.now(),
+                  type: 'rag_search',
+                  title: 'RAG Search Result',
+                  answer: answer,
+                  isActive: true,
+                  timestamp: new Date(),
+                  chatId: data.chat_id
+                }
+                const currentResults = chatResults.value[activeChatId.value] || []
+                currentResults.forEach(r => r.isActive = false)
+                currentResults.push(newResult)
+                chatResults.value[activeChatId.value] = currentResults
+                addMessage('bot', `✅ RAG 검색 결과를 성공적으로 받았습니다!`)
+              } else if (data.response.response) {
+                // 텍스트 응답만 메시지에 추가
+                addMessage('bot', data.response.response)
               }
-              const currentResults = chatResults.value[activeChatId.value] || []
-              currentResults.forEach(r => r.isActive = false)
-              currentResults.push(newResult)
-              chatResults.value[activeChatId.value] = currentResults
-              addMessage('bot', `✅ RAG 검색 결과를 성공적으로 받았습니다!`)
             }
             
             // 성공한 응답 후 입력창에 포커스
