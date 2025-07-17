@@ -228,12 +228,13 @@ def initialize_default_chatrooms():
         chat_storage.add_message(general_room.id, '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.', 'bot', 'pcm')
         
         # 샘플 채팅 히스토리 추가
+        sample_data = [{'DATE_WAFER_ID': 1, 'MIN': 10, 'MAX': 20, 'Q1': 15, 'Q2': 16, 'Q3': 17, 'DEVICE': 'A'}]
         chat_storage.add_chat_history(
             general_room.id, 
             "PCM 트렌드를 보여줘", 
             json.dumps({
                 'result': 'lot_start',
-                'real_data': generate_pcm_trend_data(),
+                'real_data': sample_data,
                 'sql': 'SELECT * FROM pcm_data WHERE date >= "2024-01-01" ORDER BY date_wafer_id',
                 'timestamp': datetime.now().isoformat()
             })

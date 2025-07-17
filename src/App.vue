@@ -262,16 +262,13 @@ import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
 import CommonalityTable from './components/CommonalityTable.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
-import { 
-  fetchPCMData, 
-  refreshPCMData, 
-  fetchPCMDataByDateRange, 
-  fetchPCMDataByDevice,
+import {
   streamChatAPI,
   generatePCMDataWithRealData,
   generateCommonalityDataWithRealData,
   createChatRoom,
   getChatRooms,
+  getChatRoomHistory,
   getChatRoomDetail,
   deleteChatRoom as deleteChatRoomAPI
 } from './services/api.js'
@@ -829,25 +826,61 @@ export default defineComponent({
         
         chatRooms.value = rooms.map(room => ({
           id: room.id,
-          name: '채팅방', // 모든 채팅방을 일반적인 이름으로
-          dataType: room.data_type,
-          lastMessage: '',
-          lastMessageTime: new Date(room.created_at),
-          messageCount: 0
+          name: `채팅방 #${room.id}`, // ID를 포함한 이름으로
+          dataType: 'pcm', // API 명세에 data_type이 없으므로 기본값
+          lastMessage: `${room.message_count}개의 메시지`,
+          lastMessageTime: new Date(room.last_activity),
+          messageCount: room.message_count
         }))
         
         console.log('Processed chatrooms:', chatRooms.value)
         
-        // 각 채팅방에 초기 메시지 설정
-        rooms.forEach(room => {
-          const welcomeMessage = {
-            type: 'bot',
-            text: '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.',
-            timestamp: new Date(room.created_at)
+        // 각 채팅방의 메시지 히스토리 로드
+        for (const room of rooms) {
+          try {
+            const history = await getChatRoomHistory(room.id)
+            const messages = []
+            
+            // 히스토리를 메시지 형태로 변환
+            history.recent_conversations.forEach(conv => {
+              messages.push({
+                type: 'user',
+                text: conv.user_message,
+                timestamp: new Date(conv.chat_time)
+              })
+              
+              // bot_response를 파싱하여 적절히 처리
+              let botResponseText = conv.bot_response
+              try {
+                const parsed = JSON.parse(conv.bot_response)
+                if (parsed.result) {
+                  botResponseText = `✅ ${parsed.result} 데이터를 성공적으로 처리했습니다!`
+                }
+              } catch (e) {
+                // JSON 파싱 실패시 원본 텍스트 사용
+              }
+              
+              messages.push({
+                type: 'bot',
+                text: botResponseText,
+                timestamp: new Date(conv.response_time)
+              })
+            })
+            
+            chatMessages.value[room.id] = messages
+            chatResults.value[room.id] = []
+          } catch (error) {
+            console.error(`Failed to load history for room ${room.id}:`, error)
+            // 히스토리 로드 실패시 기본 메시지만 설정
+            const welcomeMessage = {
+              type: 'bot',
+              text: '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.',
+              timestamp: new Date(room.last_activity)
+            }
+            chatMessages.value[room.id] = [welcomeMessage]
+            chatResults.value[room.id] = []
           }
-          chatMessages.value[room.id] = [welcomeMessage]
-          chatResults.value[room.id] = []
-        })
+        }
         
         // 첫 번째 채팅방을 기본으로 선택
         if (rooms.length > 0 && !activeChatId.value) {
@@ -929,9 +962,9 @@ export default defineComponent({
         // 로컬 상태 업데이트
         const roomData = {
           id: createdRoom.id,
-          name: '채팅방', // 모든 채팅방을 일반적인 이름으로
+          name: `채팅방 #${createdRoom.id}`, // ID를 포함한 이름으로
           dataType: createdRoom.data_type,
-          lastMessage: '',
+          lastMessage: '새로운 채팅방',
           lastMessageTime: new Date(createdRoom.created_at),
           messageCount: 0
         }
