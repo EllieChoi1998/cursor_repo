@@ -143,7 +143,7 @@
                 
                 <!-- 항상 펼쳐서 보여주기 -->
                 <div class="result-content">
-                  <!-- PCM Trend Chart -->
+                  <!-- PCM Trend Chart (기존 그래프 로직 유지) -->
                   <div v-if="result.type === 'pcm_trend'" class="chart-section">
                     <PCMTrendChart 
                       :data="result.data"
@@ -152,7 +152,7 @@
                     />
                   </div>
                   
-                  <!-- PCM Trend Point Chart -->
+                  <!-- PCM Trend Point Chart (기존 그래프 로직 유지) -->
                   <div v-else-if="result.type === 'pcm_trend_point'" class="chart-section">
                     <PCMTrendPointChart 
                       :data="result.data"
@@ -160,25 +160,18 @@
                       :title="result.title"
                     />
                   </div>
-                  
-                  <!-- Commonality Table -->
-                  <div v-else-if="result.type === 'commonality'" class="chart-section">
-                    <CommonalityTable 
-                      :data="result.data"
-                      :commonalityData="result.commonalityData"
-                    />
-                  </div>
-                  
-                  <!-- PCM Data Table -->
-                  <div v-else-if="result.type === 'pcm_data'" class="chart-section">
-                    <CommonalityTable 
-                      :data="result.data"
-                    />
-                  </div>
 
-                  <!-- RAG Answer List -->
+                  <!-- RAG Answer List (기존 RAG 로직 유지) -->
                   <div v-else-if="result.type === 'rag_search'" class="chart-section">
                     <RAGAnswerList :answer="result.answer" />
+                  </div>
+
+                  <!-- 그 외 모든 result는 DynamicTable로 표시 (real_data가 있으면) -->
+                  <div v-else-if="result.realData && result.realData.length > 0" class="chart-section">
+                    <DynamicTable 
+                      :data="result.realData"
+                      :title="result.resultType || result.title || 'Data Table'"
+                    />
                   </div>
                 </div>
               </div>
@@ -260,18 +253,16 @@ import { defineComponent, ref, computed, nextTick, onMounted } from 'vue'
 import PCMTrendChart from './components/PCMTrendChart.vue'
 import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
 import CommonalityTable from './components/CommonalityTable.vue'
+import DynamicTable from './components/DynamicTable.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
-import { 
-  fetchPCMData, 
-  refreshPCMData, 
-  fetchPCMDataByDateRange, 
-  fetchPCMDataByDevice,
+import {
   streamChatAPI,
   generatePCMDataWithRealData,
   generateCommonalityDataWithRealData,
   createChatRoom,
   getChatRooms,
+  getChatRoomHistory,
   getChatRoomDetail,
   deleteChatRoom as deleteChatRoomAPI
 } from './services/api.js'
@@ -283,6 +274,7 @@ export default defineComponent({
     PCMTrendChart,
     PCMTrendPointChart,
     CommonalityTable,
+    DynamicTable,
     ChatRoomList,
     RAGAnswerList
   },
@@ -607,7 +599,8 @@ export default defineComponent({
                 timestamp: new Date(),
                 chatId: data.chat_id,
                 sql: data.response.sql,
-                realData: realData
+                realData: realData,
+                resultType: data.response.result
               }
               
               // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
@@ -644,24 +637,21 @@ export default defineComponent({
               chatResults.value[activeChatId.value] = currentResults
               addMessage('bot', `✅ PCM 트렌드 포인트 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
               addMessage('bot', `Chart Summary:\n• Total Records: ${realData.length}\n• PCM_SITE: ${[...new Set(realData.map(row => row.PCM_SITE))].join(', ')}\n• Date Range: ${Math.min(...realData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...realData.map(row => row.DATE_WAFER_ID))}`)
-            } else if (data.response.result === 'commonality_start') {
-              // Commonality 데이터 처리
+            } 
+            // 그래프나 RAG가 아닌 모든 응답은 테이블로 처리
+            else if (data.response.real_data && data.response.real_data.length > 0) {
               const realData = data.response.real_data
-              const determinedData = data.response.determined
-              
-              const commonalityResult = generateCommonalityDataWithRealData(realData, determinedData)
               
               const newResult = {
                 id: Date.now(),
-                type: 'commonality',
-                title: `Commonality Analysis`,
-                data: commonalityResult.data,
-                commonalityData: commonalityResult.commonality,
+                type: 'dynamic_table',
+                title: `${data.response.result.toUpperCase()} Analysis`,
                 isActive: true,
                 timestamp: new Date(),
                 chatId: data.chat_id,
-                sql: data.response.SQL,
-                realData: realData
+                sql: data.response.sql || data.response.SQL,
+                realData: realData,
+                resultType: data.response.result
               }
               
               // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
@@ -670,31 +660,32 @@ export default defineComponent({
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               
-              addMessage('bot', `✅ Commonality 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.SQL}\n• Chat ID: ${data.chat_id}`)
-              
-              addMessage('bot', `Commonality Summary:
-• Good Lots: ${commonalityResult.commonality.good_lots.join(', ')}
-• Bad Lots: ${commonalityResult.commonality.bad_lots.join(', ')}
-• Good Wafers: ${commonalityResult.commonality.good_wafers.join(', ')}
-• Bad Wafers: ${commonalityResult.commonality.bad_wafers.join(', ')}`)
+              addMessage('bot', `✅ ${data.response.result.toUpperCase()} 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`)
             }
 
-            else if (data.response.result === 'rag_search') {
-              const answer = data.response.answer || []
-              const newResult = {
-                id: Date.now(),
-                type: 'rag_search',
-                title: 'RAG Search Result',
-                answer: answer,
-                isActive: true,
-                timestamp: new Date(),
-                chatId: data.chat_id
+            else if (data.response.result === 'rag') {
+              // RAG 응답 처리 - 파일이 있으면 파일 리스트, 없으면 텍스트 응답
+              if (data.response.files) {
+                // 파일 검색 결과
+                const answer = data.response.files || []
+                const newResult = {
+                  id: Date.now(),
+                  type: 'rag_search',
+                  title: 'RAG Search Result',
+                  answer: answer,
+                  isActive: true,
+                  timestamp: new Date(),
+                  chatId: data.chat_id
+                }
+                const currentResults = chatResults.value[activeChatId.value] || []
+                currentResults.forEach(r => r.isActive = false)
+                currentResults.push(newResult)
+                chatResults.value[activeChatId.value] = currentResults
+                addMessage('bot', `✅ RAG 검색 결과를 성공적으로 받았습니다!`)
+              } else if (data.response.response) {
+                // 텍스트 응답만 메시지에 추가
+                addMessage('bot', data.response.response)
               }
-              const currentResults = chatResults.value[activeChatId.value] || []
-              currentResults.forEach(r => r.isActive = false)
-              currentResults.push(newResult)
-              chatResults.value[activeChatId.value] = currentResults
-              addMessage('bot', `✅ RAG 검색 결과를 성공적으로 받았습니다!`)
             }
             
             // 성공한 응답 후 입력창에 포커스
@@ -829,25 +820,61 @@ export default defineComponent({
         
         chatRooms.value = rooms.map(room => ({
           id: room.id,
-          name: '채팅방', // 모든 채팅방을 일반적인 이름으로
-          dataType: room.data_type,
-          lastMessage: '',
-          lastMessageTime: new Date(room.created_at),
-          messageCount: 0
+          name: `채팅방 #${room.id}`, // ID를 포함한 이름으로
+          dataType: 'pcm', // API 명세에 data_type이 없으므로 기본값
+          lastMessage: `${room.message_count}개의 메시지`,
+          lastMessageTime: new Date(room.last_activity),
+          messageCount: room.message_count
         }))
         
         console.log('Processed chatrooms:', chatRooms.value)
         
-        // 각 채팅방에 초기 메시지 설정
-        rooms.forEach(room => {
-          const welcomeMessage = {
-            type: 'bot',
-            text: '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.',
-            timestamp: new Date(room.created_at)
+        // 각 채팅방의 메시지 히스토리 로드
+        for (const room of rooms) {
+          try {
+            const history = await getChatRoomHistory(room.id)
+            const messages = []
+            
+            // 히스토리를 메시지 형태로 변환
+            history.recent_conversations.forEach(conv => {
+              messages.push({
+                type: 'user',
+                text: conv.user_message,
+                timestamp: new Date(conv.chat_time)
+              })
+              
+              // bot_response를 파싱하여 적절히 처리
+              let botResponseText = conv.bot_response
+              try {
+                const parsed = JSON.parse(conv.bot_response)
+                if (parsed.result) {
+                  botResponseText = `✅ ${parsed.result} 데이터를 성공적으로 처리했습니다!`
+                }
+              } catch (e) {
+                // JSON 파싱 실패시 원본 텍스트 사용
+              }
+              
+              messages.push({
+                type: 'bot',
+                text: botResponseText,
+                timestamp: new Date(conv.response_time)
+              })
+            })
+            
+            chatMessages.value[room.id] = messages
+            chatResults.value[room.id] = []
+          } catch (error) {
+            console.error(`Failed to load history for room ${room.id}:`, error)
+            // 히스토리 로드 실패시 기본 메시지만 설정
+            const welcomeMessage = {
+              type: 'bot',
+              text: '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.',
+              timestamp: new Date(room.last_activity)
+            }
+            chatMessages.value[room.id] = [welcomeMessage]
+            chatResults.value[room.id] = []
           }
-          chatMessages.value[room.id] = [welcomeMessage]
-          chatResults.value[room.id] = []
-        })
+        }
         
         // 첫 번째 채팅방을 기본으로 선택
         if (rooms.length > 0 && !activeChatId.value) {
@@ -929,9 +956,9 @@ export default defineComponent({
         // 로컬 상태 업데이트
         const roomData = {
           id: createdRoom.id,
-          name: '채팅방', // 모든 채팅방을 일반적인 이름으로
+          name: `채팅방 #${createdRoom.id}`, // ID를 포함한 이름으로
           dataType: createdRoom.data_type,
-          lastMessage: '',
+          lastMessage: '새로운 채팅방',
           lastMessageTime: new Date(createdRoom.created_at),
           messageCount: 0
         }

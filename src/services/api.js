@@ -1,5 +1,10 @@
-// API 서비스
-const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000/api'
+// API 서비스 - 환경변수에서 백엔드 URL 읽기
+const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000'
+
+// 디버깅을 위한 콘솔 출력 (개발 환경에서만)
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔗 API Base URL:', API_BASE_URL)
+}
 
 // 채팅방 관련 API 함수들
 export const createChatRoom = async (dataType) => {
@@ -26,6 +31,7 @@ export const createChatRoom = async (dataType) => {
   }
 }
 
+// API 명세에 맞는 채팅방 목록 조회
 export const getChatRooms = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/chatrooms`)
@@ -38,6 +44,23 @@ export const getChatRooms = async () => {
     return data.chatrooms
   } catch (error) {
     console.error('Error fetching chatrooms:', error)
+    throw error
+  }
+}
+
+// API 명세에 맞는 채팅방 히스토리 조회
+export const getChatRoomHistory = async (chatroomId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}/history`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching chatroom history:', error)
     throw error
   }
 }

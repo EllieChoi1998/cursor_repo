@@ -43,7 +43,18 @@ pip install -r requirements.txt
 python app.py
 ```
 
-백엔드는 `http://localhost:8005`에서 실행됩니다.
+백엔드는 `http://localhost:8000`에서 실행됩니다.
+
+### 백엔드 IP 설정
+
+프론트엔드에서 백엔드 서버 IP를 변경하려면 `.env` 파일을 수정하세요:
+
+```bash
+# .env 파일 수정
+VUE_APP_API_BASE_URL=http://your-backend-ip:8000
+```
+
+자세한 설정 방법은 [BACKEND_IP_CONFIGURATION.md](./BACKEND_IP_CONFIGURATION.md) 문서를 참조하세요.
 
 ### 프론트엔드 실행
 
