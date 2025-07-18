@@ -65,21 +65,7 @@ export const getChatRoomHistory = async (chatroomId) => {
   }
 }
 
-export const getChatRoomDetail = async (chatroomId) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}`)
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
 
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Error fetching chatroom detail:', error)
-    throw error
-  }
-}
 
 export const deleteChatRoom = async (chatroomId) => {
   try {

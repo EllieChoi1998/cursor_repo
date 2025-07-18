@@ -6,6 +6,7 @@ export const API_CONFIG = {
   // API 엔드포인트들
   ENDPOINTS: {
     CHATROOMS: '/chatrooms',
+    CHATROOM_HISTORY: '/chatrooms/:id/history',
     CHAT: '/chat',
     HEALTH: '/api/health'
   },

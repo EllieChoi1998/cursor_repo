@@ -263,7 +263,6 @@ import {
   createChatRoom,
   getChatRooms,
   getChatRoomHistory,
-  getChatRoomDetail,
   deleteChatRoom as deleteChatRoomAPI
 } from './services/api.js'
 import { isErrorResponse, extractErrorMessage } from './config/dataTypes.js'
@@ -889,48 +888,44 @@ export default defineComponent({
       }
     }
     
-    // 채팅방 상세 정보 로드
-    const loadChatRoomDetail = async (roomId) => {
+    // 채팅방 히스토리 새로고침 (필요시)
+    const refreshChatRoomHistory = async (roomId) => {
       try {
-        const detail = await getChatRoomDetail(roomId)
+        const history = await getChatRoomHistory(roomId)
+        const messages = []
         
-        // 메시지 변환 (기존 메시지가 있으면 유지)
-        const existingMessages = chatMessages.value[roomId] || []
-        const newMessages = detail.messages.map(msg => ({
-          type: msg.message_type,
-          text: msg.content,
-          timestamp: new Date(msg.timestamp)
-        }))
-        
-        // 기존 메시지와 새 메시지 합치기 (중복 제거)
-        const allMessages = [...existingMessages]
-        newMessages.forEach(newMsg => {
-          const exists = allMessages.some(existing => 
-            existing.text === newMsg.text && existing.type === newMsg.type
-          )
-          if (!exists) {
-            allMessages.push(newMsg)
+        // 히스토리를 메시지 형태로 변환
+        history.recent_conversations.forEach(conv => {
+          messages.push({
+            type: 'user',
+            text: conv.user_message,
+            timestamp: new Date(conv.chat_time)
+          })
+          
+          // bot_response를 파싱하여 적절히 처리
+          let botResponseText = conv.bot_response
+          try {
+            const parsed = JSON.parse(conv.bot_response)
+            if (parsed.result) {
+              botResponseText = `✅ ${parsed.result} 데이터를 성공적으로 처리했습니다!`
+            }
+          } catch (e) {
+            // JSON 파싱 실패시 원본 텍스트 사용
           }
+          
+          messages.push({
+            type: 'bot',
+            text: botResponseText,
+            timestamp: new Date(conv.response_time)
+          })
         })
         
-        // 결과 변환
-        const results = detail.responses.map(resp => ({
-          id: resp.id,
-          type: resp.content.result || 'unknown',
-          title: `${resp.content.result || 'Response'} Analysis`,
-          data: resp.content.real_data || [],
-          isActive: true,
-          timestamp: new Date(resp.timestamp),
-          chatId: resp.chatroom_id
-        }))
-        
-        // 채팅방별 데이터 저장
-        chatMessages.value[roomId] = allMessages
-        chatResults.value[roomId] = results
+        chatMessages.value[roomId] = messages
+        chatResults.value[roomId] = []
         
       } catch (error) {
-        console.error('Failed to load chatroom detail:', error)
-        addMessage('bot', '⚠️ 채팅방 정보를 불러오는데 실패했습니다.')
+        console.error(`Failed to refresh history for room ${roomId}:`, error)
+        addMessage('bot', '⚠️ 채팅방 히스토리를 새로고침하는데 실패했습니다.')
       }
     }
     
@@ -940,8 +935,8 @@ export default defineComponent({
       const selectedRoom = chatRooms.value.find(room => room.id === roomId)
       if (selectedRoom) {
         selectedDataType.value = selectedRoom.dataType
-        // 채팅방 상세 정보 로드
-        await loadChatRoomDetail(roomId)
+        // 히스토리는 이미 loadChatRooms에서 로드되므로 별도 로드 불필요
+        console.log(`Selected chatroom ${roomId} with ${(chatMessages.value[roomId] || []).length} messages`)
       }
     }
 
