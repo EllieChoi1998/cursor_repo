@@ -1236,22 +1236,23 @@ body {
 }
 
 .sidebar {
-  flex: 1 1 0%;
-  /* width: 300px; */
+  flex: 0 0 280px;
+  width: 280px;
   flex-shrink: 0;
   background: none;
 }
 
 .chat-section {
-  flex: 4 4 0%;
+  flex: 1 1 400px;
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  min-width: 350px;
+  max-width: 600px;
 }
 
 .results-sidebar {
-  flex: 5 5 0%;
-  /* width: 1000px; */
+  flex: 1 1 500px;
+  max-width: 800px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1678,6 +1679,64 @@ body {
   text-align: center;
   padding: 1rem;
   margin-top: auto;
+}
+
+/* 반응형 레이아웃 조정 */
+@media (max-width: 1400px) {
+  .app-layout {
+    gap: 0.5rem;
+  }
+  
+  .results-sidebar {
+    max-width: 700px;
+  }
+  
+  .chat-section {
+    max-width: 500px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .app-layout {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .sidebar {
+    flex: 0 0 auto;
+    width: 100%;
+    order: 1;
+  }
+  
+  .chat-section {
+    flex: 0 0 auto;
+    min-width: unset;
+    max-width: unset;
+    width: 100%;
+    height: 400px;
+    order: 2;
+  }
+  
+  .results-sidebar {
+    flex: 0 0 auto;
+    max-width: unset;
+    width: 100%;
+    order: 3;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-main {
+    padding: 0.5rem;
+  }
+  
+  .app-layout {
+    gap: 0.5rem;
+  }
+  
+  .chat-section {
+    height: 350px;
+  }
 }
 
 /* Error Message Styles */
