@@ -83,12 +83,7 @@ export default defineComponent({
           categoryorder: 'array',
           categoryarray: xOrder,
           showgrid: true,
-          gridcolor: '#f0f0f0',
-          tickangle: -45,
-          tickfont: {
-            size: 12
-          },
-          automargin: true
+          gridcolor: '#f0f0f0'
         },
         yaxis: {
           title: 'Value',
@@ -104,7 +99,7 @@ export default defineComponent({
           bordercolor: '#ccc',
           borderwidth: 1
         },
-        margin: { l: 60, r: 40, t: 80, b: 120 },
+        margin: { l: 60, r: 40, t: 80, b: 60 },
         plot_bgcolor: 'white',
         paper_bgcolor: 'white',
         hovermode: 'closest'
