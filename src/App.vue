@@ -86,7 +86,14 @@
                     :disabled="!currentMessage.trim() || isLoading"
                   >
                     <span v-if="isLoading">⏳</span>
-                    <span v-else>📤</span>
+                                          <span v-else>📤</span>
+                  </button>
+                  <button 
+                    @click="debugChatMessages" 
+                    class="debug-button"
+                    style="margin-left: 10px; padding: 8px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                  >
+                    🔍 디버그
                   </button>
                 </div>
                 <!-- 에러 메시지 표시 영역 -->
@@ -391,7 +398,10 @@ export default defineComponent({
 
     const addMessage = (type, text, isEditable = false, originalMessage = null) => {
       if (!chatMessages.value[activeChatId.value]) {
-        chatMessages.value[activeChatId.value] = []
+        chatMessages.value = {
+          ...chatMessages.value,
+          [activeChatId.value]: []
+        }
       }
       
       // 오류 메시지 중복 방지
@@ -417,7 +427,12 @@ export default defineComponent({
         isError: type === 'bot' && text.includes('❌')
       }
       
-      chatMessages.value[activeChatId.value].push(newMessage)
+      const currentMessages = [...(chatMessages.value[activeChatId.value] || [])]
+      currentMessages.push(newMessage)
+      chatMessages.value = {
+        ...chatMessages.value,
+        [activeChatId.value]: currentMessages
+      }
       
       // 수정 가능한 메시지를 맨 아래로 이동
       if (isEditable) {
@@ -832,10 +847,13 @@ export default defineComponent({
         for (const room of rooms) {
           try {
             const history = await getChatRoomHistory(room.id)
+            console.log(`Loading history for room ${room.id}:`, history)
             const messages = []
             
             // 히스토리를 메시지 형태로 변환
-            history.recent_conversations.forEach(conv => {
+            if (history.recent_conversations && history.recent_conversations.length > 0) {
+              console.log(`Found ${history.recent_conversations.length} conversations for room ${room.id}`)
+              history.recent_conversations.forEach(conv => {
               messages.push({
                 type: 'user',
                 text: conv.user_message,
@@ -859,9 +877,18 @@ export default defineComponent({
                 timestamp: new Date(conv.response_time)
               })
             })
+            } else {
+              console.log(`No conversations found for room ${room.id}`)
+            }
             
-            chatMessages.value[room.id] = messages
+            console.log(`Setting messages for room ${room.id}:`, messages)
+            // Vue의 reactivity를 위해 새 객체로 설정
+            chatMessages.value = {
+              ...chatMessages.value,
+              [room.id]: messages
+            }
             chatResults.value[room.id] = []
+            console.log(`After setting, chatMessages[${room.id}]:`, chatMessages.value[room.id])
           } catch (error) {
             console.error(`Failed to load history for room ${room.id}:`, error)
             // 히스토리 로드 실패시 기본 메시지만 설정
@@ -870,7 +897,10 @@ export default defineComponent({
               text: '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.',
               timestamp: new Date(room.last_activity)
             }
-            chatMessages.value[room.id] = [welcomeMessage]
+            chatMessages.value = {
+              ...chatMessages.value,
+              [room.id]: [welcomeMessage]
+            }
             chatResults.value[room.id] = []
           }
         }
@@ -880,6 +910,9 @@ export default defineComponent({
           console.log('Selecting first chatroom:', rooms[0].id)
           await selectChatRoom(rooms[0].id)
         }
+        
+        // 디버깅: 최종 chatMessages 상태 확인
+        console.log('Final chatMessages state after loading:', chatMessages.value)
       } catch (error) {
         console.error('Failed to load chatrooms:', error)
         addMessage('bot', '⚠️ 채팅방 목록을 불러오는데 실패했습니다.')
@@ -920,7 +953,10 @@ export default defineComponent({
           })
         })
         
-        chatMessages.value[roomId] = messages
+        chatMessages.value = {
+          ...chatMessages.value,
+          [roomId]: messages
+        }
         chatResults.value[roomId] = []
         
       } catch (error) {
@@ -931,6 +967,10 @@ export default defineComponent({
     
     // 채팅방 관련 함수들
     const selectChatRoom = async (roomId) => {
+      console.log(`Selecting chatroom ${roomId}`)
+      console.log('Current chatMessages state:', chatMessages.value)
+      console.log(`Messages for room ${roomId}:`, chatMessages.value[roomId])
+      
       activeChatId.value = roomId
       const selectedRoom = chatRooms.value.find(room => room.id === roomId)
       if (selectedRoom) {
@@ -1083,6 +1123,51 @@ export default defineComponent({
         newChatroomDisplay,
         handleErrorMessage,
         clearErrorMessages,
+        // 디버그 함수
+        debugChatMessages: () => {
+          console.log('=== 디버그 정보 ===')
+          console.log('activeChatId:', activeChatId.value)
+          console.log('chatMessages:', chatMessages.value)
+          console.log('chatRooms:', chatRooms.value)
+          console.log('messages computed:', messages.value)
+          
+          if (activeChatId.value) {
+            console.log(`현재 채팅방 ${activeChatId.value}의 메시지:`, chatMessages.value[activeChatId.value])
+          }
+          
+          // 테스트: 강제로 메시지 추가
+          if (activeChatId.value) {
+            const testMessages = [
+              {
+                type: 'user',
+                text: 'PCM 트렌드를 보여줘',
+                timestamp: new Date('2025-07-18T01:17:20.251493')
+              },
+              {
+                type: 'bot', 
+                text: '✅ lot_start 데이터를 성공적으로 처리했습니다!',
+                timestamp: new Date('2025-07-18T01:17:20.251493')
+              },
+              {
+                type: 'user',
+                text: '테스트 메시지입니다',
+                timestamp: new Date('2025-07-18T01:17:52.183145')
+              },
+              {
+                type: 'bot',
+                text: '✅ rag 데이터를 성공적으로 처리했습니다!',
+                timestamp: new Date('2025-07-18T01:17:52.183145')
+              }
+            ]
+            
+            chatMessages.value = {
+              ...chatMessages.value,
+              [activeChatId.value]: testMessages
+            }
+            
+            console.log('테스트 메시지 추가 완료')
+          }
+        },
         // 에러 상태
         currentError,
         showError,
