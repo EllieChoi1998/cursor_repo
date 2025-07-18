@@ -236,6 +236,8 @@ export default defineComponent({
 .chat-room-info {
   flex: 1;
   min-width: 0;
+  max-width: 220px; /* 최대 너비 제한 */
+  overflow: hidden; /* 넘치는 내용 숨김 */
 }
 
 .chat-room-title {
@@ -285,6 +287,8 @@ export default defineComponent({
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
+  max-width: 200px; /* 최대 너비 제한 */
+  word-break: break-all; /* 긴 단어 강제 줄바꿈 */
 }
 
 .chat-room-actions {

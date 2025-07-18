@@ -87,6 +87,8 @@ export const deleteChatRoom = async (chatroomId) => {
 
 // 스트리밍 채팅 API
 export const streamChatAPI = async (choice, message, chatroomId, onData) => {
+  console.log('🚀 Sending chat request:', { choice, message, chatroomId })
+  
   try {
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
@@ -99,6 +101,8 @@ export const streamChatAPI = async (choice, message, chatroomId, onData) => {
         chatroom_id: chatroomId
       })
     })
+    
+    console.log('📡 Response status:', response.status, response.statusText)
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -116,12 +120,19 @@ export const streamChatAPI = async (choice, message, chatroomId, onData) => {
       const lines = chunk.split('\n')
       
       for (const line of lines) {
+        if (line.trim()) {
+          console.log('📝 Raw line received:', line)
+        }
+        
         if (line.startsWith('data: ')) {
           try {
-            const data = JSON.parse(line.slice(6))
+            const jsonString = line.slice(6).trim()
+            console.log('🔍 Parsing JSON:', jsonString)
+            const data = JSON.parse(jsonString)
+            console.log('✅ Parsed data:', data)
             onData(data)
           } catch (e) {
-            console.warn('Failed to parse streaming data:', e)
+            console.warn('❌ Failed to parse streaming data:', e, 'Line:', line)
           }
         }
       }

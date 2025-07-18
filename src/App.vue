@@ -580,6 +580,8 @@ export default defineComponent({
         
         await streamChatAPI(selectedDataType.value, message, activeChatId.value, (data) => {
           // 스트리밍 데이터 처리
+          console.log('🎯 Received streaming data:', data)
+          
           if (data.status === 'processing') {
             addMessage('bot', '⚙️ 데이터를 처리하고 있습니다...')
           } else if (data.error) {
