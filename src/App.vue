@@ -228,22 +228,31 @@
           
           <!-- Commonality Table -->
           <div v-else-if="fullscreenResult?.type === 'commonality'" class="fullscreen-chart">
-            <CommonalityTable 
-              :data="fullscreenResult.data"
-              :commonalityData="fullscreenResult.commonalityData"
+            <DynamicTable 
+              :data="fullscreenResult.data || fullscreenResult.realData"
+              :title="fullscreenResult.title || 'Commonality Analysis'"
             />
           </div>
           
           <!-- PCM Data Table -->
           <div v-else-if="fullscreenResult?.type === 'pcm_data'" class="fullscreen-chart">
-            <CommonalityTable 
-              :data="fullscreenResult.data"
+            <DynamicTable 
+              :data="fullscreenResult.data || fullscreenResult.realData"
+              :title="fullscreenResult.title || 'PCM Data Table'"
             />
           </div>
 
           <!-- RAG Answer List -->
           <div v-else-if="fullscreenResult?.type === 'rag_search'" class="fullscreen-chart">
             <RAGAnswerList :answer="fullscreenResult.answer" />
+          </div>
+          
+          <!-- 모든 기타 데이터 타입 -->
+          <div v-else-if="fullscreenResult?.data || fullscreenResult?.realData" class="fullscreen-chart">
+            <DynamicTable 
+              :data="fullscreenResult.data || fullscreenResult.realData"
+              :title="fullscreenResult.title || 'Data Table'"
+            />
           </div>
         </div>
       </div>
@@ -259,7 +268,6 @@
 import { defineComponent, ref, computed, nextTick, onMounted } from 'vue'
 import PCMTrendChart from './components/PCMTrendChart.vue'
 import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
-import CommonalityTable from './components/CommonalityTable.vue'
 import DynamicTable from './components/DynamicTable.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
@@ -279,7 +287,6 @@ export default defineComponent({
   components: {
     PCMTrendChart,
     PCMTrendPointChart,
-    CommonalityTable,
     DynamicTable,
     ChatRoomList,
     RAGAnswerList
