@@ -185,7 +185,7 @@ export default defineComponent({
             color: getDeviceColor(device),
             width: 2
           },
-          fillcolor: getDeviceColor(device, 0.3),
+          fillcolor: getDeviceColor(device, 0.4),
           showlegend: true
         })
       })
@@ -332,12 +332,45 @@ export default defineComponent({
 
     // Helper function to get colors for different devices
     const getDeviceColor = (device, alpha = 1) => {
-      const colors = {
-        'A': `rgba(102, 126, 234, ${alpha})`,
-        'B': `rgba(118, 75, 162, ${alpha})`,
-        'C': `rgba(255, 128, 10, ${alpha})`
+      // 동적 색상 팔레트 - 다양한 DEVICE에 대응
+      const colorPalette = [
+        [102, 126, 234], // 블루
+        [118, 75, 162],  // 퍼플
+        [255, 128, 10],  // 오렌지
+        [46, 204, 113],  // 그린
+        [231, 76, 60],   // 레드
+        [52, 152, 219],  // 라이트 블루
+        [155, 89, 182],  // 바이올렛
+        [241, 196, 15],  // 옐로우
+        [230, 126, 34],  // 카로트
+        [26, 188, 156],  // 터쿼이즈
+        [192, 57, 43],   // 다크 레드
+        [142, 68, 173],  // 다크 퍼플
+        [39, 174, 96],   // 다크 그린
+        [211, 84, 0],    // 다크 오렌지
+        [41, 128, 185],  // 다크 블루
+        [243, 156, 18],  // 다크 옐로우
+        [149, 165, 166], // 그레이
+        [44, 62, 80],    // 다크 그레이
+        [127, 140, 141], // 라이트 그레이
+        [189, 195, 199]  // 베이지
+      ]
+      
+      // DEVICE 이름을 해시하여 색상 인덱스 결정
+      const getDeviceIndex = (deviceName) => {
+        let hash = 0
+        for (let i = 0; i < deviceName.toString().length; i++) {
+          const char = deviceName.toString().charCodeAt(i)
+          hash = ((hash << 5) - hash) + char
+          hash = hash & hash // 32bit 정수로 변환
+        }
+        return Math.abs(hash) % colorPalette.length
       }
-      return colors[device] || `rgba(128, 128, 128, ${alpha})`
+      
+      const colorIndex = getDeviceIndex(device)
+      const [r, g, b] = colorPalette[colorIndex]
+      
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`
     }
 
     const updateChart = () => {
