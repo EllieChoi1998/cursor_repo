@@ -990,17 +990,17 @@ export default defineComponent({
 
     const createNewChatRoom = async (newRoom) => {
       try {
-        console.log('Creating new chatroom with data type:', newRoom.dataType)
+        console.log('Creating new chatroom')
         
-        // 백엔드에 새 채팅방 생성
-        const createdRoom = await createChatRoom(newRoom.dataType)
+        // 백엔드에 새 채팅방 생성 (파라미터 없이)
+        const createdRoom = await createChatRoom()
         console.log('Created room response:', createdRoom)
         
         // 로컬 상태 업데이트
         const roomData = {
           id: createdRoom.id,
           name: `채팅방 #${createdRoom.id}`, // ID를 포함한 이름으로
-          dataType: createdRoom.data_type,
+          dataType: 'pcm', // 기본값으로 설정
           lastMessage: '새로운 채팅방',
           lastMessageTime: new Date(createdRoom.created_at),
           messageCount: 0
@@ -1008,7 +1008,7 @@ export default defineComponent({
         
         chatRooms.value.unshift(roomData)
         activeChatId.value = createdRoom.id
-        selectedDataType.value = createdRoom.data_type
+        selectedDataType.value = 'pcm' // 기본값으로 설정
         
         // 새 채팅방의 초기 메시지 설정 (빈 배열로 시작)
         chatMessages.value[createdRoom.id] = []

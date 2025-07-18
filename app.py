@@ -27,7 +27,6 @@ app.add_middleware(
 class ChatRoom(BaseModel):
     id: int  # 정수로 변경
     created_at: datetime
-    data_type: str  # 'pcm', 'cp', 'rag'
 
 # 채팅 기록 모델 (새로 추가)
 class ChatHistory(BaseModel):
@@ -61,9 +60,7 @@ class ChatRequest(BaseModel):
     message: str
     chatroom_id: int  # 정수로 변경
 
-# 채팅방 생성 요청 모델
-class CreateChatRoomRequest(BaseModel):
-    data_type: str  # 'pcm', 'cp', 'rag'
+# 채팅방 생성 요청 모델 제거 (파라미터 없음)
 
 # 채팅방 목록 응답 모델 (API 명세에 맞게 수정)
 class ChatRoomListItem(BaseModel):
@@ -96,15 +93,14 @@ class ChatStorage:
         self.next_chatroom_id = 1
         self.next_chat_id = 1
     
-    def create_chatroom(self, data_type: str) -> ChatRoom:
-        """새 채팅방 생성"""
+    def create_chatroom(self) -> ChatRoom:
+        """새 채팅방 생성 (파라미터 없음)"""
         chatroom_id = self.next_chatroom_id
         self.next_chatroom_id += 1
         
         chatroom = ChatRoom(
             id=chatroom_id,
-            created_at=datetime.now(),
-            data_type=data_type
+            created_at=datetime.now()
         )
         self.chatrooms[chatroom_id] = chatroom
         self.chat_histories[chatroom_id] = []  # 빈 히스토리 초기화
@@ -522,10 +518,10 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
     yield f"data: {json.dumps(chat_response)}\n\n"
 
 @app.post("/chatrooms")
-async def create_chatroom(request: CreateChatRoomRequest):
-    """새 채팅방 생성"""
+async def create_chatroom():
+    """새 채팅방 생성 (파라미터 없음)"""
     try:
-        chatroom = chat_storage.create_chatroom(request.data_type)
+        chatroom = chat_storage.create_chatroom()
         return chatroom  # 직접 chatroom 객체 반환
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"채팅방 생성 실패: {str(e)}")

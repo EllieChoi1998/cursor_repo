@@ -7,16 +7,13 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // 채팅방 관련 API 함수들
-export const createChatRoom = async (dataType) => {
+export const createChatRoom = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/chatrooms`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data_type: dataType
-      })
+      }
     })
 
     if (!response.ok) {
