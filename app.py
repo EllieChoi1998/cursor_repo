@@ -553,27 +553,7 @@ async def get_chatroom_history(chatroom_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"채팅방 히스토리 조회 실패: {str(e)}")
 
-@app.get("/chatrooms/{chatroom_id}")
-async def get_chatroom_detail(chatroom_id: int):
-    """채팅방 상세 정보 조회"""
-    try:
-        chatroom = chat_storage.get_chatroom(chatroom_id)
-        if not chatroom:
-            raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
-        
-        messages = chat_storage.get_messages_by_chatroom(chatroom_id)
-        responses = chat_storage.get_responses_by_chatroom(chatroom_id)
-        
-        return {
-            "success": True,
-            "chatroom": chatroom,
-            "messages": messages,
-            "responses": responses
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"채팅방 상세 조회 실패: {str(e)}")
+
 
 @app.delete("/chatrooms/{chatroom_id}")
 async def delete_chatroom(chatroom_id: int):
