@@ -1002,7 +1002,7 @@ export default defineComponent({
           name: `채팅방 #${createdRoom.id}`, // ID를 포함한 이름으로
           dataType: 'pcm', // 기본값으로 설정
           lastMessage: '새로운 채팅방',
-          lastMessageTime: new Date(createdRoom.created_at),
+          lastMessageTime: new Date(), // 현재 시간으로 설정
           messageCount: 0
         }
         

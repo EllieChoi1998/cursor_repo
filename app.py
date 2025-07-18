@@ -26,7 +26,6 @@ app.add_middleware(
 # 채팅방 모델
 class ChatRoom(BaseModel):
     id: int  # 정수로 변경
-    created_at: datetime
 
 # 채팅 기록 모델 (새로 추가)
 class ChatHistory(BaseModel):
@@ -99,8 +98,7 @@ class ChatStorage:
         self.next_chatroom_id += 1
         
         chatroom = ChatRoom(
-            id=chatroom_id,
-            created_at=datetime.now()
+            id=chatroom_id
         )
         self.chatrooms[chatroom_id] = chatroom
         self.chat_histories[chatroom_id] = []  # 빈 히스토리 초기화
