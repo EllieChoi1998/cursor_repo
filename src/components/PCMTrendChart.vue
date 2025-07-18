@@ -295,11 +295,13 @@ export default defineComponent({
           categoryarray: dateWaferIds,
           showgrid: true,
           gridcolor: '#f0f0f0',
-          tickangle: -45,
+          tickangle: -90,
           tickfont: {
-            size: 12
+            size: 11
           },
-          automargin: true
+          automargin: true,
+          tickmode: 'array',
+          tickvals: dateWaferIds
         },
         yaxis: {
           title: 'Values',
@@ -319,7 +321,7 @@ export default defineComponent({
           l: 60,
           r: 40,
           t: 80,
-          b: 120
+          b: 150
         },
         plot_bgcolor: 'white',
         paper_bgcolor: 'white',
