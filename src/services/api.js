@@ -110,30 +110,79 @@ export const streamChatAPI = async (choice, message, chatroomId, onData) => {
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
+    
+    // 🔧 청크 누적을 위한 버퍼
+    let accumulatedText = ''
 
     while (true) {
       const { done, value } = await reader.read()
       
-      if (done) break
+      if (done) {
+        // 마지막에 남은 데이터 처리
+        if (accumulatedText.trim()) {
+          console.log('📝 Processing final accumulated text')
+          processAccumulatedText(accumulatedText, onData)
+        }
+        break
+      }
       
-      const chunk = decoder.decode(value)
-      const lines = chunk.split('\n')
+      // 청크를 텍스트로 디코딩하고 누적
+      const chunk = decoder.decode(value, { stream: true })
+      accumulatedText += chunk
       
+      console.log('📦 Received chunk (length:', chunk.length, '), total accumulated:', accumulatedText.length)
+      
+      // 완전한 라인들을 찾아서 처리
+      const lines = accumulatedText.split('\n')
+      
+      // 마지막 라인은 불완전할 수 있으므로 다시 누적 텍스트에 보관
+      accumulatedText = lines.pop() || ''
+      
+      // 완전한 라인들 처리
       for (const line of lines) {
         if (line.trim()) {
-          console.log('📝 Raw line received:', line)
+          console.log('📝 Processing complete line (length:', line.length, ')')
+          processLine(line.trim(), onData)
+        }
+      }
+    }
+    
+    // 완전한 라인 처리 함수
+    function processLine(line, onData) {
+      if (line.startsWith('data: ')) {
+        const jsonString = line.slice(6).trim()
+        
+        if (!jsonString) {
+          console.log('📝 Empty data line, skipping...')
+          return
         }
         
-        if (line.startsWith('data: ')) {
-          try {
-            const jsonString = line.slice(6).trim()
-            console.log('🔍 Parsing JSON:', jsonString)
-            const data = JSON.parse(jsonString)
-            console.log('✅ Parsed data:', data)
-            onData(data)
-          } catch (e) {
-            console.warn('❌ Failed to parse streaming data:', e, 'Line:', line)
-          }
+        try {
+          console.log('🔍 Attempting to parse JSON (length:', jsonString.length, ')...')
+          
+          // JSON 파싱 시도
+          const data = JSON.parse(jsonString)
+          console.log('✅ Successfully parsed JSON data!')
+          console.log('✅ Data keys:', Object.keys(data))
+          
+          onData(data)
+        } catch (e) {
+          console.warn('❌ Failed to parse JSON:', e.message)
+          console.warn('❌ JSON string (first 500 chars):', jsonString.substring(0, 500))
+          console.warn('❌ JSON string (last 100 chars):', jsonString.substring(Math.max(0, jsonString.length - 100)))
+        }
+      } else {
+        console.log('📝 Non-data line:', line.substring(0, 50) + (line.length > 50 ? '...' : ''))
+      }
+    }
+    
+    // 누적된 텍스트 전체 처리 (fallback)
+    function processAccumulatedText(text, onData) {
+      console.log('🔄 Processing accumulated text as fallback...')
+      const lines = text.split('\n')
+      for (const line of lines) {
+        if (line.trim()) {
+          processLine(line.trim(), onData)
         }
       }
     }
