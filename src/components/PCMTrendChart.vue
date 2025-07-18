@@ -289,7 +289,13 @@ export default defineComponent({
           }
         },
         xaxis: {
-          title: 'Date Wafer ID',
+          title: {
+            text: 'Date Wafer ID',
+            font: {
+              size: 14,
+              color: '#333'
+            }
+          },
           type: 'category',
           categoryorder: 'array',
           categoryarray: dateWaferIds,
@@ -297,11 +303,14 @@ export default defineComponent({
           gridcolor: '#f0f0f0',
           tickangle: -90,
           tickfont: {
-            size: 11
+            size: 10,
+            color: '#333'
           },
           automargin: true,
-          tickmode: 'array',
-          tickvals: dateWaferIds
+          tickmode: 'linear',
+          side: 'bottom',
+          showticklabels: true,
+          dtick: 1
         },
         yaxis: {
           title: 'Values',
@@ -318,10 +327,10 @@ export default defineComponent({
           borderwidth: 1
         },
         margin: {
-          l: 60,
-          r: 40,
+          l: 70,
+          r: 50,
           t: 80,
-          b: 150
+          b: 180
         },
         plot_bgcolor: 'white',
         paper_bgcolor: 'white',
