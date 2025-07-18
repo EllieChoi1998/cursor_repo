@@ -39,7 +39,7 @@
               <span v-else-if="column.type === 'device'" class="device-badge" :class="`device-${row[column.key]}`">
                 {{ row[column.key] }}
               </span>
-              <span v-else class="text-value">
+              <span v-else class="text-value" :class="getValueColorClass(row[column.key])">
                 {{ row[column.key] }}
               </span>
             </td>
@@ -207,6 +207,16 @@ export default defineComponent({
       return value.toFixed(2)
     }
 
+    // G/B 값에 따른 색상 클래스 반환
+    const getValueColorClass = (value) => {
+      if (value === 'G') {
+        return 'value-good'
+      } else if (value === 'B') {
+        return 'value-bad'
+      }
+      return ''
+    }
+
     const previousPage = () => {
       if (currentPage.value > 1) {
         currentPage.value--
@@ -233,6 +243,7 @@ export default defineComponent({
       sortBy,
       getSortIcon,
       formatNumber,
+      getValueColorClass,
       previousPage,
       nextPage
     }
@@ -407,6 +418,17 @@ export default defineComponent({
   font-size: 0.875rem;
   color: #6b7280;
   font-weight: 500;
+}
+
+/* G/B 값 색상 스타일 */
+.value-good {
+  color: #10b981 !important;
+  font-weight: 600;
+}
+
+.value-bad {
+  color: #ef4444 !important;
+  font-weight: 600;
 }
 
 /* Responsive */
