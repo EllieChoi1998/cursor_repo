@@ -599,6 +599,11 @@ export default defineComponent({
             // 실제 응답 데이터 처리
             currentChatResponse.value = data
             
+            // 🔍 디버깅: 받은 데이터 구조를 자세히 로깅
+            console.log('🎯 Full response data:', JSON.stringify(data, null, 2))
+            console.log('🎯 Response result:', data.response.result)
+            console.log('🎯 Response real_data:', data.response.real_data)
+            console.log('🎯 Real data length:', data.response.real_data ? data.response.real_data.length : 'undefined')
 
             
             if (data.response.result === 'lot_start') {
@@ -701,6 +706,43 @@ export default defineComponent({
               } else if (data.response.response) {
                 // 텍스트 응답만 메시지에 추가
                 addMessage('bot', data.response.response)
+              }
+            }
+            // 🔧 FALLBACK: 모든 다른 타입의 응답을 테이블로 처리
+            else {
+              console.log('🎯 Fallback case: Unknown result type or structure')
+              
+              // real_data가 있으면 테이블로 표시
+              if (data.response.real_data && Array.isArray(data.response.real_data) && data.response.real_data.length > 0) {
+                const realData = data.response.real_data
+                
+                const newResult = {
+                  id: Date.now(),
+                  type: 'dynamic_table',
+                  title: `${(data.response.result || 'Unknown').toUpperCase()} Analysis`,
+                  isActive: true,
+                  timestamp: new Date(),
+                  chatId: data.chat_id,
+                  sql: data.response.sql || data.response.SQL,
+                  realData: realData,
+                  resultType: data.response.result || 'unknown'
+                }
+                
+                const currentResults = chatResults.value[activeChatId.value] || []
+                currentResults.forEach(r => r.isActive = false)
+                currentResults.push(newResult)
+                chatResults.value[activeChatId.value] = currentResults
+                
+                addMessage('bot', `✅ ${(data.response.result || 'Unknown').toUpperCase()} 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result || 'unknown'}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`)
+              } 
+              // real_data가 없거나 빈 배열이면 응답 텍스트만 표시
+              else if (data.response.response) {
+                addMessage('bot', data.response.response)
+              } 
+              // 모든 경우에 해당하지 않으면 최소한 성공 메시지라도 표시
+              else {
+                addMessage('bot', `✅ 응답을 받았습니다.\n• Result Type: ${data.response.result || 'unknown'}\n• Chat ID: ${data.chat_id}`)
+                console.warn('🎯 Warning: Unknown response structure', data)
               }
             }
             
