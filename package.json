@@ -1,7 +1,7 @@
 {
   "name": "pcm-chat-assistant",
   "version": "1.0.0",
-  "description": "PCM Chat Assistant - Process Control Monitor data analysis with chat interface",
+  "description": "Chat Assistant - Process Control Monitor data analysis with chat interface",
   "author": "PCM Analysis Team",
   "license": "MIT",
   "private": true,

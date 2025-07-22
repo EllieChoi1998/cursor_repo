@@ -1,14 +1,14 @@
 <template>
   <div id="app">
     <header class="app-header">
-      <h1>PCM Chat Assistant</h1>
-      <p class="subtitle">Ask me about PCM trends and data analysis</p>
+      <h1>Chat Assistant</h1>
+      <p class="subtitle">Ask me about PCM / CP trends and data analysis, or Search Database via RAG system</p>
     </header>
     
     <main class="app-main">
       <div class="app-layout">
         <!-- Left Sidebar - Chat Room List -->
-        <aside class="sidebar">
+        <aside class="sidebar" ref="sidebar">
           <ChatRoomList 
             :activeChatId="activeChatId"
             :chatRooms="chatRooms"
@@ -19,8 +19,11 @@
           />
         </aside>
         
+        <!-- Resize Bar 1 -->
+        <div class="resize-bar" ref="resizeBar1" @mousedown="startResize"></div>
+        
         <!-- Center - Chat Interface -->
-        <div class="chat-section">
+        <div class="chat-section" ref="chatSection">
           <div class="chat-container">
             <div class="chat-messages" ref="messagesContainer">
               <div 
@@ -107,8 +110,11 @@
           </div>
         </div>
         
+        <!-- Resize Bar 2 -->
+        <div class="resize-bar" ref="resizeBar2" @mousedown="startResize"></div>
+        
         <!-- Right Sidebar - Results Section -->
-        <aside class="results-sidebar">
+        <aside class="results-sidebar" ref="resultsSidebar">
           <div v-if="results.length > 0" class="results-section">
             <div class="results-header">
               <h3>Analysis Results ({{ results.length }})</h3>
@@ -265,7 +271,7 @@
     </div>
     
     <footer class="app-footer">
-      <p>&copy; 2024 PCM Chat Assistant. Built with Vue.js and Plotly.js</p>
+      <p>&copy; 2024 Chat Assistant. Built with Vue.js and Plotly.js</p>
     </footer>
   </div>
 </template>
@@ -312,6 +318,19 @@ export default defineComponent({
     // 에러 상태 관리
     const currentError = ref('')
     const showError = ref(false)
+    
+    // 리사이즈 관련 refs
+    const sidebar = ref(null)
+    const chatSection = ref(null)
+    const resultsSidebar = ref(null)
+    const resizeBar1 = ref(null)
+    const resizeBar2 = ref(null)
+    
+    // 리사이즈 상태
+    const isResizing = ref(false)
+    const currentResizeBar = ref(null)
+    const startX = ref(0)
+    const startWidths = ref({})
     
     // 전체화면 모달 상태 관리
     const fullscreenResult = ref(null)
@@ -506,6 +525,73 @@ export default defineComponent({
       // 에러 상태 초기화
       currentError.value = ''
       showError.value = false
+    }
+
+
+
+    // 리사이즈 기능
+    const startResize = (event) => {
+      isResizing.value = true
+      currentResizeBar.value = event.target
+      startX.value = event.clientX
+      
+      // 현재 너비들 저장
+      startWidths.value = {
+        sidebar: sidebar.value?.offsetWidth || 280,
+        chatSection: chatSection.value?.offsetWidth || 400,
+        resultsSidebar: resultsSidebar.value?.offsetWidth || 500
+      }
+      
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+      
+      document.addEventListener('mousemove', handleResize)
+      document.addEventListener('mouseup', stopResize)
+      event.preventDefault()
+    }
+
+    const handleResize = (event) => {
+      if (!isResizing.value || !currentResizeBar.value) return
+      
+      const deltaX = event.clientX - startX.value
+      
+      if (currentResizeBar.value === resizeBar1.value) {
+        // 사이드바와 채팅 섹션 사이 리사이즈
+        const newSidebarWidth = Math.max(200, Math.min(500, startWidths.value.sidebar + deltaX))
+        const newChatWidth = Math.max(350, Math.min(800, startWidths.value.chatSection - deltaX))
+        
+        if (sidebar.value) {
+          sidebar.value.style.width = `${newSidebarWidth}px`
+          sidebar.value.style.flex = `0 0 ${newSidebarWidth}px`
+        }
+        if (chatSection.value) {
+          chatSection.value.style.width = `${newChatWidth}px`
+          chatSection.value.style.flex = `1 1 ${newChatWidth}px`
+        }
+      } else if (currentResizeBar.value === resizeBar2.value) {
+        // 채팅 섹션과 결과 사이드바 사이 리사이즈
+        const newChatWidth = Math.max(350, Math.min(800, startWidths.value.chatSection + deltaX))
+        const newResultsWidth = Math.max(300, Math.min(1200, startWidths.value.resultsSidebar - deltaX))
+        
+        if (chatSection.value) {
+          chatSection.value.style.width = `${newChatWidth}px`
+          chatSection.value.style.flex = `1 1 ${newChatWidth}px`
+        }
+        if (resultsSidebar.value) {
+          resultsSidebar.value.style.width = `${newResultsWidth}px`
+          resultsSidebar.value.style.flex = `1 1 ${newResultsWidth}px`
+        }
+      }
+    }
+
+    const stopResize = () => {
+      isResizing.value = false
+      currentResizeBar.value = null
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      
+      document.removeEventListener('mousemove', handleResize)
+      document.removeEventListener('mouseup', stopResize)
     }
 
     // 전체화면 모달 제어 함수들
@@ -1209,7 +1295,14 @@ export default defineComponent({
         fullscreenResult,
         showFullscreen,
         openFullscreen,
-        closeFullscreen
+        closeFullscreen,
+        // 리사이즈 관련
+        sidebar,
+        chatSection,
+        resultsSidebar,
+        resizeBar1,
+        resizeBar2,
+        startResize
       }
   }
 })
@@ -1271,8 +1364,11 @@ body {
 .sidebar {
   flex: 0 0 280px;
   width: 280px;
+  min-width: 200px;
+  max-width: 500px;
   flex-shrink: 0;
   background: none;
+  position: relative;
 }
 
 .chat-section {
@@ -1280,16 +1376,19 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 350px;
-  max-width: 600px;
+  max-width: 800px;
+  position: relative;
 }
 
 .results-sidebar {
   flex: 1 1 500px;
-  max-width: 800px;
+  min-width: 300px;
+  max-width: 1200px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: none;
+  position: relative;
 }
 
 /* Chat Container */
@@ -1738,7 +1837,10 @@ body {
   .sidebar {
     flex: 0 0 auto;
     width: 100%;
+    min-width: unset;
+    max-width: unset;
     order: 1;
+    resize: none;
   }
   
   .chat-section {
@@ -1748,13 +1850,16 @@ body {
     width: 100%;
     height: 400px;
     order: 2;
+    resize: none;
   }
   
   .results-sidebar {
     flex: 0 0 auto;
+    min-width: unset;
     max-width: unset;
     width: 100%;
     order: 3;
+    resize: none;
   }
 }
 
@@ -2137,6 +2242,42 @@ body {
   to {
     opacity: 1;
   }
+}
+
+
+
+/* Resize Bar Styles */
+.resize-bar {
+  width: 8px;
+  background: #e0e0e0;
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.resize-bar:hover {
+  background: #007bff;
+}
+
+.resize-bar:active {
+  background: #0056b3;
+}
+
+.resize-bar::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 20px;
+  background: #999;
+  border-radius: 1px;
+}
+
+.resize-bar:hover::before {
+  background: white;
 }
 
 /* Download Link Styles */
