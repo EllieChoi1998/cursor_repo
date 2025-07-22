@@ -1,5 +1,5 @@
 // API 서비스 - 환경변수에서 백엔드 URL 읽기
-const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000'
+export const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000'
 
 // 디버깅을 위한 콘솔 출력 (개발 환경에서만)
 if (process.env.NODE_ENV === 'development') {

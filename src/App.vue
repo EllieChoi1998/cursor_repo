@@ -50,7 +50,7 @@
                       ✏️
                     </button>
                   </div>
-                  <div v-else class="message-text">{{ message.text }}</div>
+                  <div v-else class="message-text" v-html="message.text"></div>
                   <div class="message-time">{{ formatTime(message.timestamp) }}</div>
                 </div>
               </div>
@@ -286,6 +286,7 @@ import {
   getChatRoomHistory,
   deleteChatRoom as deleteChatRoomAPI
 } from './services/api.js'
+import { API_BASE_URL } from './services/api.js'
 import { isErrorResponse, extractErrorMessage } from './config/dataTypes.js'
 
 export default defineComponent({
@@ -692,27 +693,46 @@ export default defineComponent({
             }
 
             else if (data.response.result === 'rag') {
-              // RAG 응답 처리 - 파일이 있으면 파일 리스트, 없으면 텍스트 응답
+              // RAG 응답 처리 - 모든 결과를 채팅 내역에 표시
               if (data.response.files) {
-                // 파일 검색 결과
-                const answer = data.response.files || []
-                const newResult = {
-                  id: Date.now(),
-                  type: 'rag_search',
-                  title: 'RAG Search Result',
-                  answer: answer,
-                  isActive: true,
-                  timestamp: new Date(),
-                  chatId: data.chat_id
-                }
-                const currentResults = chatResults.value[activeChatId.value] || []
-                currentResults.forEach(r => r.isActive = false)
-                currentResults.push(newResult)
-                chatResults.value[activeChatId.value] = currentResults
-                addMessage('bot', `✅ RAG 검색 결과를 성공적으로 받았습니다!`)
+                // 파일 검색 결과를 채팅 메시지로 표시
+                const files = data.response.files || []
+                let fileListText = '📁 검색된 파일 목록:\n\n'
+                
+                files.forEach((file, index) => {
+                  const fileName = file.file_name || file.filename || 'Unknown File'
+                  const filePath = file.file_path || ''
+                  // API_BASE_URL이 undefined인 경우 기본값 사용
+                  const baseUrl = API_BASE_URL || 'http://localhost:8000'
+                  const downloadUrl = filePath ? `${baseUrl}${filePath}` : ''
+                  
+                  fileListText += `${index + 1}. 📄 ${fileName}\n`
+                  if (file.content) {
+                    fileListText += `   내용: ${file.content.substring(0, 200)}${file.content.length > 200 ? '...' : ''}\n`
+                  }
+                  if (file.similarity || file.score) {
+                    const score = file.similarity || file.score
+                    fileListText += `   유사도 점수: ${(score * 100).toFixed(2)}%\n`
+                  }
+                  if (filePath) {
+                    fileListText += `   경로: ${filePath}\n`
+                  }
+                  
+                  // 다운로드 링크 추가
+                  if (downloadUrl) {
+                    fileListText += `   📥 <a href="${downloadUrl}" target="_blank" class="download-link">파일 보기</a>\n`
+                  }
+                  
+                  fileListText += '\n'
+                })
+                
+                addMessage('bot', fileListText)
               } else if (data.response.response) {
-                // 텍스트 응답만 메시지에 추가
+                // 텍스트 응답을 메시지에 추가
                 addMessage('bot', data.response.response)
+              } else {
+                // 기타 RAG 응답
+                addMessage('bot', '✅ RAG 검색이 완료되었습니다.')
               }
             }
             
@@ -2117,5 +2137,39 @@ body {
   to {
     opacity: 1;
   }
+}
+
+/* Download Link Styles */
+.download-link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 123, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.download-link:hover {
+  background: rgba(0, 123, 255, 0.2);
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Message text에서 링크 스타일링 */
+.message-text a {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 123, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.message-text a:hover {
+  background: rgba(0, 123, 255, 0.2);
+  color: #0056b3;
+  text-decoration: underline;
 }
 </style> 

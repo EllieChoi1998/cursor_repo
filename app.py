@@ -23,6 +23,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 정적 파일 서빙 설정
+import os
+static_dir = "static"
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+    # 예시 파일 생성
+    docs_dir = os.path.join(static_dir, "docs")
+    if not os.path.exists(docs_dir):
+        os.makedirs(docs_dir)
+        # 예시 PDF 파일 생성 (실제로는 텍스트 파일로 대체)
+        with open(os.path.join(docs_dir, "example1.pdf"), "w", encoding="utf-8") as f:
+            f.write("PCM 데이터 분석 가이드\n\n이 문서는 PCM 데이터 분석 방법에 대한 상세한 가이드입니다.")
+        with open(os.path.join(docs_dir, "example2.pdf"), "w", encoding="utf-8") as f:
+            f.write("Commonality 분석 기법\n\nCommonality 분석을 통한 품질 관리 방법을 설명합니다.")
+        with open(os.path.join(docs_dir, "example3.pdf"), "w", encoding="utf-8") as f:
+            f.write("데이터 시각화 모범 사례\n\n효과적인 데이터 시각화 방법과 모범 사례를 제시합니다.")
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 # 채팅방 모델
 class ChatRoom(BaseModel):
     id: int  # 정수로 변경
