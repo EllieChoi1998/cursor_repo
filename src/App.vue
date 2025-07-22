@@ -91,13 +91,7 @@
                     <span v-if="isLoading">⏳</span>
                                           <span v-else>📤</span>
                   </button>
-                  <button 
-                    @click="debugChatMessages" 
-                    class="debug-button"
-                    style="margin-left: 10px; padding: 8px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;"
-                  >
-                    🔍 디버그
-                  </button>
+
                 </div>
                 <!-- 에러 메시지 표시 영역 -->
                 <div v-if="showError" class="error-message">
@@ -185,6 +179,24 @@
                     <RAGAnswerList :answer="result.answer" />
                   </div>
 
+                  <!-- Metadata Only (real_data가 없는 경우) -->
+                  <div v-else-if="result.type === 'metadata_only'" class="chart-section">
+                    <div class="metadata-info">
+                      <h4>📊 Analysis Metadata</h4>
+                      <div class="metadata-details">
+                        <p><strong>Result Type:</strong> {{ result.resultType }}</p>
+                        <p v-if="result.sql"><strong>SQL:</strong> {{ result.sql }}</p>
+                        <p v-if="result.metadata"><strong>Timestamp:</strong> {{ result.metadata.timestamp }}</p>
+                        <p v-if="result.metadata && result.metadata.files">
+                          <strong>Files:</strong> {{ result.metadata.files.length }} files found
+                        </p>
+                        <p v-if="result.metadata && result.metadata.response">
+                          <strong>Response:</strong> {{ result.metadata.response }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- 그 외 모든 result는 DynamicTable로 표시 (real_data가 있으면) -->
                   <div v-else-if="result.realData && result.realData.length > 0" class="chart-section">
                     <DynamicTable 
@@ -265,6 +277,24 @@
           <!-- RAG Answer List -->
           <div v-else-if="fullscreenResult?.type === 'rag_search'" class="fullscreen-chart">
             <RAGAnswerList :answer="fullscreenResult.answer" />
+          </div>
+          
+          <!-- Metadata Only (전체화면) -->
+          <div v-else-if="fullscreenResult?.type === 'metadata_only'" class="fullscreen-chart">
+            <div class="metadata-info-fullscreen">
+              <h3>📊 Analysis Metadata</h3>
+              <div class="metadata-details-fullscreen">
+                <p><strong>Result Type:</strong> {{ fullscreenResult.resultType }}</p>
+                <p v-if="fullscreenResult.sql"><strong>SQL:</strong> {{ fullscreenResult.sql }}</p>
+                <p v-if="fullscreenResult.metadata"><strong>Timestamp:</strong> {{ fullscreenResult.metadata.timestamp }}</p>
+                <p v-if="fullscreenResult.metadata && fullscreenResult.metadata.files">
+                  <strong>Files:</strong> {{ fullscreenResult.metadata.files.length }} files found
+                </p>
+                <p v-if="fullscreenResult.metadata && fullscreenResult.metadata.response">
+                  <strong>Response:</strong> {{ fullscreenResult.metadata.response }}
+                </p>
+              </div>
+            </div>
           </div>
           
           <!-- 모든 기타 데이터 타입 -->
@@ -428,6 +458,78 @@ export default defineComponent({
 
     const formatTime = (timestamp) => {
       return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+
+    // 응답 데이터로부터 결과 객체 생성하는 함수
+    const createResultFromResponseData = (responseData, userMessage, chatId) => {
+      try {
+        console.log('🔧 Creating result from response data:', responseData)
+        
+        if (!responseData) {
+          console.warn('⚠️ No response data')
+          return null
+        }
+
+        // real_data가 있으면 실제 데이터로 결과 생성, 없으면 메타데이터만 저장
+        const realData = responseData.real_data || []
+        let result = null
+
+        // 결과 타입에 따라 다른 처리
+        if (responseData.result === 'lot_start') {
+          // PCM 트렌드 데이터 처리
+          const chartData = generatePCMDataWithRealData(realData)
+          result = {
+            id: `history_${chatId}_${Date.now()}`,
+            type: 'pcm_trend',
+            title: `PCM Trend Analysis`,
+            data: chartData,
+            isActive: false,
+            timestamp: new Date(),
+            chatId: chatId,
+            sql: responseData.sql,
+            realData: realData,
+            resultType: responseData.result,
+            userMessage: userMessage
+          }
+        } else if (responseData.result === 'lot_point') {
+          // PCM 트렌드 포인트 데이터 처리
+          result = {
+            id: `history_${chatId}_${Date.now()}`,
+            type: 'pcm_trend_point',
+            title: `PCM Trend Point Chart`,
+            data: realData,
+            isActive: false,
+            timestamp: new Date(),
+            chatId: chatId,
+            sql: responseData.sql,
+            realData: realData,
+            userMessage: userMessage
+          }
+        } else if (responseData.result) {
+          // real_data가 없어도 메타데이터만으로 결과 생성
+          result = {
+            id: `history_${chatId}_${Date.now()}`,
+            type: 'metadata_only',
+            title: `${responseData.result?.toUpperCase() || 'Data'} Analysis`,
+            isActive: false,
+            timestamp: new Date(),
+            chatId: chatId,
+            sql: responseData.sql || responseData.SQL,
+            realData: realData,
+            resultType: responseData.result,
+            userMessage: userMessage,
+            metadata: responseData // 전체 메타데이터 저장
+          }
+        }
+
+        if (result) {
+          console.log('✅ Created result:', result)
+        }
+        return result
+      } catch (error) {
+        console.error('❌ Error creating result from response data:', error)
+        return null
+      }
     }
 
     const scrollToBottom = async () => {
@@ -623,7 +725,7 @@ export default defineComponent({
       try {
         const data = await fetchPCMData()
         const newResult = {
-          id: Date.now(),
+          id: `local_${Date.now()}`, // 로컬 데이터는 별도 ID 사용
           type: 'pcm_data',
           title: 'PCM Data Load',
           data: data,
@@ -652,7 +754,7 @@ export default defineComponent({
       try {
         const data = await refreshPCMData()
         const newResult = {
-          id: Date.now(),
+          id: `local_${Date.now()}`, // 로컬 데이터는 별도 ID 사용
           type: 'pcm_data',
           title: 'PCM Data Refresh',
           data: data,
@@ -718,13 +820,15 @@ export default defineComponent({
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
               
               const newResult = {
-                id: Date.now(),
+                id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
                 type: 'pcm_trend',
                 title: `PCM Trend Analysis`,
                 data: chartData,
                 isActive: true,
                 timestamp: new Date(),
                 chatId: data.chat_id,
+                messageId: data.message_id,
+                responseId: data.response_id,
                 sql: data.response.sql,
                 realData: realData,
                 resultType: data.response.result,
@@ -753,13 +857,15 @@ export default defineComponent({
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
               
               const newResult = {
-                id: Date.now(),
+                id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
                 type: 'pcm_trend_point',
                 title: `PCM Trend Point Chart`,
                 data: realData,
                 isActive: true,
                 timestamp: new Date(),
                 chatId: data.chat_id,
+                messageId: data.message_id,
+                responseId: data.response_id,
                 sql: data.response.sql,
                 realData: realData,
                 userMessage: userMessage ? userMessage.text : 'Unknown message'
@@ -781,12 +887,14 @@ export default defineComponent({
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
               
               const newResult = {
-                id: Date.now(),
+                id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
                 type: 'dynamic_table',
                 title: `${data.response.result.toUpperCase()} Analysis`,
                 isActive: true,
                 timestamp: new Date(),
                 chatId: data.chat_id,
+                messageId: data.message_id,
+                responseId: data.response_id,
                 sql: data.response.sql || data.response.SQL,
                 realData: realData,
                 resultType: data.response.result,
@@ -972,18 +1080,40 @@ export default defineComponent({
     const loadChatRooms = async () => {
       isLoadingChatRooms.value = true
       try {
-        console.log('Loading chatrooms...')
+        console.log('🚀 Starting to load chatrooms...')
         const rooms = await getChatRooms()
-        console.log('Received rooms:', rooms)
+        console.log('📋 Received rooms from API:', rooms)
         
-        chatRooms.value = rooms.map(room => ({
-          id: room.id,
-          name: `채팅방 #${room.id}`, // ID를 포함한 이름으로
-          dataType: 'pcm', // API 명세에 data_type이 없으므로 기본값
-          lastMessage: `${room.message_count}개의 메시지`,
-          lastMessageTime: new Date(room.last_activity),
-          messageCount: room.message_count
-        }))
+        if (!rooms || rooms.length === 0) {
+          console.warn('⚠️ No rooms received from API')
+          chatRooms.value = []
+          
+          // 빈 배열일 때 기본 채팅방 생성 시도
+          try {
+            console.log('🔄 Attempting to create default chatroom...')
+            const defaultRoom = await createChatRoom()
+            console.log('✅ Created default room:', defaultRoom)
+            
+            // 새로 생성된 채팅방으로 목록 다시 로드
+            await loadChatRooms()
+            return
+          } catch (createError) {
+            console.error('❌ Failed to create default room:', createError)
+            return
+          }
+        }
+        
+        chatRooms.value = rooms.map(room => {
+          console.log('🏠 Processing room:', room)
+          return {
+            id: room.id,
+            name: `채팅방 #${room.id}`, // ID를 포함한 이름으로
+            dataType: 'pcm', // API 명세에 data_type이 없으므로 기본값
+            lastMessage: `${room.message_count || 0}개의 메시지`,
+            lastMessageTime: new Date(room.last_activity || new Date()),
+            messageCount: room.message_count || 0
+          }
+        })
         
         console.log('Processed chatrooms:', chatRooms.value)
         
@@ -997,30 +1127,75 @@ export default defineComponent({
             // 히스토리를 메시지 형태로 변환
             if (history.recent_conversations && history.recent_conversations.length > 0) {
               console.log(`Found ${history.recent_conversations.length} conversations for room ${room.id}`)
+              const results = [] // 결과 배열 초기화
+              
               history.recent_conversations.forEach(conv => {
               messages.push({
                 type: 'user',
                 text: conv.user_message,
-                timestamp: new Date(conv.chat_time)
+                timestamp: new Date(conv.chat_time),
+                chatId: conv.chat_id // 백엔드에서 받은 chat_id 사용
               })
               
               // bot_response를 파싱하여 적절히 처리
               let botResponseText = conv.bot_response
+              let responseData = null
+              
+              console.log('🔍 Parsing bot response:', conv.bot_response)
+              
               try {
                 const parsed = JSON.parse(conv.bot_response)
+                console.log('✅ Parsed response data:', parsed)
+                
                 if (parsed.result) {
-                  botResponseText = `✅ ${parsed.result} 데이터를 성공적으로 처리했습니다!`
+                  console.log('🔍 Processing result:', parsed.result)
+                  // 실제 응답 데이터를 기반으로 구체적인 메시지 생성
+                  if (parsed.result === 'lot_start') {
+                    botResponseText = `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+                  } else if (parsed.result === 'lot_point') {
+                    botResponseText = `✅ PCM 트렌드 포인트 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+                  } else if (parsed.result === 'commonality_start') {
+                    botResponseText = `✅ PCM 커먼 분석이 완료되었습니다!\n• SQL: ${parsed.SQL || 'N/A'}\n• Determined: ${JSON.stringify(parsed.determined) || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+                  } else if (parsed.result === 'rag') {
+                    if (parsed.files) {
+                      botResponseText = `✅ RAG 검색이 완료되었습니다!\n• ${parsed.files.length}개의 파일을 찾았습니다.\n• Chat ID: ${conv.chat_id}`
+                    } else if (parsed.response) {
+                      botResponseText = `✅ RAG 응답: ${parsed.response}\n• Chat ID: ${conv.chat_id}`
+                    } else {
+                      botResponseText = `✅ RAG 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
+                    }
+                  } else {
+                    botResponseText = `✅ ${parsed.result.toUpperCase()} 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
+                  }
+                  responseData = parsed
+                  
+                  // 응답 데이터가 있으면 결과 생성 (real_data가 없어도 메타데이터는 저장)
+                  if (responseData) {
+                    const result = createResultFromResponseData(responseData, conv.user_message, conv.chat_id)
+                    if (result) {
+                      results.push(result)
+                    }
+                  }
+                } else {
+                  console.warn('⚠️ No result field in parsed response')
                 }
               } catch (e) {
                 // JSON 파싱 실패시 원본 텍스트 사용
+                console.warn('❌ Failed to parse bot response:', e)
+                console.log('📄 Raw bot response:', conv.bot_response)
               }
               
               messages.push({
                 type: 'bot',
                 text: botResponseText,
-                timestamp: new Date(conv.response_time)
+                timestamp: new Date(conv.response_time),
+                chatId: conv.chat_id, // 백엔드에서 받은 chat_id 사용
+                responseData: responseData // 파싱된 응답 데이터 저장
               })
             })
+            
+            // 결과 설정
+            chatResults.value[room.id] = results
             } else {
               console.log(`No conversations found for room ${room.id}`)
             }
@@ -1070,30 +1245,71 @@ export default defineComponent({
       try {
         const history = await getChatRoomHistory(roomId)
         const messages = []
+        const results = [] // 결과 배열 초기화
         
         // 히스토리를 메시지 형태로 변환
         history.recent_conversations.forEach(conv => {
           messages.push({
             type: 'user',
             text: conv.user_message,
-            timestamp: new Date(conv.chat_time)
+            timestamp: new Date(conv.chat_time),
+            chatId: conv.chat_id // 백엔드에서 받은 chat_id 사용
           })
           
           // bot_response를 파싱하여 적절히 처리
           let botResponseText = conv.bot_response
+          let responseData = null
+          
+          console.log('🔍 Parsing bot response (refresh):', conv.bot_response)
+          
           try {
             const parsed = JSON.parse(conv.bot_response)
+            console.log('✅ Parsed response data (refresh):', parsed)
+            
             if (parsed.result) {
-              botResponseText = `✅ ${parsed.result} 데이터를 성공적으로 처리했습니다!`
+              console.log('🔍 Processing result (refresh):', parsed.result)
+              // 실제 응답 데이터를 기반으로 구체적인 메시지 생성
+              if (parsed.result === 'lot_start') {
+                botResponseText = `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+              } else if (parsed.result === 'lot_point') {
+                botResponseText = `✅ PCM 트렌드 포인트 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+              } else if (parsed.result === 'commonality_start') {
+                botResponseText = `✅ PCM 커먼 분석이 완료되었습니다!\n• SQL: ${parsed.SQL || 'N/A'}\n• Determined: ${JSON.stringify(parsed.determined) || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+              } else if (parsed.result === 'rag') {
+                if (parsed.files) {
+                  botResponseText = `✅ RAG 검색이 완료되었습니다!\n• ${parsed.files.length}개의 파일을 찾았습니다.\n• Chat ID: ${conv.chat_id}`
+                } else if (parsed.response) {
+                  botResponseText = `✅ RAG 응답: ${parsed.response}\n• Chat ID: ${conv.chat_id}`
+                } else {
+                  botResponseText = `✅ RAG 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
+                }
+              } else {
+                botResponseText = `✅ ${parsed.result.toUpperCase()} 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
+              }
+              responseData = parsed
+              
+              // 응답 데이터가 있으면 결과 생성 (real_data가 없어도 메타데이터는 저장)
+              if (responseData) {
+                const result = createResultFromResponseData(responseData, conv.user_message, conv.chat_id)
+                if (result) {
+                  results.push(result)
+                }
+              }
+            } else {
+              console.warn('⚠️ No result field in parsed response (refresh)')
             }
           } catch (e) {
             // JSON 파싱 실패시 원본 텍스트 사용
+            console.warn('❌ Failed to parse bot response (refresh):', e)
+            console.log('📄 Raw bot response (refresh):', conv.bot_response)
           }
           
           messages.push({
             type: 'bot',
             text: botResponseText,
-            timestamp: new Date(conv.response_time)
+            timestamp: new Date(conv.response_time),
+            chatId: conv.chat_id, // 백엔드에서 받은 chat_id 사용
+            responseData: responseData // 파싱된 응답 데이터 저장
           })
         })
         
@@ -1101,7 +1317,7 @@ export default defineComponent({
           ...chatMessages.value,
           [roomId]: messages
         }
-        chatResults.value[roomId] = []
+        chatResults.value[roomId] = results
         
       } catch (error) {
         console.error(`Failed to refresh history for room ${roomId}:`, error)
@@ -1157,6 +1373,9 @@ export default defineComponent({
         
         console.log('Successfully created and configured new chatroom:', createdRoom.id)
         
+        // 채팅방 목록 새로고침
+        await loadChatRooms()
+        
       } catch (error) {
         console.error('Failed to create chatroom:', error)
         addMessage('bot', '⚠️ 새 채팅방 생성에 실패했습니다.')
@@ -1188,6 +1407,10 @@ export default defineComponent({
             }
           }
         }
+        
+        // 채팅방 목록 새로고침
+        await loadChatRooms()
+        
       } catch (error) {
         console.error('Failed to delete chatroom:', error)
         addMessage('bot', '⚠️ 채팅방 삭제에 실패했습니다.')
@@ -1267,51 +1490,7 @@ export default defineComponent({
         newChatroomDisplay,
         handleErrorMessage,
         clearErrorMessages,
-        // 디버그 함수
-        debugChatMessages: () => {
-          console.log('=== 디버그 정보 ===')
-          console.log('activeChatId:', activeChatId.value)
-          console.log('chatMessages:', chatMessages.value)
-          console.log('chatRooms:', chatRooms.value)
-          console.log('messages computed:', messages.value)
-          
-          if (activeChatId.value) {
-            console.log(`현재 채팅방 ${activeChatId.value}의 메시지:`, chatMessages.value[activeChatId.value])
-          }
-          
-          // 테스트: 강제로 메시지 추가
-          if (activeChatId.value) {
-            const testMessages = [
-              {
-                type: 'user',
-                text: 'PCM 트렌드를 보여줘',
-                timestamp: new Date('2025-07-18T01:17:20.251493')
-              },
-              {
-                type: 'bot', 
-                text: '✅ lot_start 데이터를 성공적으로 처리했습니다!',
-                timestamp: new Date('2025-07-18T01:17:20.251493')
-              },
-              {
-                type: 'user',
-                text: '테스트 메시지입니다',
-                timestamp: new Date('2025-07-18T01:17:52.183145')
-              },
-              {
-                type: 'bot',
-                text: '✅ rag 데이터를 성공적으로 처리했습니다!',
-                timestamp: new Date('2025-07-18T01:17:52.183145')
-              }
-            ]
-            
-            chatMessages.value = {
-              ...chatMessages.value,
-              [activeChatId.value]: testMessages
-            }
-            
-            console.log('테스트 메시지 추가 완료')
-          }
-        },
+
         // 에러 상태
         currentError,
         showError,
@@ -2379,5 +2558,56 @@ body {
   font-size: 1rem;
   word-break: break-word;
   line-height: 1.5;
+}
+
+/* Metadata Info Styles */
+.metadata-info {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #17a2b8;
+}
+
+.metadata-info h4 {
+  margin: 0 0 1rem 0;
+  color: #17a2b8;
+  font-size: 1.1rem;
+}
+
+.metadata-details p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.metadata-details strong {
+  color: #495057;
+  font-weight: 600;
+}
+
+.metadata-info-fullscreen {
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border-left: 6px solid #17a2b8;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.metadata-info-fullscreen h3 {
+  margin: 0 0 1.5rem 0;
+  color: #17a2b8;
+  font-size: 1.5rem;
+}
+
+.metadata-details-fullscreen p {
+  margin: 0.75rem 0;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.metadata-details-fullscreen strong {
+  color: #495057;
+  font-weight: 600;
 }
 </style> 

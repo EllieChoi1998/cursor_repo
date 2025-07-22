@@ -129,24 +129,28 @@ class ChatStorage:
     
     def get_all_chatrooms(self) -> List[ChatRoomListItem]:
         """모든 채팅방 조회 (API 명세 형식으로)"""
+        print(f"🔍 get_all_chatrooms called. Chatrooms: {list(self.chatrooms.keys())}")
         result = []
         for chatroom_id, chatroom in self.chatrooms.items():
             message_count = len(self.chat_histories.get(chatroom_id, []))
-            last_activity = chatroom.created_at
             
-            # 가장 최근 활동 시간 찾기
+            # 가장 최근 활동 시간 찾기 (기본값은 현재 시간)
+            last_activity = datetime.now()
             histories = self.chat_histories.get(chatroom_id, [])
             if histories:
                 last_activity = max(history.response_time for history in histories)
             
-            result.append(ChatRoomListItem(
+            item = ChatRoomListItem(
                 id=chatroom_id,
                 message_count=message_count,
                 last_activity=last_activity
-            ))
+            )
+            result.append(item)
+            print(f"📋 Added chatroom {chatroom_id}: {item}")
         
         # 최근 활동 순으로 정렬
         result.sort(key=lambda x: x.last_activity, reverse=True)
+        print(f"✅ Returning {len(result)} chatrooms")
         return result
     
     def get_chatroom_history(self, chatroom_id: int) -> Optional[ChatHistoryResponse]:
@@ -192,6 +196,8 @@ class ChatStorage:
         chat_id = self.next_chat_id
         self.next_chat_id += 1
         
+        print(f"🔧 Creating chat history with chat_id: {chat_id} for chatroom: {chatroom_id}")
+        
         now = datetime.now()
         history = ChatHistory(
             chat_id=chat_id,
@@ -206,6 +212,7 @@ class ChatStorage:
             self.chat_histories[chatroom_id] = []
         
         self.chat_histories[chatroom_id].append(history)
+        print(f"✅ Added chat history with chat_id: {chat_id}")
         return history
     
     def get_messages_by_chatroom(self, chatroom_id: int) -> List[Message]:
@@ -235,10 +242,15 @@ chat_storage = ChatStorage()
 # 기본 채팅방 생성
 def initialize_default_chatrooms():
     """기본 채팅방들을 생성합니다."""
+    print(f"🔍 Initializing default chatrooms. Current chatrooms: {len(chat_storage.chatrooms)}")
     if not chat_storage.chatrooms:
+        print("📝 Creating default chatroom...")
         # 일반 채팅방 (기본) - choice는 pcm로 유지하되 메시지는 일반적인 내용
         general_room = chat_storage.create_chatroom()
+        print(f"✅ Created default chatroom with ID: {general_room.id}")
+        
         chat_storage.add_message(general_room.id, '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.', 'bot', 'pcm')
+        print(f"📝 Added welcome message to chatroom {general_room.id}")
         
         # 샘플 채팅 히스토리 추가
         sample_data = [{'DATE_WAFER_ID': '2025-06-18:36:57:54_A12345678998999', 'MIN': 10, 'MAX': 20, 'Q1': 15, 'Q2': 16, 'Q3': 17, 'DEVICE': 'A'}]
@@ -252,6 +264,9 @@ def initialize_default_chatrooms():
                 'timestamp': datetime.now().isoformat()
             })
         )
+        print(f"📝 Added sample chat history to chatroom {general_room.id}")
+    else:
+        print(f"✅ Default chatrooms already exist: {list(chat_storage.chatrooms.keys())}")
 
 # 앱 시작 시 기본 채팅방 생성
 initialize_default_chatrooms()
@@ -517,21 +532,31 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
     # 성공한 경우에만 저장
     bot_response = chat_storage.add_response(user_message.id, chatroom_id, response)
     
-    # 채팅 히스토리에 추가
-    chat_storage.add_chat_history(chatroom_id, message, json.dumps(response))
+    # real_data를 제외한 response 데이터 생성 (채팅 히스토리용)
+    history_response = response.copy()
+    if 'real_data' in history_response:
+        del history_response['real_data']
     
-    # 성공 메시지 저장
-    success_message = f"✅ {detected_type.upper()} 데이터를 성공적으로 처리했습니다!"
-    chat_storage.add_message(chatroom_id, success_message, 'bot', detected_type)
+    print(f"📝 Saving to chat history (real_data excluded): {json.dumps(history_response, indent=2)}")
+    print(f"📝 JSON string being saved: {json.dumps(history_response)}")
     
-    # 최종 응답
+    # 채팅 히스토리에 추가 (real_data 제외) - chat_id 반환받기
+    chat_history = chat_storage.add_chat_history(chatroom_id, message, json.dumps(history_response))
+    print(f"📝 Chat history saved with chat_id: {chat_history.chat_id}")
+    print(f"📝 Bot response in chat history: {chat_history.bot_response}")
+    
+    # 성공 메시지는 저장하지 않음 (프론트엔드에서만 표시)
+    # 실제 응답 데이터는 채팅 히스토리에만 저장
+    
+    # 최종 응답 - 실제 chat_id 사용
     chat_response = {
-        'chat_id': chatroom_id,
+        'chat_id': chat_history.chat_id,  # 실제 생성된 chat_id 사용
         'message_id': user_message.id,
         'response_id': bot_response.id,
         'response': response
     }
     
+    print(f"📤 Sending chat response with chat_id: {chat_history.chat_id}")
     yield f"data: {json.dumps(chat_response)}\n\n"
 
 @app.post("/chatrooms")
@@ -547,9 +572,12 @@ async def create_chatroom():
 async def get_chatrooms():
     """모든 채팅방 조회 (API 명세에 맞는 형식)"""
     try:
+        print(f"🔍 Getting all chatrooms. Total chatrooms in storage: {len(chat_storage.chatrooms)}")
         chatrooms = chat_storage.get_all_chatrooms()
+        print(f"📋 Returning {len(chatrooms)} chatrooms: {chatrooms}")
         return {"chatrooms": chatrooms}
     except Exception as e:
+        print(f"❌ Error getting chatrooms: {e}")
         raise HTTPException(status_code=500, detail=f"채팅방 조회 실패: {str(e)}")
 
 @app.get("/chatrooms/{chatroom_id}/history")

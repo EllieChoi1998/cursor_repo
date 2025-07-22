@@ -31,13 +31,24 @@ export const createChatRoom = async () => {
 // API 명세에 맞는 채팅방 목록 조회
 export const getChatRooms = async () => {
   try {
+    console.log('🔍 Fetching chatrooms from:', `${API_BASE_URL}/chatrooms`)
     const response = await fetch(`${API_BASE_URL}/chatrooms`)
+    
+    console.log('📡 Response status:', response.status, response.statusText)
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
     const data = await response.json()
+    console.log('📦 Raw response data:', data)
+    
+    if (!data.chatrooms) {
+      console.error('❌ No chatrooms field in response:', data)
+      return []
+    }
+    
+    console.log('✅ Chatrooms found:', data.chatrooms)
     return data.chatrooms
   } catch (error) {
     console.error('Error fetching chatrooms:', error)
@@ -48,13 +59,17 @@ export const getChatRooms = async () => {
 // API 명세에 맞는 채팅방 히스토리 조회
 export const getChatRoomHistory = async (chatroomId) => {
   try {
+    console.log('🔍 Fetching history for chatroom:', chatroomId)
     const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}/history`)
+    
+    console.log('📡 History response status:', response.status, response.statusText)
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
     const data = await response.json()
+    console.log('📦 History response data:', data)
     return data
   } catch (error) {
     console.error('Error fetching chatroom history:', error)
