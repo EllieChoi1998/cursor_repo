@@ -135,6 +135,10 @@
                     <span class="result-type">{{ result.type }}</span>
                     <span class="result-time">{{ formatTime(result.timestamp) }}</span>
                     <span v-if="result.chatId" class="chat-id">Chat ID: {{ result.chatId }}</span>
+                    <div v-if="result.userMessage" class="user-message">
+                      <span class="user-message-label">💬 User Message:</span>
+                      <span class="user-message-text">{{ result.userMessage }}</span>
+                    </div>
                   </div>
                   <div class="result-actions">
                     <button 
@@ -212,6 +216,10 @@
             <span class="result-type">{{ fullscreenResult?.type }}</span>
             <span class="result-time">{{ formatTime(fullscreenResult?.timestamp) }}</span>
             <button @click="closeFullscreen" class="close-fullscreen-btn">✕</button>
+          </div>
+          <div v-if="fullscreenResult?.userMessage" class="fullscreen-user-message">
+            <span class="user-message-label">💬 User Message:</span>
+            <span class="user-message-text">{{ fullscreenResult.userMessage }}</span>
           </div>
         </div>
         
@@ -705,6 +713,10 @@ export default defineComponent({
               const realData = data.response.real_data
               const chartData = generatePCMDataWithRealData(realData)
               
+              // 현재 유저 메시지 찾기
+              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
+              
               const newResult = {
                 id: Date.now(),
                 type: 'pcm_trend',
@@ -715,7 +727,8 @@ export default defineComponent({
                 chatId: data.chat_id,
                 sql: data.response.sql,
                 realData: realData,
-                resultType: data.response.result
+                resultType: data.response.result,
+                userMessage: userMessage ? userMessage.text : 'Unknown message'
               }
               
               // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
@@ -734,6 +747,11 @@ export default defineComponent({
             } else if (data.response.result === 'lot_point') {
               // PCM 트렌드 포인트 데이터 처리
               const realData = data.response.real_data
+              
+              // 현재 유저 메시지 찾기
+              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
+              
               const newResult = {
                 id: Date.now(),
                 type: 'pcm_trend_point',
@@ -743,7 +761,8 @@ export default defineComponent({
                 timestamp: new Date(),
                 chatId: data.chat_id,
                 sql: data.response.sql,
-                realData: realData
+                realData: realData,
+                userMessage: userMessage ? userMessage.text : 'Unknown message'
               }
               // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
               const currentResults = chatResults.value[activeChatId.value] || []
@@ -757,6 +776,10 @@ export default defineComponent({
             else if (data.response.real_data && data.response.real_data.length > 0) {
               const realData = data.response.real_data
               
+              // 현재 유저 메시지 찾기
+              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
+              
               const newResult = {
                 id: Date.now(),
                 type: 'dynamic_table',
@@ -766,7 +789,8 @@ export default defineComponent({
                 chatId: data.chat_id,
                 sql: data.response.sql || data.response.SQL,
                 realData: realData,
-                resultType: data.response.result
+                resultType: data.response.result,
+                userMessage: userMessage ? userMessage.text : 'Unknown message'
               }
               
               // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
@@ -2310,7 +2334,50 @@ body {
 
 .message-text a:hover {
   background: rgba(0, 123, 255, 0.2);
-  color: #0056b3;
-  text-decoration: underline;
+}
+
+/* User Message Styles */
+.user-message {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0, 123, 255, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #007bff;
+}
+
+.user-message-label {
+  font-weight: 600;
+  color: #007bff;
+  font-size: 0.85rem;
+  margin-right: 0.5rem;
+}
+
+.user-message-text {
+  color: #333;
+  font-size: 0.9rem;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.fullscreen-user-message {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 123, 255, 0.1);
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.fullscreen-user-message .user-message-label {
+  font-weight: 600;
+  color: #007bff;
+  font-size: 1rem;
+  margin-right: 0.75rem;
+}
+
+.fullscreen-user-message .user-message-text {
+  color: #333;
+  font-size: 1rem;
+  word-break: break-word;
+  line-height: 1.5;
 }
 </style> 
