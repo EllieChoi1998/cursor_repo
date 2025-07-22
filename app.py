@@ -218,11 +218,11 @@ def initialize_default_chatrooms():
     """기본 채팅방들을 생성합니다."""
     if not chat_storage.chatrooms:
         # 일반 채팅방 (기본) - choice는 pcm로 유지하되 메시지는 일반적인 내용
-        general_room = chat_storage.create_chatroom('pcm')
+        general_room = chat_storage.create_chatroom()
         chat_storage.add_message(general_room.id, '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.', 'bot', 'pcm')
         
         # 샘플 채팅 히스토리 추가
-        sample_data = [{'DATE_WAFER_ID': 1, 'MIN': 10, 'MAX': 20, 'Q1': 15, 'Q2': 16, 'Q3': 17, 'DEVICE': 'A'}]
+        sample_data = [{'DATE_WAFER_ID': '2025-06-18:36:57:54_A12345678998999', 'MIN': 10, 'MAX': 20, 'Q1': 15, 'Q2': 16, 'Q3': 17, 'DEVICE': 'A'}]
         chat_storage.add_chat_history(
             general_room.id, 
             "PCM 트렌드를 보여줘", 
@@ -299,9 +299,9 @@ def analyze_query(message: str) -> tuple[str, str, str]:
 def generate_pcm_trend_data() -> list:
     """PCM 트렌드 데이터 생성"""
     data = []
-    for i in range(1, 21):
+    for i in range(1, 1000):
         data.append({
-            'DATE_WAFER_ID': i,
+            'DATE_WAFER_ID': f'2025-06-{i}:36:57:54_A12345678998999',
             'MIN': round(random.uniform(8, 12), 2),
             'MAX': round(random.uniform(18, 22), 2),
             'Q1': round(random.uniform(14, 16), 2),
@@ -334,31 +334,31 @@ def generate_commonality_data() -> tuple[list, dict]:
 def generate_pcm_point_data() -> list:
     """PCM 트렌드 포인트(라인+마커)용 예시 데이터 (고정값)"""
     return [
-        {'DATE_WAFER_ID': 1, 'PCM_SITE': '1', 'VALUE': 10},
-        {'DATE_WAFER_ID': 1, 'PCM_SITE': '2', 'VALUE': 11},
-        {'DATE_WAFER_ID': 1, 'PCM_SITE': '3', 'VALUE': 12},
-        {'DATE_WAFER_ID': 1, 'PCM_SITE': '4', 'VALUE': 13},
-        {'DATE_WAFER_ID': 1, 'PCM_SITE': '5', 'VALUE': 14},
-        {'DATE_WAFER_ID': 2, 'PCM_SITE': '1', 'VALUE': 11},
-        {'DATE_WAFER_ID': 2, 'PCM_SITE': '2', 'VALUE': 12},
-        {'DATE_WAFER_ID': 2, 'PCM_SITE': '3', 'VALUE': 13},
-        {'DATE_WAFER_ID': 2, 'PCM_SITE': '4', 'VALUE': 14},
-        {'DATE_WAFER_ID': 2, 'PCM_SITE': '5', 'VALUE': 15},
-        {'DATE_WAFER_ID': 3, 'PCM_SITE': '1', 'VALUE': 10},
-        {'DATE_WAFER_ID': 3, 'PCM_SITE': '2', 'VALUE': 11},
-        {'DATE_WAFER_ID': 3, 'PCM_SITE': '3', 'VALUE': 12},
-        {'DATE_WAFER_ID': 3, 'PCM_SITE': '4', 'VALUE': 13},
-        {'DATE_WAFER_ID': 3, 'PCM_SITE': '5', 'VALUE': 14},
-        {'DATE_WAFER_ID': 4, 'PCM_SITE': '1', 'VALUE': 12},
-        {'DATE_WAFER_ID': 4, 'PCM_SITE': '2', 'VALUE': 13},
-        {'DATE_WAFER_ID': 4, 'PCM_SITE': '3', 'VALUE': 14},
-        {'DATE_WAFER_ID': 4, 'PCM_SITE': '4', 'VALUE': 15},
-        {'DATE_WAFER_ID': 4, 'PCM_SITE': '5', 'VALUE': 16},
-        {'DATE_WAFER_ID': 5, 'PCM_SITE': '1', 'VALUE': 14},
-        {'DATE_WAFER_ID': 5, 'PCM_SITE': '2', 'VALUE': 13},
-        {'DATE_WAFER_ID': 5, 'PCM_SITE': '3', 'VALUE': 13},
-        {'DATE_WAFER_ID': 5, 'PCM_SITE': '4', 'VALUE': 12},
-        {'DATE_WAFER_ID': 5, 'PCM_SITE': '5', 'VALUE': 11},
+        {'DATE_WAFER_ID': '2025-06-1:36:57:54_A12345678998999', 'PCM_SITE': '1', 'VALUE': 10},
+        {'DATE_WAFER_ID': '2025-06-2:36:57:54_A12345678998999', 'PCM_SITE': '2', 'VALUE': 11},
+        {'DATE_WAFER_ID': '2025-06-3:36:57:54_A12345678998999', 'PCM_SITE': '3', 'VALUE': 12},
+        {'DATE_WAFER_ID': '2025-06-4:36:57:54_A12345678998999', 'PCM_SITE': '4', 'VALUE': 13},
+        {'DATE_WAFER_ID': '2025-06-5:36:57:54_A12345678998999', 'PCM_SITE': '5', 'VALUE': 14},
+        {'DATE_WAFER_ID': '2025-06-6:36:57:54_A12345678998999', 'PCM_SITE': '1', 'VALUE': 11},
+        {'DATE_WAFER_ID': '2025-06-7:36:57:54_A12345678998999', 'PCM_SITE': '2', 'VALUE': 12},
+        {'DATE_WAFER_ID': '2025-06-8:36:57:54_A12345678998999', 'PCM_SITE': '3', 'VALUE': 13},
+        {'DATE_WAFER_ID': '2025-06-9:36:57:54_A12345678998999', 'PCM_SITE': '4', 'VALUE': 14},
+        {'DATE_WAFER_ID': '2025-06-10:36:57:54_A12345678998999', 'PCM_SITE': '5', 'VALUE': 15},
+        {'DATE_WAFER_ID': '2025-06-11:36:57:54_A12345678998999', 'PCM_SITE': '1', 'VALUE': 10},
+        {'DATE_WAFER_ID': '2025-06-12:36:57:54_A12345678998999', 'PCM_SITE': '2', 'VALUE': 11},
+        {'DATE_WAFER_ID': '2025-06-13:36:57:54_A12345678998999', 'PCM_SITE': '3', 'VALUE': 12},
+        {'DATE_WAFER_ID': '2025-06-14:36:57:54_A12345678998999', 'PCM_SITE': '4', 'VALUE': 13},
+        {'DATE_WAFER_ID': '2025-06-15:36:57:54_A12345678998999', 'PCM_SITE': '5', 'VALUE': 14},
+        {'DATE_WAFER_ID': '2025-06-16:36:57:54_A12345678998999', 'PCM_SITE': '1', 'VALUE': 12},
+        {'DATE_WAFER_ID': '2025-06-17:36:57:54_A12345678998999', 'PCM_SITE': '2', 'VALUE': 13},
+        {'DATE_WAFER_ID': '2025-06-18:36:57:54_A12345678998999', 'PCM_SITE': '3', 'VALUE': 14},
+        {'DATE_WAFER_ID': '2025-06-19:36:57:54_A12345678998999', 'PCM_SITE': '4', 'VALUE': 15},
+        {'DATE_WAFER_ID': '2025-06-20:36:57:54_A12345678998999', 'PCM_SITE': '5', 'VALUE': 16},
+        {'DATE_WAFER_ID': '2025-06-21:36:57:54_A12345678998999', 'PCM_SITE': '1', 'VALUE': 14},
+        {'DATE_WAFER_ID': '2025-06-22:36:57:54_A12345678998999', 'PCM_SITE': '2', 'VALUE': 13},
+        {'DATE_WAFER_ID': '2025-06-23:36:57:54_A12345678998999', 'PCM_SITE': '3', 'VALUE': 13},
+        {'DATE_WAFER_ID': '2025-06-24:36:57:54_A12345678998999', 'PCM_SITE': '4', 'VALUE': 12},
+        {'DATE_WAFER_ID': '2025-06-25:36:57:54_A12345678998999', 'PCM_SITE': '5', 'VALUE': 11},
     ]
 
 def generate_cp_analysis_data() -> list:

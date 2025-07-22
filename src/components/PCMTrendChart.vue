@@ -93,6 +93,14 @@ export default defineComponent({
     title: {
       type: String,
       default: 'PCM Trend Analysis'
+    },
+    maxLabels: {
+      type: Number,
+      default: 50  // 사용자가 설정 가능하도록 props로 받음
+    },
+    dataSampling: {
+      type: Boolean,
+      default: true  // 데이터 샘플링 여부
     }
   },
   setup(props) {
@@ -135,9 +143,11 @@ export default defineComponent({
     const createChart = () => {
       if (!chartContainer.value) return
 
-      // Data is already in object format (DataFrame JSON)
+      // 데이터 샘플링 제거 - 전체 데이터 사용
       const data = props.data
+      console.log(`PCMTrendChart 전체 데이터 사용: ${data.length}개`)
 
+      // Data is already in object format (DataFrame JSON)
       // Extract data for control lines
       const dateWaferIds = data.map(row => row.DATE_WAFER_ID)
       const usls = data.map(row => row.USL)
@@ -145,6 +155,14 @@ export default defineComponent({
       const lsls = data.map(row => row.LSL)
       const ucls = data.map(row => row.UCL)
       const lcls = data.map(row => row.LCL)
+
+      // x축 라벨 생성 (적절한 간격으로 표시)
+      const xOrder = [...new Set(dateWaferIds)].sort((a, b) => a - b)
+      const maxLabels = 50  // 적절한 라벨 수
+      const step = Math.max(1, Math.floor(xOrder.length / maxLabels))
+      const sampledLabels = xOrder.filter((_, index) => index % step === 0)
+      
+      console.log(`PCMTrendChart x축 라벨: ${xOrder.length}개 → ${sampledLabels.length}개 샘플링 (최대 ${maxLabels}개)`)
 
       // Create box plot traces for each device
       const deviceTypes = [...new Set(data.map(row => row.DEVICE))]
@@ -291,10 +309,25 @@ export default defineComponent({
         xaxis: {
           title: 'Date Wafer ID',
           type: 'category',
-          categoryorder: 'array',
-          categoryarray: dateWaferIds,
           showgrid: true,
-          gridcolor: '#f0f0f0'
+          gridcolor: '#f0f0f0',
+          // 적절한 라벨 표시
+          showticklabels: true,
+          tickangle: 90,  // 45도 회전으로 겹침 방지
+          tickmode: 'array',  // 명시적 라벨 설정
+          tickvals: sampledLabels,  // 샘플링된 라벨 사용
+          ticktext: sampledLabels.map(val => val.toString()),  // 샘플링된 텍스트
+          tickfont: {
+            size: 9,  // 적절한 폰트 크기
+            color: '#333'
+          },
+          automargin: true,
+          // 하단에 라벨 표시
+          side: 'bottom',  // 하단에 라벨 표시
+          tickposition: 'outside',
+          // category 순서 설정 (전체 데이터, 순서 유지)
+          categoryorder: 'array',
+          categoryarray: xOrder  // 전체 데이터 순서 유지
         },
         yaxis: {
           title: 'Values',
@@ -313,20 +346,29 @@ export default defineComponent({
         margin: {
           l: 60,
           r: 40,
-          t: 80,
-          b: 60
+          t: 80,  // 150 → 80으로 줄임 (위쪽 라벨 없음)
+          b: 150  // 60 → 150으로 증가 (하단 라벨 공간)
         },
         plot_bgcolor: 'white',
         paper_bgcolor: 'white',
         hovermode: 'closest'
       }
 
+      console.log('PCMTrendChart 생성 중...', { 
+        dataLength: data.length, 
+        xLabels: sampledLabels.length,
+        sampleData: data.slice(0, 3),  // 처음 3개 데이터 샘플
+        dateWaferIds: dateWaferIds.slice(0, 10),  // 처음 10개 ID
+        deviceTypes: deviceTypes
+      })
+
       // Plot the chart
       Plotly.newPlot(chartContainer.value, allTraces, layout, {
         responsive: true,
         displayModeBar: true,
         modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
-        displaylogo: false
+        displaylogo: false,
+        scrollZoom: true
       })
     }
 
@@ -387,6 +429,8 @@ export default defineComponent({
     watch(() => props.data, updateChart, { deep: true })
     watch(() => props.height, updateChart)
     watch(() => props.title, updateChart)
+    watch(() => props.maxLabels, updateChart)
+    watch(() => props.dataSampling, updateChart)
 
     return {
       chartContainer

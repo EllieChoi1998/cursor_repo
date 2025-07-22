@@ -165,6 +165,8 @@
                       :data="result.data"
                       :height="chartHeight"
                       :title="result.title"
+                      :maxLabels="50"
+                      :dataSampling="false"
                     />
                   </div>
 
@@ -214,6 +216,8 @@
               :data="fullscreenResult.data"
               :height="800"
               :title="fullscreenResult.title"
+              :maxLabels="50"
+              :dataSampling="false"
             />
           </div>
           
@@ -223,6 +227,8 @@
               :data="fullscreenResult.data"
               :height="800"
               :title="fullscreenResult.title"
+              :maxLabels="50"
+              :dataSampling="false"
             />
           </div>
           
