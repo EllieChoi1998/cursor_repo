@@ -78,18 +78,30 @@ export default defineComponent({
 
 
     const formatTime = (timestamp) => {
+      if (!timestamp) return ''
+      
       const now = new Date()
-      const diff = now - timestamp
+      const messageDate = new Date(timestamp)
+      const diff = now - messageDate
       const minutes = Math.floor(diff / (1000 * 60))
       const hours = Math.floor(diff / (1000 * 60 * 60))
       const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+      // 오늘인지 확인
+      const isToday = messageDate.toDateString() === now.toDateString()
 
       if (minutes < 60) {
         return `${minutes}분 전`
       } else if (hours < 24) {
         return `${hours}시간 전`
-      } else {
+      } else if (days < 7) {
         return `${days}일 전`
+      } else {
+        // 7일 이상 지난 경우 날짜 표시
+        return messageDate.toLocaleDateString('ko-KR', { 
+          month: 'short',
+          day: 'numeric'
+        })
       }
     }
 

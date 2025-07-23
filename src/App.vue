@@ -54,25 +54,41 @@
                     </button>
                   </div>
                   <div v-else class="message-text" v-html="message.text"></div>
-                  <div class="message-time">{{ formatTime(message.timestamp) }}</div>
+                  <div class="message-time">
+                    {{ formatTime(message.timestamp) }}
+                    <span v-if="message.originalTime && showOriginalTime" class="original-time" :title="message.originalTime">
+                      (원본: {{ new Date(message.originalTime).toLocaleString('ko-KR') }})
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
             
             <div class="chat-input-container">
               <div class="input-controls">
-                <div class="data-type-selector">
-                  <label for="dataType">Data Type:</label>
-                  <select 
-                    id="dataType"
-                    v-model="selectedDataType" 
-                    class="data-type-dropdown"
-                    :disabled="isLoading"
-                  >
-                    <option value="pcm">PCM (Process Control Monitor)</option>
-                    <option value="cp">CP (Critical Path)</option>
-                    <option value="rag">RAG (Retrieval-Augmented Generation)</option>
-                  </select>
+                <div class="input-controls-top">
+                  <div class="data-type-selector">
+                    <label for="dataType">Data Type:</label>
+                    <select 
+                      id="dataType"
+                      v-model="selectedDataType" 
+                      class="data-type-dropdown"
+                      :disabled="isLoading"
+                    >
+                      <option value="pcm">PCM (Process Control Monitor)</option>
+                      <option value="cp">CP (Critical Path)</option>
+                      <option value="rag">RAG (Retrieval-Augmented Generation)</option>
+                    </select>
+                  </div>
+                  <div class="time-toggle">
+                    <button 
+                      @click="showOriginalTime = !showOriginalTime" 
+                      :class="['time-toggle-btn', { 'active': showOriginalTime }]"
+                      title="원본 시간 표시 토글"
+                    >
+                      {{ showOriginalTime ? '🕐' : '🕑' }} 원본시간
+                    </button>
+                  </div>
                 </div>
                 <div class="message-input-group">
                   <input 
@@ -356,6 +372,7 @@ export default defineComponent({
     // 에러 상태 관리
     const currentError = ref('')
     const showError = ref(false)
+const showOriginalTime = ref(false) // 원본 시간 표시 토글
     
     // 리사이즈 관련 refs
     const sidebar = ref(null)
@@ -457,7 +474,32 @@ export default defineComponent({
     })
 
     const formatTime = (timestamp) => {
-      return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      if (!timestamp) return ''
+      
+      const now = new Date()
+      const messageDate = new Date(timestamp)
+      
+      // 오늘인지 확인
+      const isToday = messageDate.toDateString() === now.toDateString()
+      
+      if (isToday) {
+        // 오늘은 시간만 표시
+        return messageDate.toLocaleTimeString('ko-KR', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          second: '2-digit'
+        })
+      } else {
+        // 다른 날은 날짜와 시간 모두 표시
+        return messageDate.toLocaleString('ko-KR', { 
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit', 
+          minute: '2-digit',
+          second: '2-digit'
+        })
+      }
     }
 
     // 응답 데이터로부터 결과 객체 생성하는 함수
@@ -1130,69 +1172,73 @@ export default defineComponent({
               const results = [] // 결과 배열 초기화
               
               history.recent_conversations.forEach(conv => {
-              messages.push({
-                type: 'user',
-                text: conv.user_message,
-                timestamp: new Date(conv.chat_time),
-                chatId: conv.chat_id // 백엔드에서 받은 chat_id 사용
-              })
-              
-              // bot_response를 파싱하여 적절히 처리
-              let botResponseText = conv.bot_response
-              let responseData = null
-              
-              console.log('🔍 Parsing bot response:', conv.bot_response)
-              
-              try {
-                const parsed = JSON.parse(conv.bot_response)
-                console.log('✅ Parsed response data:', parsed)
+                // 사용자 메시지 추가 (chat_time 기준)
+                messages.push({
+                  type: 'user',
+                  text: conv.user_message,
+                  timestamp: new Date(conv.chat_time),
+                  chatId: conv.chat_id, // 백엔드에서 받은 chat_id 사용
+                  originalTime: conv.chat_time // 원본 시간 문자열 저장
+                })
                 
-                if (parsed.result) {
-                  console.log('🔍 Processing result:', parsed.result)
-                  // 실제 응답 데이터를 기반으로 구체적인 메시지 생성
-                  if (parsed.result === 'lot_start') {
-                    botResponseText = `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
-                  } else if (parsed.result === 'lot_point') {
-                    botResponseText = `✅ PCM 트렌드 포인트 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
-                  } else if (parsed.result === 'commonality_start') {
-                    botResponseText = `✅ PCM 커먼 분석이 완료되었습니다!\n• SQL: ${parsed.SQL || 'N/A'}\n• Determined: ${JSON.stringify(parsed.determined) || 'N/A'}\n• Chat ID: ${conv.chat_id}`
-                  } else if (parsed.result === 'rag') {
-                    if (parsed.files) {
-                      botResponseText = `✅ RAG 검색이 완료되었습니다!\n• ${parsed.files.length}개의 파일을 찾았습니다.\n• Chat ID: ${conv.chat_id}`
-                    } else if (parsed.response) {
-                      botResponseText = `✅ RAG 응답: ${parsed.response}\n• Chat ID: ${conv.chat_id}`
+                // bot_response를 파싱하여 적절히 처리
+                let botResponseText = conv.bot_response
+                let responseData = null
+                
+                console.log('🔍 Parsing bot response:', conv.bot_response)
+                
+                try {
+                  const parsed = JSON.parse(conv.bot_response)
+                  console.log('✅ Parsed response data:', parsed)
+                  
+                  if (parsed.result) {
+                    console.log('🔍 Processing result:', parsed.result)
+                    // 실제 응답 데이터를 기반으로 구체적인 메시지 생성
+                    if (parsed.result === 'lot_start') {
+                      botResponseText = `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+                    } else if (parsed.result === 'lot_point') {
+                      botResponseText = `✅ PCM 트렌드 포인트 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+                    } else if (parsed.result === 'commonality_start') {
+                      botResponseText = `✅ PCM 커먼 분석이 완료되었습니다!\n• SQL: ${parsed.SQL || 'N/A'}\n• Determined: ${JSON.stringify(parsed.determined) || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+                    } else if (parsed.result === 'rag') {
+                      if (parsed.files) {
+                        botResponseText = `✅ RAG 검색이 완료되었습니다!\n• ${parsed.files.length}개의 파일을 찾았습니다.\n• Chat ID: ${conv.chat_id}`
+                      } else if (parsed.response) {
+                        botResponseText = `✅ RAG 응답: ${parsed.response}\n• Chat ID: ${conv.chat_id}`
+                      } else {
+                        botResponseText = `✅ RAG 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
+                      }
                     } else {
-                      botResponseText = `✅ RAG 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
+                      botResponseText = `✅ ${parsed.result.toUpperCase()} 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
+                    }
+                    responseData = parsed
+                    
+                    // 응답 데이터가 있으면 결과 생성 (real_data가 없어도 메타데이터는 저장)
+                    if (responseData) {
+                      const result = createResultFromResponseData(responseData, conv.user_message, conv.chat_id)
+                      if (result) {
+                        results.push(result)
+                      }
                     }
                   } else {
-                    botResponseText = `✅ ${parsed.result.toUpperCase()} 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
+                    console.warn('⚠️ No result field in parsed response')
                   }
-                  responseData = parsed
-                  
-                  // 응답 데이터가 있으면 결과 생성 (real_data가 없어도 메타데이터는 저장)
-                  if (responseData) {
-                    const result = createResultFromResponseData(responseData, conv.user_message, conv.chat_id)
-                    if (result) {
-                      results.push(result)
-                    }
-                  }
-                } else {
-                  console.warn('⚠️ No result field in parsed response')
+                } catch (e) {
+                  // JSON 파싱 실패시 원본 텍스트 사용
+                  console.warn('❌ Failed to parse bot response:', e)
+                  console.log('📄 Raw bot response:', conv.bot_response)
                 }
-              } catch (e) {
-                // JSON 파싱 실패시 원본 텍스트 사용
-                console.warn('❌ Failed to parse bot response:', e)
-                console.log('📄 Raw bot response:', conv.bot_response)
-              }
-              
-              messages.push({
-                type: 'bot',
-                text: botResponseText,
-                timestamp: new Date(conv.response_time),
-                chatId: conv.chat_id, // 백엔드에서 받은 chat_id 사용
-                responseData: responseData // 파싱된 응답 데이터 저장
+                
+                // 봇 응답 메시지 추가 (response_time 기준)
+                messages.push({
+                  type: 'bot',
+                  text: botResponseText,
+                  timestamp: new Date(conv.response_time),
+                  chatId: conv.chat_id, // 백엔드에서 받은 chat_id 사용
+                  responseData: responseData, // 파싱된 응답 데이터 저장
+                  originalTime: conv.response_time // 원본 시간 문자열 저장
+                })
               })
-            })
             
             // 결과 설정
             chatResults.value[room.id] = results
@@ -1249,11 +1295,13 @@ export default defineComponent({
         
         // 히스토리를 메시지 형태로 변환
         history.recent_conversations.forEach(conv => {
+          // 사용자 메시지 추가 (chat_time 기준)
           messages.push({
             type: 'user',
             text: conv.user_message,
             timestamp: new Date(conv.chat_time),
-            chatId: conv.chat_id // 백엔드에서 받은 chat_id 사용
+            chatId: conv.chat_id, // 백엔드에서 받은 chat_id 사용
+            originalTime: conv.chat_time // 원본 시간 문자열 저장
           })
           
           // bot_response를 파싱하여 적절히 처리
@@ -1304,12 +1352,14 @@ export default defineComponent({
             console.log('📄 Raw bot response (refresh):', conv.bot_response)
           }
           
+          // 봇 응답 메시지 추가 (response_time 기준)
           messages.push({
             type: 'bot',
             text: botResponseText,
             timestamp: new Date(conv.response_time),
             chatId: conv.chat_id, // 백엔드에서 받은 chat_id 사용
-            responseData: responseData // 파싱된 응답 데이터 저장
+            responseData: responseData, // 파싱된 응답 데이터 저장
+            originalTime: conv.response_time // 원본 시간 문자열 저장
           })
         })
         
@@ -1494,6 +1544,7 @@ export default defineComponent({
         // 에러 상태
         currentError,
         showError,
+        showOriginalTime,
         // 전체화면 모달
         fullscreenResult,
         showFullscreen,
@@ -1680,6 +1731,16 @@ body {
   color: #999;
   margin-top: 0.25rem;
   text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.original-time {
+  font-size: 0.65rem;
+  color: #bbb;
+  font-style: italic;
+  cursor: help;
 }
 
 .message.user .message-time {
@@ -1701,6 +1762,42 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.input-controls-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.time-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.time-toggle-btn {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.time-toggle-btn:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.time-toggle-btn.active {
+  border-color: #667eea;
+  background: #667eea;
+  color: white;
 }
 
 .data-type-selector {

@@ -191,21 +191,24 @@ class ChatStorage:
         self.messages[message_id] = message
         return message
     
-    def add_chat_history(self, chatroom_id: int, user_message: str, bot_response: str) -> ChatHistory:
+    def add_chat_history(self, chatroom_id: int, user_message: str, bot_response: str, user_time: datetime = None, response_time: datetime = None) -> ChatHistory:
         """채팅 히스토리 추가"""
         chat_id = self.next_chat_id
         self.next_chat_id += 1
         
         print(f"🔧 Creating chat history with chat_id: {chat_id} for chatroom: {chatroom_id}")
         
-        now = datetime.now()
+        # 시간 설정: 파라미터로 받은 시간이 있으면 사용, 없으면 현재 시간
+        chat_time = user_time if user_time else datetime.now()
+        bot_response_time = response_time if response_time else datetime.now()
+        
         history = ChatHistory(
             chat_id=chat_id,
             chatroom_id=chatroom_id,
             user_message=user_message,
-            chat_time=now,
+            chat_time=chat_time,
             bot_response=bot_response,
-            response_time=now
+            response_time=bot_response_time
         )
         
         if chatroom_id not in self.chat_histories:
@@ -213,6 +216,7 @@ class ChatStorage:
         
         self.chat_histories[chatroom_id].append(history)
         print(f"✅ Added chat history with chat_id: {chat_id}")
+        print(f"📅 Chat time: {chat_time}, Response time: {bot_response_time}")
         return history
     
     def get_messages_by_chatroom(self, chatroom_id: int) -> List[Message]:
@@ -252,8 +256,11 @@ def initialize_default_chatrooms():
         chat_storage.add_message(general_room.id, '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.', 'bot', 'pcm')
         print(f"📝 Added welcome message to chatroom {general_room.id}")
         
-        # 샘플 채팅 히스토리 추가
+        # 샘플 채팅 히스토리 추가 (시간 차이를 두어 실제 상황 시뮬레이션)
         sample_data = [{'DATE_WAFER_ID': '2025-06-18:36:57:54_A12345678998999', 'MIN': 10, 'MAX': 20, 'Q1': 15, 'Q2': 16, 'Q3': 17, 'DEVICE': 'A'}]
+        user_time = datetime.now()
+        response_time = user_time.replace(second=user_time.second + 2)  # 2초 후 응답
+        
         chat_storage.add_chat_history(
             general_room.id, 
             "PCM 트렌드를 보여줘", 
@@ -262,7 +269,9 @@ def initialize_default_chatrooms():
                 'real_data': sample_data,
                 'sql': 'SELECT * FROM pcm_data WHERE date >= "2024-01-01" ORDER BY date_wafer_id',
                 'timestamp': datetime.now().isoformat()
-            })
+            }),
+            user_time=user_time,
+            response_time=response_time
         )
         print(f"📝 Added sample chat history to chatroom {general_room.id}")
     else:
@@ -456,6 +465,9 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
         yield f"data: {json.dumps({'msg': error_msg})}\n\n"
         return
     
+    # 사용자 메시지 시간 기록
+    user_message_time = datetime.now()
+    
     # 유효한 메시지만 저장
     user_message = chat_storage.add_message(chatroom_id, message, 'user', detected_type)
     
@@ -540,10 +552,20 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
     print(f"📝 Saving to chat history (real_data excluded): {json.dumps(history_response, indent=2)}")
     print(f"📝 JSON string being saved: {json.dumps(history_response)}")
     
-    # 채팅 히스토리에 추가 (real_data 제외) - chat_id 반환받기
-    chat_history = chat_storage.add_chat_history(chatroom_id, message, json.dumps(history_response))
+    # 봇 응답 시간 기록
+    bot_response_time = datetime.now()
+    
+    # 채팅 히스토리에 추가 (real_data 제외) - 실제 시간 사용
+    chat_history = chat_storage.add_chat_history(
+        chatroom_id, 
+        message, 
+        json.dumps(history_response),
+        user_time=user_message_time,
+        response_time=bot_response_time
+    )
     print(f"📝 Chat history saved with chat_id: {chat_history.chat_id}")
     print(f"📝 Bot response in chat history: {chat_history.bot_response}")
+    print(f"📅 User message time: {user_message_time}, Bot response time: {bot_response_time}")
     
     # 성공 메시지는 저장하지 않음 (프론트엔드에서만 표시)
     # 실제 응답 데이터는 채팅 히스토리에만 저장
