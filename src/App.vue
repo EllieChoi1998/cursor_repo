@@ -37,23 +37,56 @@
                   <span v-else>🤖</span>
                 </div>
                 <div class="message-content">
-                  <div v-if="message.isEditable && message.type === 'user'" class="editable-message">
-                    <input 
-                      v-model="message.text"
-                      @blur="editMessage(index, message.text)"
-                      @keyup.enter="editMessage(index, message.text)"
-                      class="message-edit-input"
-                      :disabled="isLoading"
-                    />
-                    <button 
-                      @click="editMessage(index, message.text)"
-                      class="edit-button"
-                      :disabled="isLoading"
-                    >
-                      ✏️
-                    </button>
+                  <!-- 사용자 메시지인 경우 수정 가능한 형태로 표시 -->
+                  <div v-if="message.type === 'user'" class="user-message-container">
+                    <!-- 수정 모드 -->
+                    <div v-if="message.isEditing" class="editable-message">
+                      <input 
+                        v-model="message.editText"
+                        @blur="saveEdit(index)"
+                        @keyup.enter="saveEdit(index)"
+                        @keyup.esc="cancelEdit(index)"
+                        class="message-edit-input"
+                        :disabled="isLoading"
+                        ref="editInput"
+                      />
+                      <div class="edit-buttons">
+                        <button 
+                          @click="saveEdit(index)"
+                          class="save-button"
+                          :disabled="isLoading"
+                          title="저장"
+                        >
+                          ✅
+                        </button>
+                        <button 
+                          @click="cancelEdit(index)"
+                          class="cancel-button"
+                          :disabled="isLoading"
+                          title="취소"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    </div>
+                    <!-- 일반 표시 모드 -->
+                    <div v-else class="message-display">
+                      <div class="message-text" v-html="message.text"></div>
+                      <div class="message-actions">
+                        <button 
+                          @click="startEdit(index)"
+                          class="edit-action-button"
+                          :disabled="isLoading"
+                          title="메시지 수정"
+                        >
+                          ✏️
+                        </button>
+                      </div>
+                    </div>
                   </div>
+                  <!-- 봇 메시지는 기존과 동일 -->
                   <div v-else class="message-text" v-html="message.text"></div>
+                  
                   <div class="message-time">
                     {{ formatTime(message.timestamp) }}
                     <span v-if="message.originalTime && showOriginalTime" class="original-time" :title="message.originalTime">
@@ -613,7 +646,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         timestamp: new Date(),
         isEditable,
         originalMessage,
-        isError: type === 'bot' && text.includes('❌')
+        isError: type === 'bot' && text.includes('❌'),
+        // 수정 관련 속성들 추가
+        isEditing: false,
+        editText: ''
       }
       
       const currentMessages = [...(chatMessages.value[activeChatId.value] || [])]
@@ -1044,9 +1080,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       // 새 메시지 전송 시 기존 에러 메시지들 제거
       clearErrorMessages()
       
-      // Add user message (수정 가능하게)
-      const messageIndex = chatMessages.value[activeChatId.value]?.length || 0
-      addMessage('user', message, true, messageIndex)
+      // Add user message (모든 사용자 메시지는 수정 가능)
+      addMessage('user', message)
       currentMessage.value = ''
       isLoading.value = true
       
@@ -1063,13 +1098,51 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       isLoading.value = false
     }
 
-    // 메시지 수정 기능
-    const editMessage = async (messageIndex, newText) => {
+    // 메시지 수정 관련 함수들
+    const startEdit = (messageIndex) => {
       const messages = chatMessages.value[activeChatId.value]
       if (!messages || !messages[messageIndex]) return
       
       const message = messages[messageIndex]
-      if (!message.isEditable) return
+      if (message.type !== 'user') return
+      
+      // 수정 모드 시작
+      message.isEditing = true
+      message.editText = message.text // 원본 텍스트를 편집 텍스트로 복사
+      
+      // 다음 tick에서 입력 필드에 포커스
+      nextTick(() => {
+        const editInput = document.querySelector('.message-edit-input')
+        if (editInput) {
+          editInput.focus()
+          editInput.select()
+        }
+      })
+    }
+    
+    const cancelEdit = (messageIndex) => {
+      const messages = chatMessages.value[activeChatId.value]
+      if (!messages || !messages[messageIndex]) return
+      
+      const message = messages[messageIndex]
+      message.isEditing = false
+      message.editText = ''
+    }
+    
+    const saveEdit = async (messageIndex) => {
+      const messages = chatMessages.value[activeChatId.value]
+      if (!messages || !messages[messageIndex]) return
+      
+      const message = messages[messageIndex]
+      if (message.type !== 'user' || !message.isEditing) return
+      
+      const newText = message.editText.trim()
+      if (!newText || newText === message.text) {
+        // 텍스트가 변경되지 않았으면 수정 모드만 종료
+        message.isEditing = false
+        message.editText = ''
+        return
+      }
       
       // 기존 응답에서 chat_id 찾기
       const currentResults = chatResults.value[activeChatId.value] || []
@@ -1082,11 +1155,18 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       if (!originalChatId) {
         console.warn('⚠️ 기존 chat_id를 찾을 수 없어 일반 채팅으로 처리합니다.')
         // 기존 방식으로 처리
+        message.text = newText
+        message.isEditing = false
+        message.editText = ''
         await processUserMessage(newText)
         return
       }
       
       try {
+        // 수정 모드 종료
+        message.isEditing = false
+        message.editText = ''
+        
         // 원본 메시지 업데이트
         message.text = newText
         message.timestamp = new Date()
@@ -1613,7 +1693,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         updateChatRoomInfo,
         updateChatRoomName,
         loadChatRooms,
-        editMessage,
+        startEdit,
+        cancelEdit,
+        saveEdit,
         newChatroomDisplay,
         handleErrorMessage,
         clearErrorMessages,
@@ -2783,5 +2865,108 @@ body {
 .metadata-details-fullscreen strong {
   color: #495057;
   font-weight: 600;
+}
+
+/* Message Edit Styles */
+.user-message-container {
+  width: 100%;
+}
+
+.editable-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.message-edit-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 2px solid #007bff;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: white;
+  color: #333;
+}
+
+.message-edit-input:focus {
+  outline: none;
+  border-color: #0056b3;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.edit-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.save-button,
+.cancel-button {
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.save-button {
+  background: #28a745;
+  color: white;
+}
+
+.save-button:hover {
+  background: #218838;
+}
+
+.cancel-button {
+  background: #dc3545;
+  color: white;
+}
+
+.cancel-button:hover {
+  background: #c82333;
+}
+
+.message-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.message-text {
+  flex: 1;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.message-actions {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.message:hover .message-actions {
+  opacity: 1;
+}
+
+.edit-action-button {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 4px;
+  background: #6c757d;
+  color: white;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.edit-action-button:hover {
+  background: #5a6268;
+}
+
+.edit-action-button:disabled {
+  background: #adb5bd;
+  cursor: not-allowed;
 }
 </style> 
