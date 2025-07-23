@@ -122,84 +122,85 @@ export const streamChatAPI = async (choice, message, chatroomId, onData) => {
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
+    let buffer = ''
     
-    // 🔧 청크 누적을 위한 버퍼
-    let accumulatedText = ''
-
     while (true) {
       const { done, value } = await reader.read()
+      if (done) break
       
-      if (done) {
-        // 마지막에 남은 데이터 처리
-        if (accumulatedText.trim()) {
-          console.log('📝 Processing final accumulated text')
-          processAccumulatedText(accumulatedText, onData)
-        }
-        break
-      }
-      
-      // 청크를 텍스트로 디코딩하고 누적
       const chunk = decoder.decode(value, { stream: true })
-      accumulatedText += chunk
-      
-      console.log('📦 Received chunk (length:', chunk.length, '), total accumulated:', accumulatedText.length)
+      buffer += chunk
       
       // 완전한 라인들을 찾아서 처리
-      const lines = accumulatedText.split('\n')
+      const lines = buffer.split('\n')
       
-      // 마지막 라인은 불완전할 수 있으므로 다시 누적 텍스트에 보관
-      accumulatedText = lines.pop() || ''
+      // 마지막 라인은 불완전할 수 있으므로 버퍼에 보관
+      buffer = lines.pop() || ''
       
-      // 완전한 라인들 처리
       for (const line of lines) {
-        if (line.trim()) {
-          console.log('📝 Processing complete line (length:', line.length, ')')
-          processLine(line.trim(), onData)
+        if (line.trim() && line.startsWith('data: ')) {
+          try {
+            const jsonString = line.slice(6).trim()
+            if (jsonString) {
+              const data = JSON.parse(jsonString)
+              console.log('✅ Successfully parsed streaming data:', Object.keys(data))
+              onData(data)
+            }
+          } catch (e) {
+            console.error('❌ Error parsing streaming data:', e)
+            console.error('❌ Problematic line:', line.substring(0, 200) + '...')
+          }
         }
       }
     }
     
-    // 완전한 라인 처리 함수
-    function processLine(line, onData) {
-      if (line.startsWith('data: ')) {
-        const jsonString = line.slice(6).trim()
-        
-        if (!jsonString) {
-          console.log('📝 Empty data line, skipping...')
-          return
-        }
-        
-        try {
-          console.log('🔍 Attempting to parse JSON (length:', jsonString.length, ')...')
-          
-          // JSON 파싱 시도
+    // 마지막에 남은 버퍼 처리
+    if (buffer.trim() && buffer.startsWith('data: ')) {
+      try {
+        const jsonString = buffer.slice(6).trim()
+        if (jsonString) {
           const data = JSON.parse(jsonString)
-          console.log('✅ Successfully parsed JSON data!')
-          console.log('✅ Data keys:', Object.keys(data))
-          
+          console.log('✅ Successfully parsed final streaming data:', Object.keys(data))
           onData(data)
-        } catch (e) {
-          console.warn('❌ Failed to parse JSON:', e.message)
-          console.warn('❌ JSON string (first 500 chars):', jsonString.substring(0, 500))
-          console.warn('❌ JSON string (last 100 chars):', jsonString.substring(Math.max(0, jsonString.length - 100)))
         }
-      } else {
-        console.log('📝 Non-data line:', line.substring(0, 50) + (line.length > 50 ? '...' : ''))
-      }
-    }
-    
-    // 누적된 텍스트 전체 처리 (fallback)
-    function processAccumulatedText(text, onData) {
-      console.log('🔄 Processing accumulated text as fallback...')
-      const lines = text.split('\n')
-      for (const line of lines) {
-        if (line.trim()) {
-          processLine(line.trim(), onData)
-        }
+      } catch (e) {
+        console.error('❌ Error parsing final streaming data:', e)
       }
     }
   } catch (error) {
-    console.error('Error in streaming chat API:', error)
+    console.error('Error in streamChatAPI:', error)
+    throw error
+  }
+}
+
+// 메시지 수정 API (새로 추가)
+export const editMessageAPI = async (choice, message, chatroomId, originalChatId) => {
+  console.log('🔄 Sending edit message request:', { choice, message, chatroomId, originalChatId })
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/edit_message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        choice: choice,
+        message: message,
+        chatroom_id: chatroomId,
+        original_chat_id: originalChatId
+      })
+    })
+    
+    console.log('📡 Edit response status:', response.status, response.statusText)
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error in editMessageAPI:', error)
     throw error
   }
 }

@@ -78,6 +78,13 @@ class ChatRequest(BaseModel):
     message: str
     chatroom_id: int  # 정수로 변경
 
+# 메시지 수정 요청 모델 (새로 추가)
+class EditMessageRequest(BaseModel):
+    choice: str  # 'pcm', 'cp', 'rag'
+    message: str
+    chatroom_id: int
+    original_chat_id: int  # 기존 chat_id
+
 # 채팅방 생성 요청 모델 제거 (파라미터 없음)
 
 # 채팅방 목록 응답 모델 (API 명세에 맞게 수정)
@@ -218,6 +225,30 @@ class ChatStorage:
         print(f"✅ Added chat history with chat_id: {chat_id}")
         print(f"📅 Chat time: {chat_time}, Response time: {bot_response_time}")
         return history
+    
+    def edit_chat_history(self, chatroom_id: int, chat_id: int, user_message: str, bot_response: str) -> Optional[ChatHistory]:
+        """채팅 히스토리 수정 (기존 chat_id 유지)"""
+        if chatroom_id not in self.chat_histories:
+            print(f"❌ Chatroom {chatroom_id} not found in histories")
+            return None
+        
+        # 기존 히스토리에서 해당 chat_id를 찾아 업데이트
+        for history in self.chat_histories[chatroom_id]:
+            if history.chat_id == chat_id:
+                print(f"🔧 Updating existing chat history with chat_id: {chat_id}")
+                
+                # 히스토리 내용 업데이트
+                history.user_message = user_message
+                history.chat_time = datetime.now()
+                history.bot_response = bot_response
+                history.response_time = datetime.now()
+                
+                print(f"✅ Updated chat history with chat_id: {chat_id}")
+                print(f"📅 Updated time: {history.chat_time}")
+                return history
+        
+        print(f"❌ Chat history with chat_id {chat_id} not found in chatroom {chatroom_id}")
+        return None
     
     def get_messages_by_chatroom(self, chatroom_id: int) -> List[Message]:
         """채팅방의 메시지 조회"""
@@ -579,7 +610,18 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
     }
     
     print(f"📤 Sending chat response with chat_id: {chat_history.chat_id}")
-    yield f"data: {json.dumps(chat_response)}\n\n"
+    
+    # 응답 데이터 크기 확인
+    response_json = json.dumps(chat_response)
+    print(f"📤 Response JSON size: {len(response_json)} characters")
+    
+    # real_data 크기 확인
+    if 'real_data' in response and response['real_data']:
+        real_data_size = len(json.dumps(response['real_data']))
+        print(f"📤 Real data size: {real_data_size} characters")
+        print(f"📤 Real data records: {len(response['real_data'])}")
+    
+    yield f"data: {response_json}\n\n"
 
 @app.post("/chatrooms")
 async def create_chatroom():
@@ -652,6 +694,147 @@ async def chat_endpoint(request: ChatRequest):
             "X-Accel-Buffering": "no"
         }
     )
+
+@app.post("/edit_message")
+async def edit_message_endpoint(request: EditMessageRequest):
+    """메시지 수정 API 엔드포인트"""
+    try:
+        # 기존 chat_id 재사용 (새로운 chat_id 생성하지 않음)
+        existing_chat_id = request.original_chat_id
+        print(f"🔧 Using existing chat_id: {existing_chat_id}")
+        
+        # 백엔드에서 질의 분석 (choice 파라미터는 무시하고 백엔드가 결정)
+        detected_type, command_type, error_msg = analyze_query(request.message)
+        print(f"🔍 Edit message analysis - Type: {detected_type}, Command: {command_type}, Error: {error_msg}")
+        
+        if error_msg:
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        # 데이터 타입별 처리 (기존 process_chat_request 로직과 동일)
+        if detected_type == 'pcm':
+            if command_type == 'trend':
+                data = generate_pcm_trend_data()
+                response = {
+                    'result': 'lot_start',
+                    'real_data': data,
+                    'sql': 'SELECT * FROM pcm_data WHERE date >= "2024-01-01" ORDER BY date_wafer_id',
+                    'timestamp': datetime.now().isoformat()
+                }
+            elif command_type == 'commonality':
+                data, commonality = generate_commonality_data()
+                response = {
+                    'result': 'commonality_start',
+                    'real_data': data,
+                    'determined': commonality,
+                    'SQL': 'SELECT * FROM pcm_data WHERE lot_type IN ("good", "bad")',
+                    'timestamp': datetime.now().isoformat()
+                }
+            elif command_type == 'point':
+                data = generate_pcm_point_data()
+                response = {
+                    'result': 'lot_point',
+                    'real_data': data,
+                    'sql': 'SELECT * FROM pcm_data WHERE type = "point"',
+                    'timestamp': datetime.now().isoformat()
+                }
+        
+        elif detected_type == 'cp':
+            if command_type == 'analysis':
+                data = generate_cp_analysis_data()
+                response = {
+                    'result': 'cp_analysis',
+                    'real_data': data,
+                    'sql': 'SELECT * FROM cp_data WHERE analysis_date >= "2024-01-01"',
+                    'timestamp': datetime.now().isoformat()
+                }
+            elif command_type == 'performance':
+                data = generate_cp_analysis_data()
+                response = {
+                    'result': 'cp_performance',
+                    'real_data': data,
+                    'sql': 'SELECT * FROM cp_performance WHERE date >= "2024-01-01"',
+                    'timestamp': datetime.now().isoformat()
+                }
+        
+        elif detected_type == 'rag':
+            # RAG 처리 - 백엔드에서 완전히 결정
+            if command_type == 'search':
+                # 파일 검색 결과 반환
+                answer = generate_rag_answer_data()
+                response = {
+                    'result': 'rag',
+                    'files': answer,  # 파일 리스트
+                    'response': None,
+                    'timestamp': datetime.now().isoformat()
+                }
+            else:
+                # 일반적인 질문에 대한 텍스트 응답
+                response = {
+                    'result': 'rag',
+                    'files': None,
+                    'response': f"'{request.message}'에 대한 답변입니다. 요청하신 내용을 분석하여 적절한 정보를 제공드립니다.",
+                    'timestamp': datetime.now().isoformat()
+                }
+        
+        # 응답 저장 (message_id 대신 chat_id 사용)
+        response_id = str(uuid.uuid4())
+        bot_response = BotResponse(
+            id=response_id,
+            message_id=str(existing_chat_id),  # chat_id를 message_id로 사용
+            chatroom_id=request.chatroom_id,
+            content=response,
+            timestamp=datetime.now()
+        )
+        chat_storage.responses[response_id] = bot_response
+        
+        # real_data를 제외한 response 데이터 생성 (채팅 히스토리용)
+        history_response = response.copy()
+        if 'real_data' in history_response:
+            del history_response['real_data']
+        
+        # 기존 chat_id를 사용하여 히스토리 업데이트
+        existing_history = chat_storage.edit_chat_history(
+            request.chatroom_id, 
+            existing_chat_id, 
+            request.message, 
+            json.dumps(history_response)
+        )
+        
+        if not existing_history:
+            # 기존 히스토리가 없으면 새로 생성 (기존 chat_id 사용)
+            existing_history = chat_storage.add_chat_history(
+                request.chatroom_id,
+                request.message,
+                json.dumps(history_response),
+                user_time=datetime.now(),
+                response_time=datetime.now()
+            )
+            # 새로 생성된 히스토리의 chat_id를 기존 chat_id로 변경
+            existing_history.chat_id = existing_chat_id
+            print(f"✅ Created new chat history with existing chat_id: {existing_chat_id}")
+        
+        # 응답 데이터 확인
+        print(f"📤 Edit response contains real_data: {'real_data' in response}")
+        if 'real_data' in response:
+            print(f"📤 Real data records: {len(response['real_data'])}")
+            print(f"📤 Real data sample: {response['real_data'][:2] if len(response['real_data']) > 0 else 'empty'}")
+        
+        final_response = {
+            'success': True,
+            'message': '메시지가 성공적으로 수정되었습니다.',
+            'chat_id': existing_chat_id,  # 기존 chat_id 반환
+            'response_id': bot_response.id,
+            'response': response
+        }
+        
+        print(f"📤 Final response keys: {list(final_response.keys())}")
+        print(f"📤 Response keys: {list(response.keys())}")
+        
+        return final_response
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"메시지 수정 실패: {str(e)}")
 
 @app.get("/")
 async def root():

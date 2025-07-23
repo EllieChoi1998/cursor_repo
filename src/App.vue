@@ -339,6 +339,7 @@ import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
 import {
   streamChatAPI,
+  editMessageAPI,
   generatePCMDataWithRealData,
   generateCommonalityDataWithRealData,
   createChatRoom,
@@ -506,6 +507,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     const createResultFromResponseData = (responseData, userMessage, chatId) => {
       try {
         console.log('🔧 Creating result from response data:', responseData)
+        console.log('🔧 Response data keys:', responseData ? Object.keys(responseData) : 'no data')
         
         if (!responseData) {
           console.warn('⚠️ No response data')
@@ -514,6 +516,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
         // real_data가 있으면 실제 데이터로 결과 생성, 없으면 메타데이터만 저장
         const realData = responseData.real_data || []
+        console.log('🔧 Real data length:', realData.length)
+        console.log('🔧 Response result type:', responseData.result)
         let result = null
 
         // 결과 타입에 따라 다른 처리
@@ -854,7 +858,12 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             
             if (data.response.result === 'lot_start') {
               // PCM 트렌드 데이터 처리
-              const realData = data.response.real_data
+              const realData = data.response.real_data || []
+              if (realData.length === 0) {
+                // real_data가 없으면 메타데이터만 표시
+                addMessage('bot', `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}\n• Note: 실제 데이터는 별도로 처리됩니다.`)
+                return
+              }
               const chartData = generatePCMDataWithRealData(realData)
               
               // 현재 유저 메시지 찾기
@@ -1062,34 +1071,102 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       const message = messages[messageIndex]
       if (!message.isEditable) return
       
-      // 원본 메시지 업데이트
-      message.text = newText
-      message.timestamp = new Date()
+      // 기존 응답에서 chat_id 찾기
+      const currentResults = chatResults.value[activeChatId.value] || []
+      const lastResult = currentResults[currentResults.length - 1]
+      const originalChatId = lastResult?.chatId || null
       
-      // 에러 메시지들 제거 (실패한 응답들)
-      const errorMessageIndices = []
-      for (let i = messageIndex + 1; i < messages.length; i++) {
-        if (messages[i].isError || messages[i].originalMessage === messageIndex) {
-          errorMessageIndices.push(i)
+      console.log('🔍 Found original chat_id:', originalChatId)
+      console.log('🔍 Last result:', lastResult)
+      
+      if (!originalChatId) {
+        console.warn('⚠️ 기존 chat_id를 찾을 수 없어 일반 채팅으로 처리합니다.')
+        // 기존 방식으로 처리
+        await processUserMessage(newText)
+        return
+      }
+      
+      try {
+        // 원본 메시지 업데이트
+        message.text = newText
+        message.timestamp = new Date()
+        
+        // 에러 메시지들 제거 (실패한 응답들)
+        const errorMessageIndices = []
+        for (let i = messageIndex + 1; i < messages.length; i++) {
+          if (messages[i].isError || messages[i].originalMessage === messageIndex) {
+            errorMessageIndices.push(i)
+          }
         }
+        
+        // 에러 메시지들을 뒤에서부터 제거
+        for (let i = errorMessageIndices.length - 1; i >= 0; i--) {
+          messages.splice(errorMessageIndices[i], 1)
+        }
+        
+        // 수정된 메시지를 맨 아래로 이동
+        const editedMessage = messages.splice(messageIndex, 1)[0]
+        messages.push(editedMessage)
+        
+        // 메시지 수정 API 호출
+        isLoading.value = true
+        addMessage('bot', '🔄 메시지를 수정하는 중...')
+        
+        const editResponse = await editMessageAPI(
+          selectedDataType.value, 
+          newText, 
+          activeChatId.value, 
+          originalChatId
+        )
+        
+        console.log('✅ Message edit response:', editResponse)
+        console.log('✅ Response keys:', editResponse.response ? Object.keys(editResponse.response) : 'no response')
+        console.log('✅ Response contains real_data:', editResponse.response && 'real_data' in editResponse.response)
+        if (editResponse.response && editResponse.response.real_data) {
+          console.log('✅ Real data records:', editResponse.response.real_data.length)
+          console.log('✅ Real data sample:', editResponse.response.real_data.slice(0, 2))
+        } else {
+          console.log('❌ No real_data found in response')
+          console.log('❌ Response content:', editResponse.response)
+        }
+        
+        // 성공 메시지 추가
+        addMessage('bot', `✅ 메시지가 성공적으로 수정되었습니다!\n• Chat ID: ${editResponse.chat_id} (기존 ID 유지)`)
+        
+        // 결과 업데이트 (기존 결과를 새로운 응답으로 교체)
+        if (editResponse.response && editResponse.response.real_data) {
+          const newResult = createResultFromResponseData(editResponse.response, newText, editResponse.chat_id)
+          if (newResult) {
+            // 새 결과를 활성화
+            newResult.isActive = true
+            
+            // 기존 결과를 새 결과로 교체
+            const currentResults = chatResults.value[activeChatId.value] || []
+            if (currentResults.length > 0) {
+              // 기존 결과들을 비활성화
+              currentResults.forEach(r => r.isActive = false)
+              // 마지막 결과를 새 결과로 교체
+              currentResults[currentResults.length - 1] = newResult
+            } else {
+              // 결과가 없으면 새로 추가
+              currentResults.push(newResult)
+            }
+            chatResults.value[activeChatId.value] = currentResults
+            
+            console.log('✅ Updated results with new data:', newResult)
+          }
+        } else {
+          console.warn('⚠️ No real_data in edit response:', editResponse.response)
+        }
+        
+        isLoading.value = false
+        scrollToBottom()
+        
+      } catch (error) {
+        console.error('❌ Error editing message:', error)
+        addMessage('bot', `❌ 메시지 수정 중 오류가 발생했습니다: ${error.message}`)
+        isLoading.value = false
       }
-      
-      // 에러 메시지들을 뒤에서부터 제거
-      for (let i = errorMessageIndices.length - 1; i >= 0; i--) {
-        messages.splice(errorMessageIndices[i], 1)
-      }
-      
-      // 수정된 메시지를 맨 아래로 이동
-      const editedMessage = messages.splice(messageIndex, 1)[0]
-      messages.push(editedMessage)
-      
-      // 수정된 메시지 재처리
-      isLoading.value = true
-      await processUserMessage(newText)
-      isLoading.value = false
-      
-      // 스크롤을 맨 아래로
-      scrollToBottom()
     }
 
     // 결과 관리 함수들
