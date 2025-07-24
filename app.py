@@ -372,22 +372,26 @@ def analyze_query(message: str) -> tuple[str, str, str]:
 
 def generate_pcm_trend_data() -> list:
     """PCM 트렌드 데이터 생성"""
-    data = []
-    for i in range(1, 1000):
-        data.append({
-            'DATE_WAFER_ID': f'2025-06-{i}:36:57:54_A12345678998999',
-            'MIN': round(random.uniform(8, 12), 2),
-            'MAX': round(random.uniform(18, 22), 2),
-            'Q1': round(random.uniform(14, 16), 2),
-            'Q2': round(random.uniform(15, 17), 2),
-            'Q3': round(random.uniform(16, 18), 2),
-            'DEVICE': random.choice(['A', 'B', 'C']),
-            'USL': 30,
-            'TGT': 15,
-            'LSL': 1,
-            'UCL': 25,
-            'LCL': 6
-        })
+    data = {}
+    para_list = ["PARA1", "PARA2"]
+    for para in para_list:
+        single = []
+        for i in range(1, 1000):
+            single.append({
+                'DATE_WAFER_ID': f'2025-06-{i}:36:57:54_A12345678998999',
+                'MIN': round(random.uniform(8, 12), 2),
+                'MAX': round(random.uniform(18, 22), 2),
+                'Q1': round(random.uniform(14, 16), 2),
+                'Q2': round(random.uniform(15, 17), 2),
+                'Q3': round(random.uniform(16, 18), 2),
+                'DEVICE': random.choice(['A', 'B', 'C']),
+                'USL': 30,
+                'TGT': 15,
+                'LSL': 1,
+                'UCL': 25,
+                'LCL': 6
+            })
+        data[para]=single
     return data
 
 def generate_commonality_data() -> tuple[list, dict]:
