@@ -1,11 +1,40 @@
 <template>
   <div class="pcm-trend-chart">
-    <div ref="chartContainer" class="chart-container"></div>
+    <!-- PARA별로 그룹화된 차트들 -->
+    <div v-if="paraTypes.length > 1" class="multi-para-charts">
+      <div 
+        v-for="(paraType, index) in paraTypes" 
+        :key="paraType"
+        class="para-chart-container"
+      >
+        <div class="para-chart-header">
+          <h3>{{ title }} - PARA: {{ paraType }}</h3>
+          <div class="para-chart-info">
+            <span class="data-count">{{ getParaData(paraType).length }} records</span>
+          </div>
+        </div>
+        <div 
+          :ref="el => setChartRef(el, index)"
+          class="chart-container"
+        ></div>
+      </div>
+    </div>
+    
+    <!-- 단일 PARA 또는 PARA 컬럼이 없는 경우 기존 로직 -->
+    <div v-else class="single-chart">
+      <div v-if="paraTypes.length === 1" class="para-chart-header">
+        <h3>{{ title }} - PARA: {{ paraTypes[0] }}</h3>
+        <div class="para-chart-info">
+          <span class="data-count">{{ data.length }} records</span>
+        </div>
+      </div>
+      <div ref="chartContainer" class="chart-container"></div>
+    </div>
   </div>
 </template>
 
 <script>
-import { defineComponent, ref, onMounted, watch } from 'vue'
+import { defineComponent, ref, onMounted, watch, computed, nextTick } from 'vue'
 import Plotly from 'plotly.js-dist'
 
 export default defineComponent({
@@ -26,7 +55,8 @@ export default defineComponent({
           TGT: 15,
           LSL: 1,
           UCL: 25,
-          LCL: 6
+          LCL: 6,
+          PARA: 'PARA_A'
         },
         {
           DATE_WAFER_ID: 2,
@@ -40,7 +70,8 @@ export default defineComponent({
           TGT: 15,
           LSL: 1,
           UCL: 25,
-          LCL: 6
+          LCL: 6,
+          PARA: 'PARA_A'
         },
         {
           DATE_WAFER_ID: 3,
@@ -54,7 +85,8 @@ export default defineComponent({
           TGT: 15,
           LSL: 1,
           UCL: 25,
-          LCL: 6
+          LCL: 6,
+          PARA: 'PARA_B'
         },
         {
           DATE_WAFER_ID: 4,
@@ -68,7 +100,8 @@ export default defineComponent({
           TGT: 15,
           LSL: 1,
           UCL: 25,
-          LCL: 6
+          LCL: 6,
+          PARA: 'PARA_B'
         },
         {
           DATE_WAFER_ID: 5,
@@ -82,7 +115,8 @@ export default defineComponent({
           TGT: 15,
           LSL: 1,
           UCL: 25,
-          LCL: 6
+          LCL: 6,
+          PARA: 'PARA_A'
         }
       ]
     },
@@ -96,16 +130,33 @@ export default defineComponent({
     },
     maxLabels: {
       type: Number,
-      default: 50  // 사용자가 설정 가능하도록 props로 받음
+      default: 50
     },
     dataSampling: {
       type: Boolean,
-      default: true  // 데이터 샘플링 여부
+      default: true
     }
   },
   setup(props) {
     const chartContainer = ref(null)
-    const columns = ['DATE_WAFER_ID', 'MIN', 'MAX', 'Q1', 'Q2', 'Q3', 'DEVICE', 'USL', 'TGT', 'LSL', 'UCL', 'LCL']
+    const chartRefs = ref([])
+    const columns = ['DATE_WAFER_ID', 'MIN', 'MAX', 'Q1', 'Q2', 'Q3', 'DEVICE', 'USL', 'TGT', 'LSL', 'UCL', 'LCL', 'PARA']
+
+    // PARA 타입별로 데이터 그룹화
+    const paraTypes = computed(() => {
+      const types = [...new Set(props.data.map(row => row.PARA).filter(para => para !== undefined && para !== null))]
+      return types.sort()
+    })
+
+    const getParaData = (paraType) => {
+      return props.data.filter(row => row.PARA === paraType)
+    }
+
+    const setChartRef = (el, index) => {
+      if (el) {
+        chartRefs.value[index] = el
+      }
+    }
 
     // Helper function to generate data points for box plots
     const generateBoxPlotData = (min, q1, q2, q3, max, count = 30) => {
@@ -140,14 +191,11 @@ export default defineComponent({
       return data
     }
 
-    const createChart = () => {
-      if (!chartContainer.value) return
+    const createSingleChart = (container, data, chartTitle = null) => {
+      if (!container || !data || data.length === 0) return
 
-      // 데이터 샘플링 제거 - 전체 데이터 사용
-      const data = props.data
-      console.log(`PCMTrendChart 전체 데이터 사용: ${data.length}개`)
+      console.log(`PCMTrendChart 차트 생성: ${chartTitle || 'Default'} - ${data.length}개 데이터`)
 
-      // Data is already in object format (DataFrame JSON)
       // Extract data for control lines
       const dateWaferIds = data.map(row => row.DATE_WAFER_ID)
       const usls = data.map(row => row.USL)
@@ -158,11 +206,9 @@ export default defineComponent({
 
       // x축 라벨 생성 (적절한 간격으로 표시)
       const xOrder = [...new Set(dateWaferIds)].sort((a, b) => a - b)
-      const maxLabels = 50  // 적절한 라벨 수
+      const maxLabels = 50
       const step = Math.max(1, Math.floor(xOrder.length / maxLabels))
       const sampledLabels = xOrder.filter((_, index) => index % step === 0)
-      
-      console.log(`PCMTrendChart x축 라벨: ${xOrder.length}개 → ${sampledLabels.length}개 샘플링 (최대 ${maxLabels}개)`)
 
       // Create box plot traces for each device
       const deviceTypes = [...new Set(data.map(row => row.DEVICE))]
@@ -208,7 +254,7 @@ export default defineComponent({
         })
       })
 
-      // Create scatter traces for control lines (matching Python go.Scatter approach)
+      // Create scatter traces for control lines
       const scatterTraces = [
         {
           type: 'scatter',
@@ -300,9 +346,9 @@ export default defineComponent({
       // Layout configuration
       const layout = {
         title: {
-          text: props.title,
+          text: chartTitle || props.title,
           font: {
-            size: 18,
+            size: 16,
             color: '#333'
           }
         },
@@ -311,23 +357,20 @@ export default defineComponent({
           type: 'category',
           showgrid: true,
           gridcolor: '#f0f0f0',
-          // 적절한 라벨 표시
           showticklabels: true,
-          tickangle: 90,  // 45도 회전으로 겹침 방지
-          tickmode: 'array',  // 명시적 라벨 설정
-          tickvals: sampledLabels,  // 샘플링된 라벨 사용
-          ticktext: sampledLabels.map(val => val.toString()),  // 샘플링된 텍스트
+          tickangle: 90,
+          tickmode: 'array',
+          tickvals: sampledLabels,
+          ticktext: sampledLabels.map(val => val.toString()),
           tickfont: {
-            size: 9,  // 적절한 폰트 크기
+            size: 9,
             color: '#333'
           },
           automargin: true,
-          // 하단에 라벨 표시
-          side: 'bottom',  // 하단에 라벨 표시
+          side: 'bottom',
           tickposition: 'outside',
-          // category 순서 설정 (전체 데이터, 순서 유지)
           categoryorder: 'array',
-          categoryarray: xOrder  // 전체 데이터 순서 유지
+          categoryarray: xOrder
         },
         yaxis: {
           title: 'Values',
@@ -346,24 +389,16 @@ export default defineComponent({
         margin: {
           l: 60,
           r: 40,
-          t: 80,  // 150 → 80으로 줄임 (위쪽 라벨 없음)
-          b: 150  // 60 → 150으로 증가 (하단 라벨 공간)
+          t: 80,
+          b: 150
         },
         plot_bgcolor: 'white',
         paper_bgcolor: 'white',
         hovermode: 'closest'
       }
 
-      console.log('PCMTrendChart 생성 중...', { 
-        dataLength: data.length, 
-        xLabels: sampledLabels.length,
-        sampleData: data.slice(0, 3),  // 처음 3개 데이터 샘플
-        dateWaferIds: dateWaferIds.slice(0, 10),  // 처음 10개 ID
-        deviceTypes: deviceTypes
-      })
-
       // Plot the chart
-      Plotly.newPlot(chartContainer.value, allTraces, layout, {
+      Plotly.newPlot(container, allTraces, layout, {
         responsive: true,
         displayModeBar: true,
         modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
@@ -372,9 +407,40 @@ export default defineComponent({
       })
     }
 
+    const createCharts = async () => {
+      // 모든 기존 차트 정리
+      if (chartContainer.value) {
+        Plotly.purge(chartContainer.value)
+      }
+      chartRefs.value.forEach(ref => {
+        if (ref) {
+          Plotly.purge(ref)
+        }
+      })
+
+      await nextTick()
+
+      if (paraTypes.value.length > 1) {
+        // 여러 PARA 타입이 있는 경우 각각 차트 생성
+        console.log(`PCMTrendChart: ${paraTypes.value.length}개의 PARA 타입별 차트 생성`)
+        paraTypes.value.forEach((paraType, index) => {
+          const paraData = getParaData(paraType)
+          const container = chartRefs.value[index]
+          if (container && paraData.length > 0) {
+            createSingleChart(container, paraData, `${props.title} - PARA: ${paraType}`)
+          }
+        })
+      } else {
+        // 단일 PARA 또는 PARA 컬럼이 없는 경우
+        console.log('PCMTrendChart: 단일 차트 생성')
+        if (chartContainer.value) {
+          createSingleChart(chartContainer.value, props.data, props.title)
+        }
+      }
+    }
+
     // Helper function to get colors for different devices
     const getDeviceColor = (device, alpha = 1) => {
-      // 동적 색상 팔레트 - 다양한 DEVICE에 대응
       const colorPalette = [
         [102, 126, 234], // 블루
         [118, 75, 162],  // 퍼플
@@ -398,13 +464,12 @@ export default defineComponent({
         [189, 195, 199]  // 베이지
       ]
       
-      // DEVICE 이름을 해시하여 색상 인덱스 결정
       const getDeviceIndex = (deviceName) => {
         let hash = 0
         for (let i = 0; i < deviceName.toString().length; i++) {
           const char = deviceName.toString().charCodeAt(i)
           hash = ((hash << 5) - hash) + char
-          hash = hash & hash // 32bit 정수로 변환
+          hash = hash & hash
         }
         return Math.abs(hash) % colorPalette.length
       }
@@ -415,25 +480,22 @@ export default defineComponent({
       return `rgba(${r}, ${g}, ${b}, ${alpha})`
     }
 
-    const updateChart = () => {
-      if (chartContainer.value) {
-        Plotly.purge(chartContainer.value)
-        createChart()
-      }
-    }
-
     onMounted(() => {
-      createChart()
+      createCharts()
     })
 
-    watch(() => props.data, updateChart, { deep: true })
-    watch(() => props.height, updateChart)
-    watch(() => props.title, updateChart)
-    watch(() => props.maxLabels, updateChart)
-    watch(() => props.dataSampling, updateChart)
+    watch(() => props.data, createCharts, { deep: true })
+    watch(() => props.height, createCharts)
+    watch(() => props.title, createCharts)
+    watch(() => props.maxLabels, createCharts)
+    watch(() => props.dataSampling, createCharts)
 
     return {
-      chartContainer
+      chartContainer,
+      chartRefs,
+      paraTypes,
+      getParaData,
+      setChartRef
     }
   }
 })
@@ -446,11 +508,80 @@ export default defineComponent({
   margin: 0 auto;
 }
 
+.multi-para-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.para-chart-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.para-chart-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.para-chart-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.para-chart-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.data-count {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .chart-container {
   width: 100%;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   background: white;
+}
+
+.single-chart .chart-container {
+  margin-top: 0;
+}
+
+.single-chart .para-chart-header + .chart-container {
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .para-chart-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .para-chart-header h3 {
+    font-size: 16px;
+  }
+  
+  .multi-para-charts {
+    gap: 20px;
+  }
 }
 </style> 
