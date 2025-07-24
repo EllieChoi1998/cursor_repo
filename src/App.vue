@@ -203,9 +203,18 @@
                 
                 <!-- 항상 펼쳐서 보여주기 -->
                 <div class="result-content">
-                  <!-- PCM Trend Chart (기존 그래프 로직 유지) -->
+                  <!-- PCM Trend Chart (PARA 타입이 있으면 MultiPara 컴포넌트 사용) -->
                   <div v-if="result.type === 'pcm_trend'" class="chart-section">
+                    <PCMTrendChartMultiPara 
+                      v-if="hasParaTypes(result.data) && getParaTypeCount(result.data) > 1"
+                      :data="result.data"
+                      :height="chartHeight"
+                      :title="result.title"
+                      :maxLabels="50"
+                      :dataSampling="true"
+                    />
                     <PCMTrendChart 
+                      v-else
                       :data="result.data"
                       :height="chartHeight"
                       :title="result.title"
@@ -287,7 +296,16 @@
         <div class="fullscreen-body">
           <!-- PCM Trend Chart -->
           <div v-if="fullscreenResult?.type === 'pcm_trend'" class="fullscreen-chart">
+            <PCMTrendChartMultiPara 
+              v-if="hasParaTypes(fullscreenResult.data) && getParaTypeCount(fullscreenResult.data) > 1"
+              :data="fullscreenResult.data"
+              :height="600"
+              :title="fullscreenResult.title"
+              :maxLabels="50"
+              :dataSampling="false"
+            />
             <PCMTrendChart 
+              v-else
               :data="fullscreenResult.data"
               :height="800"
               :title="fullscreenResult.title"
@@ -367,6 +385,7 @@
 import { defineComponent, ref, computed, nextTick, onMounted } from 'vue'
 import PCMTrendChart from './components/PCMTrendChart.vue'
 import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
+import PCMTrendChartMultiPara from './components/PCMTrendChartMultiPara.vue'
 import DynamicTable from './components/DynamicTable.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
@@ -388,6 +407,7 @@ export default defineComponent({
   components: {
     PCMTrendChart,
     PCMTrendPointChart,
+    PCMTrendChartMultiPara,
     DynamicTable,
     ChatRoomList,
     RAGAnswerList
@@ -498,6 +518,24 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       const devices = currentChartData.value.map(row => row.DEVICE) // DEVICE column
       return [...new Set(devices)]
     })
+
+    // PARA 타입이 있는지 확인하는 함수
+    const hasParaTypes = (data) => {
+      if (!data || !Array.isArray(data)) return false
+      return data.some(item => item.PARA)
+    }
+
+    // PARA 타입 개수 확인
+    const getParaTypeCount = (data) => {
+      if (!data || !Array.isArray(data)) return 0
+      const paraSet = new Set()
+      data.forEach(item => {
+        if (item.PARA) {
+          paraSet.add(item.PARA)
+        }
+      })
+      return paraSet.size
+    }
 
     const dateRange = computed(() => {
       const dates = currentChartData.value.map(row => row.DATE_WAFER_ID) // DATE_WAFER_ID column

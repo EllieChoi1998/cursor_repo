@@ -373,6 +373,7 @@ def analyze_query(message: str) -> tuple[str, str, str]:
 def generate_pcm_trend_data() -> list:
     """PCM 트렌드 데이터 생성"""
     data = []
+    para_types = ['PARA1', 'PARA2', 'PARA3', 'PARA4', 'PARA5']  # PARA 타입들
     for i in range(1, 1000):
         data.append({
             'DATE_WAFER_ID': f'2025-06-{i}:36:57:54_A12345678998999',
@@ -382,6 +383,7 @@ def generate_pcm_trend_data() -> list:
             'Q2': round(random.uniform(15, 17), 2),
             'Q3': round(random.uniform(16, 18), 2),
             'DEVICE': random.choice(['A', 'B', 'C']),
+            'PARA': random.choice(para_types),  # PARA 컬럼 추가
             'USL': 30,
             'TGT': 15,
             'LSL': 1,

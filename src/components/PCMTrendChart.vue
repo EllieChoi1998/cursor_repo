@@ -105,7 +105,7 @@ export default defineComponent({
   },
   setup(props) {
     const chartContainer = ref(null)
-    const columns = ['DATE_WAFER_ID', 'MIN', 'MAX', 'Q1', 'Q2', 'Q3', 'DEVICE', 'USL', 'TGT', 'LSL', 'UCL', 'LCL']
+    const columns = ['DATE_WAFER_ID', 'MIN', 'MAX', 'Q1', 'Q2', 'Q3', 'DEVICE', 'PARA', 'USL', 'TGT', 'LSL', 'UCL', 'LCL']
 
     // Helper function to generate data points for box plots
     const generateBoxPlotData = (min, q1, q2, q3, max, count = 30) => {
@@ -297,10 +297,16 @@ export default defineComponent({
       // Combine all traces
       const allTraces = [...boxTraces, ...scatterTraces]
 
+      // PARA 정보가 있는지 확인하고 제목에 포함
+      const paraTypes = [...new Set(data.map(row => row.PARA).filter(Boolean))]
+      const titleText = paraTypes.length > 0 
+        ? `${props.title} (${paraTypes.join(', ')})`
+        : props.title
+
       // Layout configuration
       const layout = {
         title: {
-          text: props.title,
+          text: titleText,
           font: {
             size: 18,
             color: '#333'
