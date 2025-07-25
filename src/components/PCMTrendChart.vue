@@ -116,7 +116,52 @@ export default defineComponent({
           LSL: 1,
           UCL: 25,
           LCL: 6,
+          PARA: 'PARA_C'
+        },
+        {
+          DATE_WAFER_ID: 6,
+          MIN: 13,
+          MAX: 22,
+          Q1: 16,
+          Q2: 17,
+          Q3: 18,
+          DEVICE: 'A',
+          USL: 30,
+          TGT: 15,
+          LSL: 1,
+          UCL: 25,
+          LCL: 6,
+          PARA: 'PARA_C'
+        },
+        {
+          DATE_WAFER_ID: 7,
+          MIN: 8,
+          MAX: 18,
+          Q1: 14,
+          Q2: 15,
+          Q3: 16,
+          DEVICE: 'C',
+          USL: 30,
+          TGT: 15,
+          LSL: 1,
+          UCL: 25,
+          LCL: 6,
           PARA: 'PARA_A'
+        },
+        {
+          DATE_WAFER_ID: 8,
+          MIN: 14,
+          MAX: 23,
+          Q1: 17,
+          Q2: 18,
+          Q3: 19,
+          DEVICE: 'B',
+          USL: 30,
+          TGT: 15,
+          LSL: 1,
+          UCL: 25,
+          LCL: 6,
+          PARA: 'PARA_C'
         }
       ]
     },
@@ -485,6 +530,8 @@ export default defineComponent({
     }
 
     onMounted(() => {
+      console.log('PCMTrendChart 마운트됨 - 기본 데이터:', props.data)
+      console.log('PCMTrendChart 마운트됨 - PARA 타입들:', paraTypes.value)
       createCharts()
     })
 
