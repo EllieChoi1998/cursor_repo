@@ -149,7 +149,7 @@
                       :disabled="isLoading"
                     >
                       <option value="pcm">PCM (Process Control Monitor)</option>
-                      <option value="cp">CP (Critical Path)</option>
+                      <option value="cp">CP (Chip Probe)</option>
                       <option value="rag">RAG (Retrieval-Augmented Generation)</option>
                     </select>
                   </div>
