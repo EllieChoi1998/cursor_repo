@@ -1,9 +1,11 @@
 // API 서비스 - 환경변수에서 백엔드 URL 읽기
 export const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000'
+export const FILE_API_BASE_URL = process.env.VUE_APP_FILE_API_BASE_URL || 'http://localhost:8003'
 
 // 디버깅을 위한 콘솔 출력 (개발 환경에서만)
 if (process.env.NODE_ENV === 'development') {
   console.log('🔗 API Base URL:', API_BASE_URL)
+  console.log('🔗 File API Base URL:', FILE_API_BASE_URL)
 }
 
 // 채팅방 관련 API 함수들
@@ -540,4 +542,34 @@ export const fetchPCMDataByDevice = async (deviceType) => {
       }
     }).catch(reject)
   })
+}
+
+// 파일 내용 가져오기 API (8003번 포트)
+export const fetchFileContent = async (filePath) => {
+  try {
+    console.log('📁 Fetching file content:', filePath)
+    
+    const response = await fetch(`${FILE_API_BASE_URL}/file`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        file_path: filePath
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    // 파일 내용을 텍스트로 받음
+    const fileContent = await response.text()
+    console.log('📄 File content received, length:', fileContent.length)
+    
+    return fileContent
+  } catch (error) {
+    console.error('❌ Error fetching file content:', error)
+    throw error
+  }
 } 

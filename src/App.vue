@@ -1,5 +1,27 @@
 <template>
   <div id="app">
+    <!-- 파일 내용 모달 -->
+    <div v-if="fileModal.isOpen" class="modal-overlay" @click="closeFileModal">
+      <div class="file-modal" @click.stop>
+        <div class="file-modal-header">
+          <h3>📄 {{ fileModal.fileName }}</h3>
+          <button @click="closeFileModal" class="close-btn">✕</button>
+        </div>
+        <div class="file-modal-content">
+          <div v-if="fileModal.isLoading" class="loading-indicator">
+            🔄 파일을 불러오는 중...
+          </div>
+          <div v-else-if="fileModal.error" class="error-message">
+            ❌ {{ fileModal.error }}
+          </div>
+          <pre v-else class="file-content">{{ fileModal.content }}</pre>
+        </div>
+        <div class="file-modal-footer">
+          <button @click="closeFileModal" class="btn-secondary">닫기</button>
+        </div>
+      </div>
+    </div>
+
     <header class="app-header">
       <h1>Chat Assistant</h1>
       <p class="subtitle">Ask me about PCM / CP trends and data analysis, or Search Database via RAG system</p>
@@ -84,8 +106,46 @@
                       </div>
                     </div>
                   </div>
-                  <!-- 봇 메시지는 기존과 동일 -->
-                  <div v-else class="message-text" v-html="message.text"></div>
+                  <!-- 봇 메시지 처리 -->
+                  <div v-else>
+                    <!-- 파일 목록 메시지인 경우 -->
+                    <div v-if="message.messageType === 'file_list'" class="file-list-message">
+                      <div class="message-text">{{ message.text }}</div>
+                      <div class="file-list">
+                        <div 
+                          v-for="(file, fileIndex) in message.files" 
+                          :key="fileIndex"
+                          class="file-item"
+                        >
+                          <div class="file-info">
+                            <h4 class="file-name">
+                              📄 {{ file.file_name || file.filename || 'Unknown File' }}
+                            </h4>
+                            <div v-if="file.content" class="file-preview">
+                              <strong>내용:</strong> {{ file.content.substring(0, 200) }}{{ file.content.length > 200 ? '...' : '' }}
+                            </div>
+                            <div v-if="file.similarity || file.score" class="file-score">
+                              <strong>유사도 점수:</strong> {{ ((file.similarity || file.score) * 100).toFixed(2) }}%
+                            </div>
+                            <div v-if="file.file_path" class="file-path">
+                              <strong>경로:</strong> {{ file.file_path }}
+                            </div>
+                          </div>
+                          <div class="file-actions">
+                            <button 
+                              @click="openFileModal(file.file_name || file.filename || 'Unknown File', file.file_path)"
+                              class="file-view-btn"
+                              :disabled="!file.file_path"
+                            >
+                              📄 파일 보기
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- 일반 텍스트 메시지 -->
+                    <div v-else class="message-text" v-html="message.text"></div>
+                  </div>
                   
                   <div class="message-time">
                     {{ formatTime(message.timestamp) }}
@@ -378,7 +438,8 @@ import {
   createChatRoom,
   getChatRooms,
   getChatRoomHistory,
-  deleteChatRoom as deleteChatRoomAPI
+  deleteChatRoom as deleteChatRoomAPI,
+  fetchFileContent
 } from './services/api.js'
 import { API_BASE_URL } from './services/api.js'
 import { isErrorResponse, extractErrorMessage } from './config/dataTypes.js'
@@ -402,6 +463,16 @@ export default defineComponent({
     const isDataLoading = ref(false)
     
     const chartHeight = ref(600)
+    
+    // 파일 모달 상태 관리
+    const fileModal = ref({
+      isOpen: false,
+      fileName: '',
+      filePath: '',
+      content: '',
+      isLoading: false,
+      error: ''
+    })
     
     // 에러 상태 관리
     const currentError = ref('')
@@ -622,7 +693,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
-    const addMessage = (type, text, isEditable = false, originalMessage = null) => {
+    const addMessage = (type, text, isEditable = false, originalMessage = null, messageType = 'text', files = null) => {
       if (!chatMessages.value[activeChatId.value]) {
         chatMessages.value = {
           ...chatMessages.value,
@@ -651,6 +722,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         isEditable,
         originalMessage,
         isError: type === 'bot' && text.includes('❌'),
+        messageType, // 'text', 'file_list' 등
+        files, // 파일 목록 데이터
         // 수정 관련 속성들 추가
         isEditing: false,
         editText: ''
@@ -723,7 +796,39 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       showError.value = false
     }
 
+    // 파일 모달 관련 함수들
+    const openFileModal = async (fileName, filePath) => {
+      fileModal.value = {
+        isOpen: true,
+        fileName,
+        filePath,
+        content: '',
+        isLoading: true,
+        error: ''
+      }
 
+      try {
+        console.log('📁 Opening file modal for:', fileName, filePath)
+        const content = await fetchFileContent(filePath)
+        fileModal.value.content = content
+        fileModal.value.isLoading = false
+      } catch (error) {
+        console.error('❌ Error loading file content:', error)
+        fileModal.value.error = `파일을 불러올 수 없습니다: ${error.message}`
+        fileModal.value.isLoading = false
+      }
+    }
+
+    const closeFileModal = () => {
+      fileModal.value = {
+        isOpen: false,
+        fileName: '',
+        filePath: '',
+        content: '',
+        isLoading: false,
+        error: ''
+      }
+    }
 
     // 리사이즈 기능
     const startResize = (event) => {
@@ -1002,40 +1107,12 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             }
 
             else if (data.response.result === 'rag') {
-              // RAG 응답 처리 - 모든 결과를 채팅 내역에 표시
+              // RAG 응답 처리 - 파일 목록을 구조화된 메시지로 처리
               if (data.response.files) {
-                // 파일 검색 결과를 채팅 메시지로 표시
                 const files = data.response.files || []
-                let fileListText = '📁 검색된 파일 목록:\n\n'
                 
-                files.forEach((file, index) => {
-                  const fileName = file.file_name || file.filename || 'Unknown File'
-                  const filePath = file.file_path || ''
-                  // API_BASE_URL이 undefined인 경우 기본값 사용
-                  const baseUrl = API_BASE_URL || 'http://localhost:8000'
-                  const downloadUrl = filePath ? `${baseUrl}${filePath}` : ''
-                  
-                  fileListText += `${index + 1}. 📄 ${fileName}\n`
-                  if (file.content) {
-                    fileListText += `   내용: ${file.content.substring(0, 200)}${file.content.length > 200 ? '...' : ''}\n`
-                  }
-                  if (file.similarity || file.score) {
-                    const score = file.similarity || file.score
-                    fileListText += `   유사도 점수: ${(score * 100).toFixed(2)}%\n`
-                  }
-                  if (filePath) {
-                    fileListText += `   경로: ${filePath}\n`
-                  }
-                  
-                  // 다운로드 링크 추가
-                  if (downloadUrl) {
-                    fileListText += `   📥 <a href="${downloadUrl}" target="_blank" class="download-link">파일 보기</a>\n`
-                  }
-                  
-                  fileListText += '\n'
-                })
-                
-                addMessage('bot', fileListText)
+                // 파일 목록을 특별한 메시지 타입으로 추가
+                addMessage('bot', '📁 검색된 파일 목록:', false, null, 'file_list', files)
               } else if (data.response.response) {
                 // 텍스트 응답을 메시지에 추가
                 addMessage('bot', data.response.response)
@@ -1703,6 +1780,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         newChatroomDisplay,
         handleErrorMessage,
         clearErrorMessages,
+        // 파일 모달 관련
+        fileModal,
+        openFileModal,
+        closeFileModal,
 
         // 에러 상태
         currentError,
@@ -2773,6 +2854,204 @@ body {
 
 .message-text a:hover {
   background: rgba(0, 123, 255, 0.2);
+}
+
+/* File List Styles */
+.file-list-message {
+  max-width: 100%;
+}
+
+.file-list {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.file-item:hover {
+  background: #e9ecef;
+  border-color: #667eea;
+}
+
+.file-info {
+  flex: 1;
+  margin-right: 1rem;
+}
+
+.file-name {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.file-preview, .file-score, .file-path {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.file-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.file-view-btn {
+  padding: 0.5rem 1rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.file-view-btn:hover:not(:disabled) {
+  background: #5a6fd8;
+  transform: translateY(-1px);
+}
+
+.file-view-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* File Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 2rem;
+}
+
+.file-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.file-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 12px 12px 0 0;
+}
+
+.file-modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #e9ecef;
+  color: #333;
+}
+
+.file-modal-content {
+  flex: 1;
+  padding: 2rem;
+  overflow: auto;
+  min-height: 400px;
+  max-height: 70vh;
+}
+
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.error-message {
+  color: #dc3545;
+  text-align: center;
+  padding: 2rem;
+  font-size: 1rem;
+}
+
+.file-content {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.file-modal-footer {
+  padding: 1rem 2rem;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+  display: flex;
+  justify-content: flex-end;
+  border-radius: 0 0 12px 12px;
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
 }
 
 /* User Message Styles */
