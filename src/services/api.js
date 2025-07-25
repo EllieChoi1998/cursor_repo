@@ -564,7 +564,7 @@ export const fetchFileContent = async (filePath) => {
     }
 
     // 파일 내용을 텍스트로 받음
-    const fileContent = await response.text()
+    const fileContent = await response.blob()
     console.log('📄 File content received, length:', fileContent.length)
     
     return fileContent
