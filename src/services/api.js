@@ -380,6 +380,32 @@ export const getDefaultPCMData = () => {
 
 // real_data를 활용한 PCM 데이터 생성 (DataFrame JSON 형태)
 export const generatePCMDataWithRealData = (realData) => {
+  console.log('🔧 generatePCMDataWithRealData 받은 데이터:', realData)
+  
+  // realData가 객체 형태인 경우 {para1: [data], para2: [data], ...}
+  if (realData && typeof realData === 'object' && !Array.isArray(realData)) {
+    console.log('🔧 PARA별 객체 데이터 감지:', Object.keys(realData))
+    
+    const combinedData = []
+    
+    // 각 PARA별 데이터를 합치면서 PARA 컬럼 추가
+    Object.keys(realData).forEach(paraName => {
+      const paraData = realData[paraName]
+      if (Array.isArray(paraData)) {
+        console.log(`🔧 PARA ${paraName}: ${paraData.length}개 데이터`)
+        paraData.forEach(row => {
+          combinedData.push({
+            ...row,
+            PARA: paraName
+          })
+        })
+      }
+    })
+    
+    console.log('🔧 합쳐진 데이터 총 개수:', combinedData.length)
+    return combinedData
+  }
+  
   // realData가 이미 DataFrame JSON 형태인 경우
   if (Array.isArray(realData)) {
     console.log('🔧 generatePCMDataWithRealData: 배열 데이터 받음, 길이:', realData.length)
