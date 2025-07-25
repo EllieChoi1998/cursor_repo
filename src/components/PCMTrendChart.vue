@@ -145,6 +145,9 @@ export default defineComponent({
     // PARA 타입별로 데이터 그룹화
     const paraTypes = computed(() => {
       const types = [...new Set(props.data.map(row => row.PARA).filter(para => para !== undefined && para !== null))]
+      console.log('PCMTrendChart - PARA 타입 확인:', types)
+      console.log('PCMTrendChart - 전체 데이터 개수:', props.data.length)
+      console.log('PCMTrendChart - 첫 번째 데이터 샘플:', props.data[0])
       return types.sort()
     })
 
@@ -422,9 +425,10 @@ export default defineComponent({
 
       if (paraTypes.value.length > 1) {
         // 여러 PARA 타입이 있는 경우 각각 차트 생성
-        console.log(`PCMTrendChart: ${paraTypes.value.length}개의 PARA 타입별 차트 생성`)
+        console.log(`PCMTrendChart: ${paraTypes.value.length}개의 PARA 타입별 차트 생성`, paraTypes.value)
         paraTypes.value.forEach((paraType, index) => {
           const paraData = getParaData(paraType)
+          console.log(`PCMTrendChart: PARA ${paraType} 데이터 개수: ${paraData.length}`)
           const container = chartRefs.value[index]
           if (container && paraData.length > 0) {
             createSingleChart(container, paraData, `${props.title} - PARA: ${paraType}`)
@@ -432,7 +436,7 @@ export default defineComponent({
         })
       } else {
         // 단일 PARA 또는 PARA 컬럼이 없는 경우
-        console.log('PCMTrendChart: 단일 차트 생성')
+        console.log('PCMTrendChart: 단일 차트 생성, PARA 타입:', paraTypes.value)
         if (chartContainer.value) {
           createSingleChart(chartContainer.value, props.data, props.title)
         }

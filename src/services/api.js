@@ -237,7 +237,8 @@ export const getDefaultPCMData = () => {
       TGT: 15,
       LSL: 1,
       UCL: 25,
-      LCL: 6
+      LCL: 6,
+      PARA: 'PARA_A'
     },
     {
       DATE_WAFER_ID: 2,
@@ -251,7 +252,8 @@ export const getDefaultPCMData = () => {
       TGT: 15,
       LSL: 1,
       UCL: 25,
-      LCL: 6
+      LCL: 6,
+      PARA: 'PARA_A'
     },
     {
       DATE_WAFER_ID: 3,
@@ -265,7 +267,8 @@ export const getDefaultPCMData = () => {
       TGT: 15,
       LSL: 1,
       UCL: 25,
-      LCL: 6
+      LCL: 6,
+      PARA: 'PARA_B'
     },
     {
       DATE_WAFER_ID: 4,
@@ -279,7 +282,8 @@ export const getDefaultPCMData = () => {
       TGT: 15,
       LSL: 1,
       UCL: 25,
-      LCL: 6
+      LCL: 6,
+      PARA: 'PARA_B'
     },
     {
       DATE_WAFER_ID: 5,
@@ -293,7 +297,8 @@ export const getDefaultPCMData = () => {
       TGT: 15,
       LSL: 1,
       UCL: 25,
-      LCL: 6
+      LCL: 6,
+      PARA: 'PARA_A'
     },
     {
       DATE_WAFER_ID: 6,
@@ -307,7 +312,8 @@ export const getDefaultPCMData = () => {
       TGT: 15,
       LSL: 1,
       UCL: 25,
-      LCL: 6
+      LCL: 6,
+      PARA: 'PARA_A'
     },
     {
       DATE_WAFER_ID: 7,
@@ -321,7 +327,8 @@ export const getDefaultPCMData = () => {
       TGT: 15,
       LSL: 1,
       UCL: 25,
-      LCL: 6
+      LCL: 6,
+      PARA: 'PARA_C'
     },
     {
       DATE_WAFER_ID: 8,
@@ -335,7 +342,8 @@ export const getDefaultPCMData = () => {
       TGT: 15,
       LSL: 1,
       UCL: 25,
-      LCL: 6
+      LCL: 6,
+      PARA: 'PARA_C'
     },
     {
       DATE_WAFER_ID: 9,
@@ -349,7 +357,8 @@ export const getDefaultPCMData = () => {
       TGT: 15,
       LSL: 1,
       UCL: 25,
-      LCL: 6
+      LCL: 6,
+      PARA: 'PARA_B'
     },
     {
       DATE_WAFER_ID: 10,
@@ -363,7 +372,8 @@ export const getDefaultPCMData = () => {
       TGT: 15,
       LSL: 1,
       UCL: 25,
-      LCL: 6
+      LCL: 6,
+      PARA: 'PARA_C'
     }
   ]
 }
@@ -392,7 +402,8 @@ export const generatePCMDataWithRealData = (realData) => {
       TGT: row.TGT,
       LSL: row.LSL,
       UCL: row.UCL,
-      LCL: row.LCL
+      LCL: row.LCL,
+      PARA: row.PARA
     }
   })
 }
@@ -421,7 +432,8 @@ export const generateCommonalityDataWithRealData = (realData, determinedData) =>
         TGT: row.TGT,
         LSL: row.LSL,
         UCL: row.UCL,
-        LCL: row.LCL
+        LCL: row.LCL,
+        PARA: row.PARA
       }
     })
   }
