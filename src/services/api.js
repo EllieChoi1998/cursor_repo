@@ -380,8 +380,13 @@ export const getDefaultPCMData = () => {
 
 // real_data를 활용한 PCM 데이터 생성 (DataFrame JSON 형태)
 export const generatePCMDataWithRealData = (realData) => {
-  // realData가 이미 DataFrame JSON 형태인 경우 그대로 반환
+  // realData가 이미 DataFrame JSON 형태인 경우
   if (Array.isArray(realData)) {
+    console.log('🔧 generatePCMDataWithRealData: 배열 데이터 받음, 길이:', realData.length)
+    if (realData.length > 0) {
+      console.log('🔧 generatePCMDataWithRealData: 첫 번째 데이터:', realData[0])
+      console.log('🔧 generatePCMDataWithRealData: PARA 컬럼 있음?', realData[0]?.PARA !== undefined)
+    }
     return realData
   }
   

@@ -551,6 +551,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         const realData = responseData.real_data || []
         console.log('🔧 Real data length:', realData.length)
         console.log('🔧 Response result type:', responseData.result)
+        console.log('🔧 Real data 첫 번째 샘플:', realData[0])
+        if (realData.length > 0) {
+          console.log('🔧 Real data에 PARA 컬럼 있음?', realData[0]?.PARA !== undefined)
+        }
         let result = null
 
         // 결과 타입에 따라 다른 처리

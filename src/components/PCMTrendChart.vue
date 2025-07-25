@@ -189,10 +189,20 @@ export default defineComponent({
 
     // PARA 타입별로 데이터 그룹화
     const paraTypes = computed(() => {
+      if (!props.data || props.data.length === 0) {
+        console.log('PCMTrendChart - 데이터가 없음')
+        return []
+      }
+      
       const types = [...new Set(props.data.map(row => row.PARA).filter(para => para !== undefined && para !== null))]
       console.log('PCMTrendChart - PARA 타입 확인:', types)
       console.log('PCMTrendChart - 전체 데이터 개수:', props.data.length)
       console.log('PCMTrendChart - 첫 번째 데이터 샘플:', props.data[0])
+      
+      // 모든 데이터에 PARA 컬럼이 있는지 확인
+      const hasParaCount = props.data.filter(row => row.PARA !== undefined && row.PARA !== null).length
+      console.log(`PCMTrendChart - PARA 컬럼이 있는 데이터: ${hasParaCount}/${props.data.length}`)
+      
       return types.sort()
     })
 
@@ -456,6 +466,12 @@ export default defineComponent({
     }
 
     const createCharts = async () => {
+      // 데이터가 없거나 유효하지 않으면 차트 생성하지 않음
+      if (!props.data || props.data.length === 0) {
+        console.log('PCMTrendChart: 데이터가 없어서 차트 생성 중단')
+        return
+      }
+
       // 모든 기존 차트 정리
       if (chartContainer.value) {
         Plotly.purge(chartContainer.value)
