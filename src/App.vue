@@ -3,6 +3,47 @@
     <header class="app-header">
       <h1>Chat Assistant</h1>
       <p class="subtitle">Ask me about PCM / CP trends and data analysis, or Search Database via RAG system</p>
+      
+      <!-- PARA별 차트 데모 섹션 -->
+      <div class="demo-section">
+        <button 
+          @click="toggleDemo" 
+          class="demo-toggle-btn"
+          :class="{ active: showDemo }"
+        >
+          {{ showDemo ? '📊 Hide PARA Chart Demo' : '📊 Show PARA Chart Demo' }}
+        </button>
+        
+        <div v-if="showDemo" class="demo-content">
+          <div class="demo-controls">
+            <h3>🔬 PCM Trend Chart - PARA Type Demo</h3>
+            <p>각 PARA 타입별로 자동으로 분리된 차트들을 확인할 수 있습니다.</p>
+            
+            <div class="demo-buttons">
+              <button @click="generateSampleData(2)" class="demo-btn">
+                2 PARA Types (TEMPERATURE, PRESSURE)
+              </button>
+              <button @click="generateSampleData(3)" class="demo-btn">
+                3 PARA Types (TEMPERATURE, PRESSURE, VOLTAGE)
+              </button>
+              <button @click="generateSampleData(4)" class="demo-btn">
+                4 PARA Types (TEMPERATURE, PRESSURE, VOLTAGE, CURRENT)
+              </button>
+              <button @click="generateSampleData(1)" class="demo-btn secondary">
+                Single PARA Type
+              </button>
+            </div>
+          </div>
+          
+          <div v-if="demoData.length > 0" class="demo-chart-container">
+            <PCMTrendChart 
+              :data="demoData"
+              :height="500"
+              title="PARA Types Demo Chart"
+            />
+          </div>
+        </div>
+      </div>
     </header>
     
     <main class="app-main">
@@ -402,6 +443,10 @@ export default defineComponent({
     const isDataLoading = ref(false)
     
     const chartHeight = ref(600)
+    
+    // PARA 차트 데모 관련 상태
+    const showDemo = ref(false)
+    const demoData = ref([])
     
     // 에러 상태 관리
     const currentError = ref('')
@@ -1275,6 +1320,69 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       addMessage('bot', 'All results cleared.')
     }
 
+    // PARA 차트 데모 관련 메서드들
+    const toggleDemo = () => {
+      showDemo.value = !showDemo.value
+      if (showDemo.value && demoData.value.length === 0) {
+        generateSampleData(2) // 기본으로 2개 PARA 타입 생성
+      }
+    }
+
+    const generateSampleData = (paraCount) => {
+      const paraTypes = ['TEMPERATURE', 'PRESSURE', 'VOLTAGE', 'CURRENT']
+      const deviceTypes = ['Device_A', 'Device_B', 'Device_C', 'Device_D']
+      const selectedParas = paraTypes.slice(0, paraCount)
+      
+      const sampleData = []
+      const dataPointsPerPara = 20 // 각 PARA당 데이터 포인트 수
+      
+      selectedParas.forEach((para, paraIndex) => {
+        for (let i = 1; i <= dataPointsPerPara; i++) {
+          const baseValue = 15 + paraIndex * 10 // PARA별로 다른 기준값
+          const variation = Math.random() * 10 - 5 // ±5 변동
+          
+          // 각 PARA와 날짜에 대해 여러 디바이스 데이터 생성
+          deviceTypes.forEach((device, deviceIndex) => {
+            const deviceVariation = Math.random() * 6 - 3 // 디바이스별 추가 변동
+            const finalBase = baseValue + deviceVariation + variation
+            
+            const q1 = finalBase + Math.random() * 2 - 1
+            const q2 = finalBase + Math.random() * 2 - 1
+            const q3 = finalBase + Math.random() * 2 - 1
+            const min = Math.min(q1, q2, q3) - Math.random() * 3
+            const max = Math.max(q1, q2, q3) + Math.random() * 3
+            
+            sampleData.push({
+              DATE_WAFER_ID: i + paraIndex * dataPointsPerPara,
+              MIN: parseFloat(min.toFixed(2)),
+              MAX: parseFloat(max.toFixed(2)),
+              Q1: parseFloat(q1.toFixed(2)),
+              Q2: parseFloat(q2.toFixed(2)),
+              Q3: parseFloat(q3.toFixed(2)),
+              DEVICE: device,
+              USL: baseValue + 15,
+              TGT: baseValue,
+              LSL: baseValue - 15,
+              UCL: baseValue + 10,
+              LCL: baseValue - 10,
+              PARA: para
+            })
+          })
+        }
+      })
+      
+      // 데이터를 DATE_WAFER_ID와 PARA로 정렬
+      demoData.value = sampleData.sort((a, b) => {
+        if (a.PARA !== b.PARA) {
+          return a.PARA.localeCompare(b.PARA)
+        }
+        return a.DATE_WAFER_ID - b.DATE_WAFER_ID
+      })
+      
+      console.log(`Generated demo data: ${paraCount} PARA types, ${demoData.value.length} total records`)
+      console.log('Demo data sample:', demoData.value.slice(0, 5))
+    }
+
     // 채팅방 데이터 로드
     const loadChatRooms = async () => {
       isLoadingChatRooms.value = true
@@ -1674,6 +1782,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         chartHeight,
         results,
         currentChatResponse,
+        // PARA 차트 데모 관련
+        showDemo,
+        demoData,
+        toggleDemo,
+        generateSampleData,
         uniqueDevices,
         dateRange,
         formatTime,
@@ -2814,6 +2927,143 @@ body {
   font-size: 1rem;
   word-break: break-word;
   line-height: 1.5;
+}
+
+/* PARA 차트 데모 스타일 */
+.demo-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.demo-toggle-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.demo-toggle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.demo-toggle-btn.active {
+  background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+  box-shadow: 0 4px 12px rgba(232, 67, 147, 0.3);
+}
+
+.demo-content {
+  margin-top: 1.5rem;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.demo-controls {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #667eea;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.demo-controls h3 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+}
+
+.demo-controls p {
+  margin: 0 0 1rem 0;
+  color: #6c757d;
+  line-height: 1.5;
+}
+
+.demo-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.demo-btn {
+  background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(116, 185, 255, 0.3);
+}
+
+.demo-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(116, 185, 255, 0.4);
+}
+
+.demo-btn.secondary {
+  background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+  box-shadow: 0 2px 6px rgba(162, 155, 254, 0.3);
+}
+
+.demo-btn.secondary:hover {
+  box-shadow: 0 4px 10px rgba(162, 155, 254, 0.4);
+}
+
+.demo-chart-container {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .demo-section {
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .demo-controls {
+    padding: 1rem;
+  }
+  
+  .demo-buttons {
+    flex-direction: column;
+  }
+  
+  .demo-btn {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .demo-toggle-btn {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 /* Metadata Info Styles */
