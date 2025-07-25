@@ -2816,6 +2816,7 @@ body {
   line-height: 1.5;
 }
 
+
 /* Metadata Info Styles */
 .metadata-info {
   padding: 1rem;
