@@ -1,26 +1,6 @@
 <template>
   <div id="app">
-    <!-- 파일 내용 모달 -->
-    <div v-if="fileModal.isOpen" class="modal-overlay" @click="closeFileModal">
-      <div class="file-modal" @click.stop>
-        <div class="file-modal-header">
-          <h3>📄 {{ fileModal.fileName }}</h3>
-          <button @click="closeFileModal" class="close-btn">✕</button>
-        </div>
-        <div class="file-modal-content">
-          <div v-if="fileModal.isLoading" class="loading-indicator">
-            🔄 파일을 불러오는 중...
-          </div>
-          <div v-else-if="fileModal.error" class="error-message">
-            ❌ {{ fileModal.error }}
-          </div>
-          <pre v-else class="file-content">{{ fileModal.content }}</pre>
-        </div>
-        <div class="file-modal-footer">
-          <button @click="closeFileModal" class="btn-secondary">닫기</button>
-        </div>
-      </div>
-    </div>
+
 
     <header class="app-header">
       <h1>Chat Assistant</h1>
@@ -131,15 +111,15 @@
                               <strong>경로:</strong> {{ file.file_path }}
                             </div>
                           </div>
-                          <div class="file-actions">
-                            <button 
-                              @click="openFileModal(file.file_name || file.filename || 'Unknown File', file.file_path)"
-                              class="file-view-btn"
-                              :disabled="!file.file_path"
-                            >
-                              📄 파일 보기
-                            </button>
-                          </div>
+                                                     <div class="file-actions">
+                             <button 
+                               @click="downloadFile(file.file_name || file.filename || 'Unknown File', file.file_path)"
+                               class="file-download-btn"
+                               :disabled="!file.file_path"
+                             >
+                               📥 파일 다운로드
+                             </button>
+                           </div>
                         </div>
                       </div>
                     </div>
@@ -464,15 +444,7 @@ export default defineComponent({
     
     const chartHeight = ref(600)
     
-    // 파일 모달 상태 관리
-    const fileModal = ref({
-      isOpen: false,
-      fileName: '',
-      filePath: '',
-      content: '',
-      isLoading: false,
-      error: ''
-    })
+
     
     // 에러 상태 관리
     const currentError = ref('')
@@ -796,37 +768,38 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       showError.value = false
     }
 
-    // 파일 모달 관련 함수들
-    const openFileModal = async (fileName, filePath) => {
-      fileModal.value = {
-        isOpen: true,
-        fileName,
-        filePath,
-        content: '',
-        isLoading: true,
-        error: ''
-      }
 
+
+    // 파일 다운로드 함수
+    const downloadFile = async (fileName, filePath) => {
       try {
-        console.log('📁 Opening file modal for:', fileName, filePath)
-        const content = await fetchFileContent(filePath)
-        fileModal.value.content = content
-        fileModal.value.isLoading = false
+        console.log('📥 Downloading file:', fileName, filePath)
+        
+        // 파일 내용 가져오기
+        const fileContent = await fetchFileContent(filePath)
+        
+        // Blob 생성
+        const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' })
+        
+        // 다운로드 링크 생성
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        
+        // 링크 클릭으로 다운로드 실행
+        document.body.appendChild(link)
+        link.click()
+        
+        // 정리
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        
+        console.log('✅ File downloaded successfully:', fileName)
       } catch (error) {
-        console.error('❌ Error loading file content:', error)
-        fileModal.value.error = `파일을 불러올 수 없습니다: ${error.message}`
-        fileModal.value.isLoading = false
-      }
-    }
-
-    const closeFileModal = () => {
-      fileModal.value = {
-        isOpen: false,
-        fileName: '',
-        filePath: '',
-        content: '',
-        isLoading: false,
-        error: ''
+        console.error('❌ Error downloading file:', error)
+        // 에러 메시지를 채팅에 표시
+        addMessage('bot', `❌ 파일 다운로드 실패: ${fileName}\n오류: ${error.message}`)
       }
     }
 
@@ -1780,10 +1753,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         newChatroomDisplay,
         handleErrorMessage,
         clearErrorMessages,
-        // 파일 모달 관련
-        fileModal,
-        openFileModal,
-        closeFileModal,
+        // 파일 다운로드 관련
+        downloadFile,
 
         // 에러 상태
         currentError,
@@ -2909,9 +2880,9 @@ body {
   gap: 0.5rem;
 }
 
-.file-view-btn {
+.file-download-btn {
   padding: 0.5rem 1rem;
-  background: #667eea;
+  background: #28a745;
   color: white;
   border: none;
   border-radius: 6px;
@@ -2922,137 +2893,17 @@ body {
   white-space: nowrap;
 }
 
-.file-view-btn:hover:not(:disabled) {
-  background: #5a6fd8;
+.file-download-btn:hover:not(:disabled) {
+  background: #218838;
   transform: translateY(-1px);
 }
 
-.file-view-btn:disabled {
+.file-download-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
 }
 
-/* File Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  padding: 2rem;
-}
 
-.file-modal {
-  background: white;
-  border-radius: 12px;
-  max-width: 90vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.file-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid #e9ecef;
-  background: #f8f9fa;
-  border-radius: 12px 12px 0 0;
-}
-
-.file-modal-header h3 {
-  margin: 0;
-  color: #333;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #666;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-  background: #e9ecef;
-  color: #333;
-}
-
-.file-modal-content {
-  flex: 1;
-  padding: 2rem;
-  overflow: auto;
-  min-height: 400px;
-  max-height: 70vh;
-}
-
-.loading-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  font-size: 1.1rem;
-  color: #666;
-}
-
-.error-message {
-  color: #dc3545;
-  text-align: center;
-  padding: 2rem;
-  font-size: 1rem;
-}
-
-.file-content {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  margin: 0;
-  max-height: none;
-  overflow: visible;
-}
-
-.file-modal-footer {
-  padding: 1rem 2rem;
-  border-top: 1px solid #e9ecef;
-  background: #f8f9fa;
-  display: flex;
-  justify-content: flex-end;
-  border-radius: 0 0 12px 12px;
-}
-
-.btn-secondary {
-  padding: 0.75rem 1.5rem;
-  background: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-  background: #5a6268;
-}
 
 /* User Message Styles */
 .user-message {
