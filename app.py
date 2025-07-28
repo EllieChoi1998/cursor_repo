@@ -361,13 +361,15 @@ def analyze_query(message: str) -> tuple[str, str, str]:
             return 'rag', 'search', ""
     
     # PCM 관련 키워드 검사
-    pcm_keywords = ['pcm', 'trend', '트렌드', '차트', '그래프', 'commonality', '커먼', '공통', 'point', '포인트', 'site', '사이트']
+    pcm_keywords = ['pcm', 'trend', '트렌드', '차트', '그래프', 'commonality', '커먼', '공통', 'sameness', 'point', '포인트', 'site', '사이트']
     for keyword in pcm_keywords:
         if keyword in message_lower:
             if any(k in message_lower for k in ['trend', '트렌드', '차트', '그래프']):
                 return 'pcm', 'trend', ""
             elif any(k in message_lower for k in ['commonality', '커먼', '공통']):
                 return 'pcm', 'commonality', ""
+            elif any(k in message_lower for k in ['sameness']):
+                return 'pcm', 'sameness', ""
             elif any(k in message_lower for k in ['point', '포인트', 'site', '사이트']):
                 return 'pcm', 'point', ""
             else:
@@ -411,8 +413,24 @@ def generate_pcm_trend_data() -> list:
 
 def generate_commonality_data() -> tuple[list, dict]:
     """Commonality 데이터 생성"""
-    # 기본 PCM 데이터
-    data = generate_pcm_trend_data()
+    # 테이블용 배열 데이터 생성 (PCM 트렌드 데이터를 배열로 변환)
+    pcm_data = generate_pcm_trend_data()
+    
+    print(f"🔍 generate_commonality_data: pcm_data type = {type(pcm_data)}")
+    print(f"🔍 generate_commonality_data: pcm_data keys = {list(pcm_data.keys()) if isinstance(pcm_data, dict) else 'not dict'}")
+    
+    # PARA별 객체를 배열로 변환
+    table_data = []
+    for para_name, para_data in pcm_data.items():
+        for row in para_data:
+            table_data.append({
+                **row,
+                'PARA': para_name
+            })
+    
+    print(f"🔍 generate_commonality_data: table_data type = {type(table_data)}")
+    print(f"🔍 generate_commonality_data: table_data length = {len(table_data)}")
+    print(f"🔍 generate_commonality_data: table_data sample = {table_data[:2] if table_data else 'empty'}")
     
     # Commonality 정보
     commonality = {
@@ -422,7 +440,7 @@ def generate_commonality_data() -> tuple[list, dict]:
         'bad_wafers': ['WAFER004', 'WAFER005']
     }
     
-    return data, commonality
+    return table_data, commonality
 
 def generate_pcm_point_data() -> list:
     """PCM 트렌드 포인트(라인+마커)용 예시 데이터 (고정값)"""
@@ -539,6 +557,15 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
             data, commonality = generate_commonality_data()
             response = {
                 'result': 'commonality_start',
+                'real_data': data,
+                'determined': commonality,
+                'SQL': 'SELECT * FROM pcm_data WHERE lot_type IN ("good", "bad")',
+                'timestamp': datetime.now().isoformat()
+            }
+        elif command_type == 'sameness':
+            data, commonality = generate_commonality_data()
+            response = {
+                'result': 'sameness_start',
                 'real_data': data,
                 'determined': commonality,
                 'SQL': 'SELECT * FROM pcm_data WHERE lot_type IN ("good", "bad")',

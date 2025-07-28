@@ -6,15 +6,17 @@
         <input 
           v-model="searchTerm" 
           type="text" 
-          placeholder="Search..." 
+          placeholder="전체 검색..." 
           class="search-input"
         >
-        <select v-if="uniqueDevices.length > 0" v-model="selectedDevice" class="device-filter">
-          <option value="">All Devices</option>
-          <option v-for="device in uniqueDevices" :key="device" :value="device">
-            Device {{ device }}
-          </option>
-        </select>
+        <button 
+          v-if="hasActiveFilters"
+          @click="clearAllFilters" 
+          class="emoji-btn clear-all-filters-btn"
+          title="모든 필터 초기화"
+        >
+          🗑️
+        </button>
       </div>
     </div>
     
@@ -23,10 +25,63 @@
         <thead>
           <tr>
             <th v-for="column in columns" :key="column.key" class="table-header-cell">
-              {{ column.label }}
-              <span class="sort-icon" @click="sortBy(column.key)">
-                {{ getSortIcon(column.key) }}
-              </span>
+              <div class="header-content" @click="toggleColumnFilter(column.key)">
+                <span class="header-text">{{ column.label }}</span>
+                <div class="header-actions">
+                  <span class="sort-icon" @click.stop="sortBy(column.key)">
+                    {{ getSortIcon(column.key) }}
+                  </span>
+                  <span class="filter-icon" :class="{ 'active': hasActiveFilter(column.key) }">
+                    🔍
+                  </span>
+                </div>
+              </div>
+              
+              <!-- 컬럼별 드롭다운 필터 -->
+              <div v-if="activeFilterColumn === column.key" class="column-filter-dropdown">
+                <div class="filter-dropdown-content">
+                  <div class="filter-section">
+                    <label>텍스트 검색:</label>
+                    <input 
+                      v-model="columnFilters[column.key]" 
+                      type="text" 
+                      :placeholder="`${column.label} 검색...`" 
+                      class="filter-input"
+                      @input="updateColumnFilter(column.key)"
+                    >
+                  </div>
+                  <div class="filter-section">
+                    <label>값 선택:</label>
+                    <select 
+                      v-model="columnSelectFilters[column.key]" 
+                      class="filter-select"
+                      @change="updateColumnFilter(column.key)"
+                    >
+                      <option value="">모든 값</option>
+                      <option 
+                        v-for="value in getUniqueValues(column.key)" 
+                        :key="value" 
+                        :value="value"
+                      >
+                        {{ value }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="filter-actions">
+                    <button 
+                      @click="clearColumnFilter(column.key)"
+                      class="emoji-btn clear-filter-btn"
+                      :class="{ 'disabled': !columnFilters[column.key] && !columnSelectFilters[column.key] }"
+                      title="필터 초기화"
+                    >
+                      🔄
+                    </button>
+                    <button @click="closeColumnFilter" class="emoji-btn close-filter-btn" title="닫기">
+                      ❌
+                    </button>
+                  </div>
+                </div>
+              </div>
             </th>
           </tr>
         </thead>
@@ -51,6 +106,9 @@
     <div class="table-footer">
       <div class="pagination-info">
         Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ filteredData.length }} entries
+        <span v-if="hasActiveFilters" class="filtered-info">
+          (필터링됨: {{ originalDataLength }} → {{ filteredData.length }})
+        </span>
       </div>
       <div class="pagination-controls">
         <button 
@@ -90,11 +148,17 @@ export default defineComponent({
   },
   setup(props) {
     const searchTerm = ref('')
-    const selectedDevice = ref('')
     const currentPage = ref(1)
     const itemsPerPage = ref(10)
     const sortColumn = ref('')
     const sortDirection = ref('asc')
+    
+    // 컬럼별 필터 상태
+    const columnFilters = ref({})
+    const columnSelectFilters = ref({})
+    
+    // 현재 활성화된 필터 컬럼
+    const activeFilterColumn = ref(null)
 
     // 동적 컬럼 생성: 첫 row의 키를 기준으로
     const columns = computed(() => {
@@ -120,29 +184,20 @@ export default defineComponent({
       })
     })
 
-    // 고유 디바이스 목록 (DEVICE 컬럼이 있을 때만)
-    const uniqueDevices = computed(() => {
-      if (!columns.value.some(col => col.key.toUpperCase() === 'DEVICE')) return []
-      const deviceColumn = columns.value.find(col => col.key.toUpperCase() === 'DEVICE')
-      if (!deviceColumn) return []
-      
-      const devices = props.data.map(row => row[deviceColumn.key]).filter(Boolean)
-      return [...new Set(devices)]
-    })
+    // 원본 데이터 길이
+    const originalDataLength = computed(() => props.data.length)
+
+    // 각 컬럼의 고유 값들 반환
+    const getUniqueValues = (columnKey) => {
+      const values = props.data.map(row => row[columnKey]).filter(Boolean)
+      return [...new Set(values)].sort()
+    }
 
     // 필터링된 데이터
     const filteredData = computed(() => {
       let filtered = props.data
 
-      // 디바이스 필터 (DEVICE 컬럼이 있을 때만)
-      if (selectedDevice.value && uniqueDevices.value.length > 0) {
-        const deviceColumn = columns.value.find(col => col.key.toUpperCase() === 'DEVICE')
-        if (deviceColumn) {
-          filtered = filtered.filter(row => row[deviceColumn.key] === selectedDevice.value)
-        }
-      }
-
-      // 검색 필터
+      // 전체 검색 필터
       if (searchTerm.value) {
         const term = searchTerm.value.toLowerCase()
         filtered = filtered.filter(row => 
@@ -151,6 +206,26 @@ export default defineComponent({
           )
         )
       }
+
+      // 컬럼별 필터 적용
+      Object.keys(columnFilters.value).forEach(columnKey => {
+        const filterValue = columnFilters.value[columnKey]
+        if (filterValue) {
+          const term = filterValue.toLowerCase()
+          filtered = filtered.filter(row => {
+            const cellValue = row[columnKey]
+            return cellValue && cellValue.toString().toLowerCase().includes(term)
+          })
+        }
+      })
+
+      // 컬럼별 선택 필터 적용
+      Object.keys(columnSelectFilters.value).forEach(columnKey => {
+        const selectValue = columnSelectFilters.value[columnKey]
+        if (selectValue) {
+          filtered = filtered.filter(row => row[columnKey] === selectValue)
+        }
+      })
 
       return filtered
     })
@@ -186,7 +261,53 @@ export default defineComponent({
       return sortedData.value.slice(startIndex.value, endIndex.value)
     })
 
-    // 메서드들
+    // 필터 관련 함수들
+    const hasActiveFilters = computed(() => {
+      return searchTerm.value || 
+             Object.values(columnFilters.value).some(v => v) ||
+             Object.values(columnSelectFilters.value).some(v => v)
+    })
+
+    const hasActiveFilter = (columnKey) => {
+      return columnFilters.value[columnKey] || columnSelectFilters.value[columnKey]
+    }
+
+    // 컬럼 필터 토글
+    const toggleColumnFilter = (columnKey) => {
+      if (activeFilterColumn.value === columnKey) {
+        activeFilterColumn.value = null
+      } else {
+        activeFilterColumn.value = columnKey
+      }
+    }
+
+    // 컬럼 필터 닫기
+    const closeColumnFilter = () => {
+      activeFilterColumn.value = null
+    }
+
+    // 컬럼 필터 업데이트
+    const updateColumnFilter = (columnKey) => {
+      // 필터가 적용되면 페이지를 1로 리셋
+      currentPage.value = 1
+    }
+
+    // 컬럼 필터 초기화
+    const clearColumnFilter = (columnKey) => {
+      columnFilters.value[columnKey] = ''
+      columnSelectFilters.value[columnKey] = ''
+      currentPage.value = 1
+    }
+
+    // 모든 필터 초기화
+    const clearAllFilters = () => {
+      searchTerm.value = ''
+      columnFilters.value = {}
+      columnSelectFilters.value = {}
+      activeFilterColumn.value = null
+      currentPage.value = 1
+    }
+
     const sortBy = (column) => {
       if (sortColumn.value === column) {
         sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
@@ -231,15 +352,27 @@ export default defineComponent({
 
     return {
       searchTerm,
-      selectedDevice,
       currentPage,
       columns,
-      uniqueDevices,
       filteredData,
       filteredAndSortedData,
       totalPages,
       startIndex,
       endIndex,
+      sortColumn,
+      sortDirection,
+      originalDataLength,
+      activeFilterColumn,
+      columnFilters,
+      columnSelectFilters,
+      hasActiveFilters,
+      hasActiveFilter,
+      getUniqueValues,
+      toggleColumnFilter,
+      closeColumnFilter,
+      updateColumnFilter,
+      clearColumnFilter,
+      clearAllFilters,
       sortBy,
       getSortIcon,
       formatNumber,
@@ -281,7 +414,7 @@ export default defineComponent({
   align-items: center;
 }
 
-.search-input, .device-filter {
+.search-input {
   padding: 0.5rem 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 6px;
@@ -294,7 +427,7 @@ export default defineComponent({
   color: rgba(255, 255, 255, 0.7);
 }
 
-.search-input:focus, .device-filter:focus {
+.search-input:focus {
   outline: none;
   background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.5);
@@ -302,41 +435,188 @@ export default defineComponent({
 
 .table-container {
   overflow-x: auto;
-  max-height: 600px;
-  overflow-y: auto;
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  background: white;
 }
 
 .table-header-cell {
+  position: relative;
   background: #f8f9fa;
-  padding: 1rem 0.75rem;
+  border-bottom: 2px solid #dee2e6;
+  padding: 0;
   font-weight: 600;
+  color: #495057;
   text-align: left;
-  border-bottom: 2px solid #e9ecef;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  min-width: 120px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
   cursor: pointer;
-  user-select: none;
   transition: background-color 0.2s ease;
 }
 
-.table-header-cell:hover {
-  background: #e9ecef;
+.header-content:hover {
+  background-color: #e9ecef;
+}
+
+.header-text {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .sort-icon {
-  margin-left: 0.5rem;
+  cursor: pointer;
   font-size: 0.75rem;
-  opacity: 0.6;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.sort-icon:hover {
+  opacity: 1;
+}
+
+.filter-icon {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.filter-icon.active {
+  opacity: 1;
+  color: #667eea;
+}
+
+/* 컬럼 필터 드롭다운 */
+.column-filter-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.filter-dropdown-content {
+  padding: 1rem;
+}
+
+.filter-section {
+  margin-bottom: 1rem;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-section label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+}
+
+.filter-input, .filter-select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background: white;
+}
+
+.filter-input:focus, .filter-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.25);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.emoji-btn {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 50%;
+  background: white;
+  color: #6c757d;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.clear-filter-btn:hover {
+  background: #dc3545;
+  color: white;
+  border-color: #dc3545;
+  transform: scale(1.1);
+}
+
+.close-filter-btn:hover {
+  background: #6c757d;
+  color: white;
+  border-color: #6c757d;
+  transform: scale(1.1);
+}
+
+.emoji-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.emoji-btn.disabled:hover {
+  transform: none;
+  background: white;
+  color: #6c757d;
+  border-color: #ced4da;
+}
+
+.clear-all-filters-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.clear-all-filters-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
 }
 
 .table-row {
+  border-bottom: 1px solid #e9ecef;
   transition: background-color 0.2s ease;
 }
 
@@ -345,32 +625,57 @@ export default defineComponent({
 }
 
 .table-cell {
-  padding: 0.75rem;
-  border-bottom: 1px solid #e9ecef;
-  vertical-align: middle;
+  padding: 1rem;
+  font-size: 0.875rem;
+  color: #495057;
+  border-right: 1px solid #e9ecef;
+}
+
+.table-cell:last-child {
+  border-right: none;
 }
 
 .number-value {
   font-family: 'Courier New', monospace;
   font-weight: 600;
-  color: #2563eb;
+  color: #28a745;
 }
 
 .device-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  text-align: center;
+  text-transform: uppercase;
 }
 
-.device-A { background: #dbeafe; color: #1e40af; }
-.device-B { background: #dcfce7; color: #166534; }
-.device-C { background: #fef3c7; color: #92400e; }
+.device-para1 {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.device-para2 {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.device-para3 {
+  background: #e8f5e8;
+  color: #388e3c;
+}
 
 .text-value {
-  color: #374151;
+  color: #495057;
+}
+
+.value-good {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.value-bad {
+  color: #dc3545;
+  font-weight: 600;
 }
 
 .table-footer {
@@ -383,30 +688,36 @@ export default defineComponent({
 }
 
 .pagination-info {
-  color: #6b7280;
   font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.filtered-info {
+  color: #667eea;
+  font-weight: 600;
 }
 
 .pagination-controls {
   display: flex;
+  gap: 0.5rem;
   align-items: center;
-  gap: 1rem;
 }
 
 .pagination-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
   background: white;
-  color: #374151;
-  border-radius: 6px;
+  color: #495057;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.875rem;
 }
 
 .pagination-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
 }
 
 .pagination-btn:disabled {
@@ -416,22 +727,11 @@ export default defineComponent({
 
 .page-info {
   font-size: 0.875rem;
-  color: #6b7280;
-  font-weight: 500;
+  color: #6c757d;
+  margin: 0 0.5rem;
 }
 
-/* G/B 값 색상 스타일 */
-.value-good {
-  color: #10b981 !important;
-  font-weight: 600;
-}
-
-.value-bad {
-  color: #ef4444 !important;
-  font-weight: 600;
-}
-
-/* Responsive */
+/* 반응형 디자인 */
 @media (max-width: 768px) {
   .table-header {
     flex-direction: column;
@@ -440,12 +740,35 @@ export default defineComponent({
   }
   
   .table-controls {
-    flex-direction: column;
-    gap: 0.5rem;
+    justify-content: center;
   }
   
-  .search-input, .device-filter {
-    width: 100%;
+  .header-content {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  
+  .header-actions {
+    align-self: flex-end;
+  }
+  
+  .filter-dropdown-content {
+    padding: 0.75rem;
+  }
+  
+  .filter-actions {
+    flex-direction: column;
+  }
+  
+  .table-footer {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .pagination-controls {
+    justify-content: center;
   }
 }
 </style>

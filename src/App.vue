@@ -846,7 +846,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       } else if (currentResizeBar.value === resizeBar2.value) {
         // 채팅 섹션과 결과 사이드바 사이 리사이즈
         const newChatWidth = Math.max(350, Math.min(800, startWidths.value.chatSection + deltaX))
-        const newResultsWidth = Math.max(300, Math.min(1200, startWidths.value.resultsSidebar - deltaX))
+        const newResultsWidth = Math.max(300, startWidths.value.resultsSidebar - deltaX)
         
         if (chatSection.value) {
           chatSection.value.style.width = `${newChatWidth}px`
@@ -974,6 +974,15 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             // 실제 응답 데이터 처리
             currentChatResponse.value = data
 
+            console.log('🔍 Processing response:', data.response)
+            console.log('🔍 Response result:', data.response.result)
+            console.log('🔍 Real data exists:', !!data.response.real_data)
+            console.log('🔍 Real data type:', typeof data.response.real_data)
+            console.log('🔍 Real data length:', data.response.real_data?.length)
+            
+            if (data.response.real_data && data.response.real_data.length > 0) {
+              console.log('🔍 Real data sample:', data.response.real_data.slice(0, 2))
+            }
             
             if (data.response.result === 'lot_start') {
               // PCM 트렌드 데이터 처리
@@ -1047,7 +1056,70 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               chatResults.value[activeChatId.value] = currentResults
               addMessage('bot', `✅ PCM 트렌드 포인트 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
               addMessage('bot', `Chart Summary:\n• Total Records: ${realData.length}\n• PCM_SITE: ${[...new Set(realData.map(row => row.PCM_SITE))].join(', ')}\n• Date Range: ${Math.min(...realData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...realData.map(row => row.DATE_WAFER_ID))}`)
-            } 
+            } else if (data.response.result === 'commonality_start') {
+              // PCM Commonality 데이터 처리
+              let realData = data.response.real_data
+              
+              console.log('🔍 Commonality real_data type:', typeof realData)
+              console.log('🔍 Commonality real_data keys:', realData ? Object.keys(realData) : 'no data')
+              
+              // real_data가 객체인 경우 배열로 변환 (백엔드 수정 전 임시 처리)
+              if (realData && typeof realData === 'object' && !Array.isArray(realData)) {
+                console.log('🔧 Converting object real_data to array for commonality')
+                const combinedData = []
+                Object.keys(realData).forEach(paraName => {
+                  const paraData = realData[paraName]
+                  if (Array.isArray(paraData)) {
+                    paraData.forEach(row => {
+                      combinedData.push({
+                        ...row,
+                        PARA: paraName
+                      })
+                    })
+                  }
+                })
+                realData = combinedData
+                console.log('🔧 Converted data length:', realData.length)
+              }
+              
+              // 현재 유저 메시지 찾기
+              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
+              
+              const newResult = {
+                id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
+                type: 'dynamic_table', // commonality에서 dynamic_table로 변경
+                title: `PCM Commonality Analysis`,
+                data: realData,
+                isActive: true,
+                timestamp: new Date(),
+                chatId: data.chat_id,
+                messageId: data.message_id,
+                responseId: data.response_id,
+                sql: data.response.SQL,
+                realData: realData,
+                resultType: data.response.result,
+                userMessage: userMessage ? userMessage.text : 'Unknown message',
+                // Commonality 정보 추가
+                commonalityData: data.response.determined
+              }
+              
+              // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
+              const currentResults = chatResults.value[activeChatId.value] || []
+              currentResults.forEach(r => r.isActive = false)
+              currentResults.push(newResult)
+              chatResults.value[activeChatId.value] = currentResults
+              
+              addMessage('bot', `✅ PCM Commonality 분석이 완료되었습니다!\n• SQL: ${data.response.SQL}\n• Chat ID: ${data.chat_id}`)
+              
+              // Commonality 정보 요약
+              const determined = data.response.determined
+              addMessage('bot', `Commonality Summary:
+• Good Lots: ${determined.good_lots?.length || 0}개
+• Bad Lots: ${determined.bad_lots?.length || 0}개
+• Good Wafers: ${determined.good_wafers?.length || 0}개
+• Bad Wafers: ${determined.bad_wafers?.length || 0}개`)
+            }
             // 그래프나 RAG가 아닌 모든 응답은 테이블로 처리
             else if (data.response.real_data && data.response.real_data.length > 0) {
               const realData = data.response.real_data
@@ -1136,7 +1208,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       clearErrorMessages()
       
       // Add user message (모든 사용자 메시지는 수정 가능)
-      addMessage('user', message)
+      addMessage('user', message, true)
       currentMessage.value = ''
       isLoading.value = true
       
@@ -1860,7 +1932,7 @@ body {
 .results-sidebar {
   flex: 1 1 500px;
   min-width: 300px;
-  max-width: 1200px;
+  max-width: 100%;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -2343,7 +2415,7 @@ body {
   }
   
   .results-sidebar {
-    max-width: 700px;
+    max-width: 100%;
   }
   
   .chat-section {
