@@ -45,6 +45,7 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 # 채팅방 모델
 class ChatRoom(BaseModel):
     id: int  # 정수로 변경
+    name: str  # 채팅방 이름 추가
 
 # 채팅 기록 모델 (새로 추가)
 class ChatHistory(BaseModel):
@@ -87,9 +88,14 @@ class EditMessageRequest(BaseModel):
 
 # 채팅방 생성 요청 모델 제거 (파라미터 없음)
 
+# 채팅방 이름 수정 요청 모델 (새로 추가)
+class UpdateChatRoomNameRequest(BaseModel):
+    name: str
+
 # 채팅방 목록 응답 모델 (API 명세에 맞게 수정)
 class ChatRoomListItem(BaseModel):
     id: int
+    name: str  # name 필드 추가
     message_count: int
     last_activity: datetime
 
@@ -124,7 +130,8 @@ class ChatStorage:
         self.next_chatroom_id += 1
         
         chatroom = ChatRoom(
-            id=chatroom_id
+            id=chatroom_id,
+            name=f"채팅방 #{chatroom_id}"  # 기본 이름 설정
         )
         self.chatrooms[chatroom_id] = chatroom
         self.chat_histories[chatroom_id] = []  # 빈 히스토리 초기화
@@ -149,6 +156,7 @@ class ChatStorage:
             
             item = ChatRoomListItem(
                 id=chatroom_id,
+                name=chatroom.name,  # name 필드 추가
                 message_count=message_count,
                 last_activity=last_activity
             )
@@ -270,6 +278,13 @@ class ChatStorage:
     def get_responses_by_chatroom(self, chatroom_id: int) -> List[BotResponse]:
         """채팅방의 응답 조회"""
         return [resp for resp in self.responses.values() if resp.chatroom_id == chatroom_id]
+
+    def update_chatroom_name(self, chatroom_id: int, name: str) -> Optional[ChatRoom]:
+        """채팅방 이름 수정"""
+        if chatroom_id in self.chatrooms:
+            self.chatrooms[chatroom_id].name = name
+            return self.chatrooms[chatroom_id]
+        return None
 
 # 전역 저장소 인스턴스
 chat_storage = ChatStorage()
@@ -676,6 +691,20 @@ async def delete_chatroom(chatroom_id: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"채팅방 삭제 실패: {str(e)}")
+
+@app.put("/chatrooms/{chatroom_id}/name")
+async def update_chatroom_name(chatroom_id: int, request: UpdateChatRoomNameRequest):
+    """채팅방 이름 수정"""
+    try:
+        updated_chatroom = chat_storage.update_chatroom_name(chatroom_id, request.name)
+        if not updated_chatroom:
+            raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+        
+        return {"success": True, "message": "채팅방 이름이 수정되었습니다.", "chatroom": updated_chatroom}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"채팅방 이름 수정 실패: {str(e)}")
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):

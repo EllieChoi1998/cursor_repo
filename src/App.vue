@@ -18,6 +18,7 @@
             @select-room="selectChatRoom"
             @create-room="createNewChatRoom"
             @delete-room="deleteChatRoom"
+            @update-room-name="handleUpdateRoomName"
           />
         </aside>
         
@@ -1360,7 +1361,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           console.log('🏠 Processing room:', room)
           return {
             id: room.id,
-            name: `채팅방 #${room.id}`, // ID를 포함한 이름으로
+            name: room.name || `채팅방 #${room.id}`, // 백엔드에서 받은 이름 사용, 없으면 기본값
             dataType: 'pcm', // API 명세에 data_type이 없으므로 기본값
             lastMessage: `${room.message_count || 0}개의 메시지`,
             lastMessageTime: new Date(room.last_activity || new Date()),
@@ -1698,6 +1699,12 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
+    // 채팅방 이름 수정 핸들러 (새로 추가)
+    const handleUpdateRoomName = ({ roomId, name }) => {
+      console.log('🔄 Chatroom name updated:', { roomId, name })
+      // 로컬 상태는 이미 ChatRoomList에서 업데이트되었으므로 추가 작업 불필요
+    }
+
     onMounted(async () => {
       // 채팅방 데이터 로드
       await loadChatRooms()
@@ -1771,7 +1778,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         resultsSidebar,
         resizeBar1,
         resizeBar2,
-        startResize
+        startResize,
+        handleUpdateRoomName
       }
   }
 })

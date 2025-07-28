@@ -99,6 +99,33 @@ export const deleteChatRoom = async (chatroomId) => {
   }
 }
 
+// 채팅방 이름 수정 API (새로 추가)
+export const updateChatRoomName = async (chatroomId, name) => {
+  try {
+    console.log('🔄 Updating chatroom name:', { chatroomId, name })
+    const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}/name`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name })
+    })
+    
+    console.log('📡 Update name response status:', response.status, response.statusText)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log('✅ Update name response data:', data)
+    return data
+  } catch (error) {
+    console.error('Error updating chatroom name:', error)
+    throw error
+  }
+}
+
 // 스트리밍 채팅 API
 export const streamChatAPI = async (choice, message, chatroomId, onData) => {
   console.log('🚀 Sending chat request:', { choice, message, chatroomId })

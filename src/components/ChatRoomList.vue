@@ -30,7 +30,27 @@
         <div class="chat-room-info">
           <div class="chat-room-title">
             <span class="room-icon">💬</span>
-            <span class="room-name">{{ room.name }}</span>
+            <!-- 채팅방 이름 수정 기능 -->
+            <div class="room-name-container" @click.stop>
+              <input 
+                v-if="room.isEditing"
+                v-model="room.editName"
+                @blur="saveRoomName(room)"
+                @keyup.enter="saveRoomName(room)"
+                @keyup.esc="cancelEditRoomName(room)"
+                class="room-name-input"
+                ref="nameInput"
+                :disabled="isUpdatingName"
+              />
+              <span 
+                v-else 
+                class="room-name"
+                @click="startEditRoomName(room)"
+                :title="room.name"
+              >
+                {{ room.name }}
+              </span>
+            </div>
           </div>
           <div class="chat-room-meta">
             <span class="room-type">{{ room.dataType.toUpperCase() }}</span>
@@ -55,7 +75,8 @@
 </template>
 
 <script>
-import { defineComponent, ref, computed } from 'vue'
+import { defineComponent, ref, computed, nextTick } from 'vue'
+import { updateChatRoomName } from '../services/api.js'
 
 export default defineComponent({
   name: 'ChatRoomList',
@@ -73,9 +94,9 @@ export default defineComponent({
       default: false
     }
   },
-  emits: ['select-room', 'create-room', 'delete-room'],
+  emits: ['select-room', 'create-room', 'delete-room', 'update-room-name'],
   setup(props, { emit }) {
-
+    const isUpdatingName = ref(false)
 
     const formatTime = (timestamp) => {
       if (!timestamp) return ''
@@ -122,11 +143,68 @@ export default defineComponent({
       emit('delete-room', roomId)
     }
 
+    // 채팅방 이름 수정 관련 함수들
+    const startEditRoomName = (room) => {
+      room.isEditing = true
+      room.editName = room.name
+      
+      // 다음 tick에서 입력 필드에 포커스
+      nextTick(() => {
+        const nameInput = document.querySelector('.room-name-input')
+        if (nameInput) {
+          nameInput.focus()
+          nameInput.select()
+        }
+      })
+    }
+
+    const saveRoomName = async (room) => {
+      const newName = room.editName?.trim()
+      if (!newName || newName === room.name) {
+        // 이름이 변경되지 않았으면 수정 모드만 종료
+        room.isEditing = false
+        room.editName = ''
+        return
+      }
+
+      try {
+        isUpdatingName.value = true
+        await updateChatRoomName(room.id, newName)
+        
+        // 성공적으로 업데이트된 경우
+        room.name = newName
+        room.isEditing = false
+        room.editName = ''
+        
+        // 부모 컴포넌트에 알림
+        emit('update-room-name', { roomId: room.id, name: newName })
+        
+        console.log('✅ Chatroom name updated successfully:', newName)
+      } catch (error) {
+        console.error('❌ Error updating chatroom name:', error)
+        // 에러 발생 시 원래 이름으로 복원
+        room.editName = room.name
+        room.isEditing = false
+        alert('채팅방 이름 수정에 실패했습니다.')
+      } finally {
+        isUpdatingName.value = false
+      }
+    }
+
+    const cancelEditRoomName = (room) => {
+      room.isEditing = false
+      room.editName = ''
+    }
+
     return {
       formatTime,
       selectChatRoom,
       createNewChat,
-      deleteChatRoom
+      deleteChatRoom,
+      startEditRoomName,
+      saveRoomName,
+      cancelEditRoomName,
+      isUpdatingName
     }
   }
 })
@@ -269,6 +347,41 @@ export default defineComponent({
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.room-name:hover {
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.room-name-container {
+  flex: 1;
+  min-width: 0;
+}
+
+.room-name-input {
+  width: 100%;
+  padding: 2px 4px;
+  border: 2px solid #667eea;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: white;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.room-name-input:focus {
+  border-color: #5a6fd8;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+}
+
+.room-name-input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
 }
 
 .chat-room-meta {
