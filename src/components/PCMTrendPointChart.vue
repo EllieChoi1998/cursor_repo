@@ -63,9 +63,10 @@ export default defineComponent({
 
     const createChart = () => {
       if (!chartContainer.value) return
-      
       // 데이터 샘플링 제거 - 전체 데이터 사용
-      const data = props.data
+      //const data = props.data
+      // HT 임시 수정
+      const data = props.data[0]
       console.log(`PCMTrendPointChart 전체 데이터 사용: ${data.length}개`)
       
       // PCM_SITE별로 그룹화
@@ -128,8 +129,11 @@ export default defineComponent({
         height: props.height,
         showlegend: true,
         legend: {
-          x: 0,
-          y: 1,
+          orientation: 'v',
+          x: 1, 
+          xanchor: 'left', 
+          y: 1, 
+          yanchor: 'top', 
           bgcolor: 'rgba(255,255,255,0.8)',
           bordercolor: '#ccc',
           borderwidth: 1
