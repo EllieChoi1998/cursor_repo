@@ -150,7 +150,7 @@
                     >
                       <option value="pcm">PCM (Process Control Monitor)</option>
                       <option value="cp">CP (Chip Probe)</option>
-                      <option value="rag">RAG (Retrieval-Augmented Generation)</option>
+                      <option value="rag">불량 이력 검색</option>
                     </select>
                   </div>
                   <div class="time-toggle">
@@ -2819,7 +2819,7 @@ body {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: center;
+  //align-items: center;
   justify-content: center;
   min-width: 1200px;
   overflow-x: auto;
