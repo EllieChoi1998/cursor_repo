@@ -681,17 +681,19 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
-    const addMessage = (type, text, isEditable = false, originalMessage = null, messageType = 'text', files = null) => {
-      if (!chatMessages.value[activeChatId.value]) {
+    const addMessage = (type, text, isEditable = false, originalMessage = null, messageType = 'text', files = null, targetChatId = null) => {
+      const chatId = targetChatId || activeChatId.value
+      
+      if (!chatMessages.value[chatId]) {
         chatMessages.value = {
           ...chatMessages.value,
-          [activeChatId.value]: []
+          [chatId]: []
         }
       }
       
       // 오류 메시지 중복 방지
       if (type === 'bot' && text.includes('❌')) {
-        const existingError = chatMessages.value[activeChatId.value].find(msg => 
+        const existingError = chatMessages.value[chatId].find(msg => 
           msg.isError && msg.text.includes('❌')
         )
         if (existingError) {
@@ -717,16 +719,16 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         editText: ''
       }
       
-      const currentMessages = [...(chatMessages.value[activeChatId.value] || [])]
+      const currentMessages = [...(chatMessages.value[chatId] || [])]
       currentMessages.push(newMessage)
       chatMessages.value = {
         ...chatMessages.value,
-        [activeChatId.value]: currentMessages
+        [chatId]: currentMessages
       }
       
       // 수정 가능한 메시지를 맨 아래로 이동
       if (isEditable) {
-        const messages = chatMessages.value[activeChatId.value]
+        const messages = chatMessages.value[chatId]
         const lastIndex = messages.length - 1
         if (lastIndex > 0) {
           // 수정 가능한 메시지를 맨 뒤로 이동
@@ -970,11 +972,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     // 스트리밍 채팅 처리 함수
     const processStreamingChat = async (message) => {
       try {
-        // 선택된 데이터 타입으로 메시지를 백엔드로 전송하고 백엔드에서 유효성을 검사하도록 함
-        addMessage('bot', '🔄 메시지를 처리하는 중...')
-        
         // 요청 시점의 채팅방 ID를 캡처 (응답이 올 때까지 유지)
         const requestChatId = activeChatId.value
+        
+        // 선택된 데이터 타입으로 메시지를 백엔드로 전송하고 백엔드에서 유효성을 검사하도록 함
+        addMessage('bot', '🔄 메시지를 처리하는 중...', false, null, 'text', null, requestChatId)
         console.log(`🎯 Starting request for chatroom ${requestChatId}`)
         
         await streamChatAPI(selectedDataType.value, message, requestChatId, (data) => {
@@ -982,7 +984,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           console.log(' Received streaming data:', data)
           
           if (data.status === 'processing') {
-            addMessage('bot', '⚙️ 데이터를 처리하고 있습니다...')
+            addMessage('bot', '⚙️ 데이터를 처리하고 있습니다...', false, null, 'text', null, requestChatId)
           } else if (data.error) {
             // 에러 발생 시 처리 - 채팅에 에러 메시지 추가하지 않음
             handleErrorMessage(`❌ 오류: ${data.error}`, message)
@@ -1013,7 +1015,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               const realData = data.response.real_data || []
               if (realData.length === 0) {
                 // real_data가 없으면 메타데이터만 표시
-                addMessage('bot', `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}\n• Note: 실제 데이터는 별도로 처리됩니다.`)
+                addMessage('bot', `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}\n• Note: 실제 데이터는 별도로 처리됩니다.`, false, null, 'text', null, requestChatId)
                 return
               }
               const chartData = generatePCMDataWithRealData(realData)
@@ -1045,12 +1047,12 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[requestChatId] = currentResults
               
-              addMessage('bot', `✅ PCM 트렌드 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
+              addMessage('bot', `✅ PCM 트렌드 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`, false, null, 'text', null, requestChatId)
               
               addMessage('bot', `Chart Summary:
 • Total Records: ${chartData.length}
 • Device Types: ${[...new Set(chartData.map(row => row.DEVICE))].join(', ')}
-• Date Range: ${Math.min(...chartData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...chartData.map(row => row.DATE_WAFER_ID))}`)
+• Date Range: ${Math.min(...chartData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...chartData.map(row => row.DATE_WAFER_ID))}`, false, null, 'text', null, requestChatId)
               
             } else if (data.response.result === 'lot_point') {
               // PCM 트렌드 포인트 데이터 처리
@@ -1080,8 +1082,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.forEach(r => r.isActive = false)
               currentResults.push(newResult)
               chatResults.value[requestChatId] = currentResults
-              addMessage('bot', `✅ PCM 트렌드 포인트 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
-              addMessage('bot', `Chart Summary:\n• Total Records: ${realData.length}\n• PCM_SITE: ${[...new Set(realData.map(row => row.PCM_SITE))].join(', ')}\n• Date Range: ${Math.min(...realData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...realData.map(row => row.DATE_WAFER_ID))}`)
+              addMessage('bot', `✅ PCM 트렌드 포인트 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`, false, null, 'text', null, requestChatId)
+              addMessage('bot', `Chart Summary:\n• Total Records: ${realData.length}\n• PCM_SITE: ${[...new Set(realData.map(row => row.PCM_SITE))].join(', ')}\n• Date Range: ${Math.min(...realData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...realData.map(row => row.DATE_WAFER_ID))}`, false, null, 'text', null, requestChatId)
             } else if (data.response.result === 'commonality_start') {
               // PCM Commonality 데이터 처리
               let realData = data.response.real_data
@@ -1136,7 +1138,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[requestChatId] = currentResults
               
-              addMessage('bot', `✅ PCM Commonality 분석이 완료되었습니다!\n• SQL: ${data.response.SQL}\n• Chat ID: ${data.chat_id}`)
+              addMessage('bot', `✅ PCM Commonality 분석이 완료되었습니다!\n• SQL: ${data.response.SQL}\n• Chat ID: ${data.chat_id}`, false, null, 'text', null, requestChatId)
               
               // Commonality 정보 요약
               const determined = data.response.determined
@@ -1144,7 +1146,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 • Good Lots: ${determined.good_lot_name_list?.length || 0}개
 • Bad Lots: ${determined.bad_lot_name_list?.length || 0}개
 • Good Wafers: ${determined.good_wafer_name_list?.length || 0}개
-• Bad Wafers: ${determined.bad_wafer_name_list?.length || 0}개`)
+• Bad Wafers: ${determined.bad_wafer_name_list?.length || 0}개`, false, null, 'text', null, requestChatId)
             }
             // 그래프나 RAG가 아닌 모든 응답은 테이블로 처리
             else if (data.response.real_data && data.response.real_data.length > 0) {
@@ -1175,7 +1177,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[requestChatId] = currentResults
               
-              addMessage('bot', `✅ ${data.response.result.toUpperCase()} 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`)
+              addMessage('bot', `✅ ${data.response.result.toUpperCase()} 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`, false, null, 'text', null, requestChatId)
             }
 
             else if (data.response.result === 'rag') {
@@ -1184,13 +1186,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 const files = data.response.files || []
                 
                 // 파일 목록을 특별한 메시지 타입으로 추가
-                addMessage('bot', ' 검색된 파일 목록:', false, null, 'file_list', files)
+                addMessage('bot', ' 검색된 파일 목록:', false, null, 'file_list', files, requestChatId)
               } else if (data.response.response) {
                 // 텍스트 응답을 메시지에 추가
-                addMessage('bot', data.response.response)
+                addMessage('bot', data.response.response, false, null, 'text', null, requestChatId)
               } else {
                 // 기타 RAG 응답
-                addMessage('bot', '✅ RAG 검색이 완료되었습니다.')
+                addMessage('bot', '✅ RAG 검색이 완료되었습니다.', false, null, 'text', null, requestChatId)
               }
             }
             
