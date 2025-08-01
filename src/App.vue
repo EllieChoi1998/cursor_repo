@@ -432,7 +432,6 @@ export default defineComponent({
   setup() {
 
     
-    const currentMessage = ref('')
     const selectedDataType = ref('pcm') // 기본값은 PCM
     const isLoading = ref(false)
     const messagesContainer = ref(null)
@@ -442,9 +441,28 @@ export default defineComponent({
     
 
     
-    // 에러 상태 관리
-    const currentError = ref('')
-    const showError = ref(false)
+    // 채팅방별 UI 상태 관리
+    const chatInputs = ref({}) // 각 채팅방별 입력 메시지
+    const chatErrors = ref({}) // 각 채팅방별 에러 상태
+    
+    // 현재 활성 채팅방의 입력 메시지 computed
+    const currentMessage = computed({
+      get: () => chatInputs.value[activeChatId.value] || '',
+      set: (value) => {
+        if (activeChatId.value) {
+          chatInputs.value[activeChatId.value] = value
+        }
+      }
+    })
+    
+    // 현재 활성 채팅방의 에러 상태 computed
+    const showError = computed(() => {
+      return chatErrors.value[activeChatId.value]?.show || false
+    })
+    
+    const currentError = computed(() => {
+      return chatErrors.value[activeChatId.value]?.message || ''
+    })
 const showOriginalTime = ref(false) // 원본 시간 표시 토글
     
     // 리사이즈 관련 refs
@@ -732,12 +750,15 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         }
       }
       
-      // 에러 상태 설정
-      currentError.value = errorText
-      showError.value = true
+      // 현재 채팅방의 에러 상태 설정
+      if (!chatErrors.value[activeChatId.value]) {
+        chatErrors.value[activeChatId.value] = {}
+      }
+      chatErrors.value[activeChatId.value].message = errorText
+      chatErrors.value[activeChatId.value].show = true
       
-      // 원본 메시지를 입력창에 자동 입력
-      currentMessage.value = originalMessageText
+      // 원본 메시지를 현재 채팅방의 입력창에 자동 입력
+      chatInputs.value[activeChatId.value] = originalMessageText
       
       // 입력창에 포커스
       nextTick(() => {
@@ -761,9 +782,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         }
       }
       
-      // 에러 상태 초기화
-      currentError.value = ''
-      showError.value = false
+      // 현재 채팅방의 에러 상태 초기화
+      if (chatErrors.value[activeChatId.value]) {
+        chatErrors.value[activeChatId.value].message = ''
+        chatErrors.value[activeChatId.value].show = false
+      }
     }
 
 
@@ -1206,7 +1229,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       
       // Add user message (모든 사용자 메시지는 수정 가능)
       addMessage('user', message, true)
-      currentMessage.value = ''
+      chatInputs.value[activeChatId.value] = ''
       isLoading.value = true
       
       // 채팅방 정보 업데이트
@@ -1704,6 +1727,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // 새 채팅방의 결과 배열 초기화
         chatResults.value[createdRoom.id] = []
         
+        // 새 채팅방의 입력 및 에러 상태 초기화
+        chatInputs.value[createdRoom.id] = ''
+        chatErrors.value[createdRoom.id] = { show: false, message: '' }
+        
         // 새 채팅방 표시 활성화
         newChatroomDisplay.value[createdRoom.id] = true
         
@@ -1731,6 +1758,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           // 채팅방 데이터 삭제
           delete chatMessages.value[roomId]
           delete chatResults.value[roomId]
+          delete chatInputs.value[roomId]
+          delete chatErrors.value[roomId]
           delete newChatroomDisplay.value[roomId] // 채팅방 삭제 시 표시 상태도 제거
           
           // 삭제된 채팅방이 현재 활성화된 채팅방이었다면 다른 채팅방으로 전환
@@ -1840,6 +1869,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // 에러 상태
         currentError,
         showError,
+        chatInputs,
+        chatErrors,
         showOriginalTime,
         // 전체화면 모달
         fullscreenResult,
