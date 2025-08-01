@@ -91,9 +91,11 @@ export default defineComponent({
     const chartContainer = ref(null)
     const chartRefs = ref([])
 
-    // 실제 데이터 추출 함수 (real_data 구조 처리)
+    // 실제 데이터 추출 함수 (PARA별 객체 구조 처리)
     const getRealData = () => {
       console.log('PCMTrendPointChart - props.data 확인:', props.data)
+      console.log('PCMTrendPointChart - props.data 타입:', typeof props.data)
+      console.log('PCMTrendPointChart - props.data 키들:', props.data ? Object.keys(props.data) : 'None')
       
       // 데이터가 없는 경우
       if (!props.data) {
@@ -101,9 +103,44 @@ export default defineComponent({
         return []
       }
 
-      // real_data 구조인지 확인
+      // PARA별 객체 구조인지 확인 (PARA1, PARA2, ... 형태)
+      if (typeof props.data === 'object' && !Array.isArray(props.data)) {
+        const keys = Object.keys(props.data)
+        console.log('PCMTrendPointChart - 객체 구조 감지, 키들:', keys)
+        
+        // PARA로 시작하는 키들이 있는지 확인하거나, 첫 번째 값이 배열인지 확인
+        const firstKey = keys[0]
+        if (firstKey && Array.isArray(props.data[firstKey])) {
+          console.log('PCMTrendPointChart - PARA별 객체 구조 확인됨')
+          
+          // 모든 PARA 데이터를 하나의 배열로 합치기
+          const allData = []
+          keys.forEach(paraKey => {
+            const paraData = props.data[paraKey]
+            if (Array.isArray(paraData)) {
+              console.log(`PCMTrendPointChart - ${paraKey}: ${paraData.length}개 데이터`)
+              console.log(`PCMTrendPointChart - ${paraKey} 첫 번째 데이터:`, paraData[0])
+              
+              // 각 데이터에 PARA 정보 추가
+              paraData.forEach(row => {
+                allData.push({
+                  ...row,
+                  PARA: paraKey,
+                  // START_TIME을 DATE_WAFER_ID로 매핑 (필요한 경우)
+                  DATE_WAFER_ID: row.DATE_WAFER_ID || row.START_TIME
+                })
+              })
+            }
+          })
+          console.log('PCMTrendPointChart - 전체 병합된 데이터:', allData.length, '개')
+          console.log('PCMTrendPointChart - 병합된 데이터 샘플:', allData[0])
+          return allData
+        }
+      }
+
+      // real_data 구조인지 확인 (중첩된 경우)
       if (props.data.real_data && typeof props.data.real_data === 'object') {
-        console.log('PCMTrendPointChart - real_data 구조 감지:', props.data.real_data)
+        console.log('PCMTrendPointChart - real_data 중첩 구조 감지:', Object.keys(props.data.real_data))
         // real_data 안의 모든 PARA 데이터를 하나의 배열로 합치기
         const allData = []
         Object.keys(props.data.real_data).forEach(paraKey => {
@@ -113,7 +150,8 @@ export default defineComponent({
             paraData.forEach(row => {
               allData.push({
                 ...row,
-                PARA: paraKey
+                PARA: paraKey,
+                DATE_WAFER_ID: row.DATE_WAFER_ID || row.START_TIME
               })
             })
           }
@@ -124,6 +162,7 @@ export default defineComponent({
 
       // 기존 구조 처리 (배열)
       if (Array.isArray(props.data)) {
+        console.log('PCMTrendPointChart - 배열 구조 감지')
         if (props.data.length === 0) {
           console.log('PCMTrendPointChart - props.data가 빈 배열')
           return []
@@ -137,7 +176,7 @@ export default defineComponent({
         }
         
         // props.data 자체가 데이터 배열인 경우
-        if (props.data[0] && props.data[0].DATE_WAFER_ID !== undefined) {
+        if (props.data[0] && (props.data[0].DATE_WAFER_ID !== undefined || props.data[0].START_TIME !== undefined)) {
           console.log('PCMTrendPointChart - props.data 직접 사용')
           return props.data
         }
@@ -190,7 +229,9 @@ export default defineComponent({
       const siteGroups = {}
       data.forEach(row => {
         if (!siteGroups[row.PCM_SITE]) siteGroups[row.PCM_SITE] = { x: [], y: [] }
-        siteGroups[row.PCM_SITE].x.push(row.DATE_WAFER_ID)
+        // DATE_WAFER_ID 또는 START_TIME 사용
+        const xValue = row.DATE_WAFER_ID || row.START_TIME
+        siteGroups[row.PCM_SITE].x.push(xValue)
         siteGroups[row.PCM_SITE].y.push(row.VALUE)
       })
       
@@ -206,7 +247,13 @@ export default defineComponent({
       }))
       
       // x축 라벨 생성 (적절한 간격으로 표시)
-      const xOrder = [...new Set(data.map(row => row.DATE_WAFER_ID))].sort((a, b) => a - b)
+      const xOrder = [...new Set(data.map(row => row.DATE_WAFER_ID || row.START_TIME))].sort((a, b) => {
+        // 숫자인 경우 숫자 정렬, 문자열인 경우 문자열 정렬
+        if (typeof a === 'number' && typeof b === 'number') {
+          return a - b
+        }
+        return String(a).localeCompare(String(b))
+      })
       const maxLabels = 50
       const step = Math.max(1, Math.floor(xOrder.length / maxLabels))
       const sampledLabels = xOrder.filter((_, index) => index % step === 0)
@@ -220,7 +267,7 @@ export default defineComponent({
           }
         },
         xaxis: {
-          title: 'Date Wafer ID',
+          title: data[0] && data[0].START_TIME ? 'Start Time' : 'Date Wafer ID',
           type: 'category',
           showgrid: true,
           gridcolor: '#f0f0f0',
