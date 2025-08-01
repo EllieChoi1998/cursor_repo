@@ -24,7 +24,7 @@
       <div 
         v-for="room in chatRooms" 
         :key="room.id"
-        :class="['chat-room-item', { 'active': room.id === activeChatId }]"
+        :class="['chat-room-item', { 'active': String(room.id) === String(activeChatId) }]"
         @click="selectChatRoom(room.id)"
       >
         <div class="chat-room-info">
@@ -82,7 +82,7 @@ export default defineComponent({
   name: 'ChatRoomList',
   props: {
     activeChatId: {
-      type: String,
+      type: [Number, String],
       default: null
     },
     chatRooms: {

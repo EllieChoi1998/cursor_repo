@@ -1769,7 +1769,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           delete newChatroomDisplay.value[roomId] // 채팅방 삭제 시 표시 상태도 제거
           
           // 삭제된 채팅방이 현재 활성화된 채팅방이었다면 다른 채팅방으로 전환
-          if (activeChatId.value === roomId) {
+          if (String(activeChatId.value) === String(roomId)) {
             if (chatRooms.value.length > 0) {
               selectChatRoom(chatRooms.value[0].id)
             } else {
@@ -1790,7 +1790,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // 메시지 전송 시 채팅방 정보 업데이트
     const updateChatRoomInfo = (message) => {
-      const currentRoom = chatRooms.value.find(room => room.id === activeChatId.value)
+      const currentRoom = chatRooms.value.find(room => String(room.id) === String(activeChatId.value))
       if (currentRoom) {
         currentRoom.lastMessage = message
         currentRoom.lastMessageTime = new Date()
@@ -1800,7 +1800,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     
     // 채팅방 이름 업데이트 (첫 번째 메시지 기반)
     const updateChatRoomName = (message) => {
-      const currentRoom = chatRooms.value.find(room => room.id === activeChatId.value)
+      const currentRoom = chatRooms.value.find(room => String(room.id) === String(activeChatId.value))
       if (currentRoom && !currentRoom.name.startsWith('새 채팅방')) {
         // 첫 번째 사용자 메시지를 기반으로 채팅방 이름 설정
         const shortMessage = message.length > 20 ? message.substring(0, 20) + '...' : message
