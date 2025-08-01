@@ -519,7 +519,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     })
     
     const results = computed(() => {
-      return chatResults.value[activeChatId.value] || []
+      const activeResults = chatResults.value[activeChatId.value] || []
+      console.log(`📈 Computing results for room ${activeChatId.value}:`, activeResults.length, 'results')
+      return activeResults
     })
     
     // 현재 활성화된 결과의 데이터를 가져오는 computed
@@ -1656,16 +1658,21 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     
     // 채팅방 관련 함수들
     const selectChatRoom = async (roomId) => {
-      console.log(`Selecting chatroom ${roomId}`)
-      console.log('Current chatMessages state:', chatMessages.value)
-      console.log(`Messages for room ${roomId}:`, chatMessages.value[roomId])
+      console.log(`🔄 Selecting chatroom ${roomId}`)
+      console.log('📊 Previous activeChatId:', activeChatId.value)
+      console.log('💬 All chatMessages:', Object.keys(chatMessages.value))
+      console.log('📈 All chatResults:', Object.keys(chatResults.value))
+      console.log(`💬 Messages for room ${roomId}:`, chatMessages.value[roomId]?.length || 0, 'messages')
+      console.log(`📈 Results for room ${roomId}:`, chatResults.value[roomId]?.length || 0, 'results')
       
       activeChatId.value = roomId
       const selectedRoom = chatRooms.value.find(room => room.id === roomId)
       if (selectedRoom) {
         selectedDataType.value = selectedRoom.dataType
         // 히스토리는 이미 loadChatRooms에서 로드되므로 별도 로드 불필요
-        console.log(`Selected chatroom ${roomId} with ${(chatMessages.value[roomId] || []).length} messages`)
+        console.log(`✅ Selected chatroom ${roomId} with data type: ${selectedRoom.dataType}`)
+        console.log(`💬 Final messages count: ${(chatMessages.value[roomId] || []).length}`)
+        console.log(`📈 Final results count: ${(chatResults.value[roomId] || []).length}`)
       }
     }
 
