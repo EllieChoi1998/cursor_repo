@@ -34,9 +34,9 @@
                 :class="['message', message.type, { 'error': message.isError, 'editable': message.isEditable, 'new-chatroom': message.isNewChatroom }]"
               >
                 <div class="message-avatar">
-                  <span v-if="message.type === 'user'"></span>
-                  <span v-else-if="message.type === 'system'"></span>
-                  <span v-else>烙</span>
+                  <span v-if="message.type === 'user'">👤</span>
+                  <span v-else-if="message.type === 'system'">🎉</span>
+                  <span v-else>🤖</span>
                 </div>
                 <div class="message-content">
                   <!-- 사용자 메시지인 경우 수정 가능한 형태로 표시 -->
@@ -159,7 +159,7 @@
                       :class="['time-toggle-btn', { 'active': showOriginalTime }]"
                       title="원본 시간 표시 토글"
                     >
-                      {{ showOriginalTime ? '' : '' }} 원본시간
+                      {{ showOriginalTime ? '🕐' : '🕑' }} 원본시간
                     </button>
                   </div>
                 </div>
@@ -178,7 +178,7 @@
                     :disabled="!currentMessage.trim() || isLoading"
                   >
                     <span v-if="isLoading">⏳</span>
-                                          <span v-else></span>
+                                          <span v-else>📤</span>
                   </button>
 
                 </div>
@@ -235,7 +235,7 @@
                       class="fullscreen-btn"
                       title="전체화면으로 보기"
                     >
-                      
+                      🔍
                     </button>
                     <button @click="removeResult(result.id)" class="remove-btn">✕</button>
                   </div>
@@ -432,7 +432,6 @@ export default defineComponent({
   setup() {
 
     
-    const currentMessage = ref('')
     const selectedDataType = ref('pcm') // 기본값은 PCM
     const isLoading = ref(false)
     const messagesContainer = ref(null)
@@ -442,9 +441,28 @@ export default defineComponent({
     
 
     
-    // 에러 상태 관리
-    const currentError = ref('')
-    const showError = ref(false)
+    // 채팅방별 UI 상태 관리
+    const chatInputs = ref({}) // 각 채팅방별 입력 메시지
+    const chatErrors = ref({}) // 각 채팅방별 에러 상태
+    
+    // 현재 활성 채팅방의 입력 메시지 computed
+    const currentMessage = computed({
+      get: () => chatInputs.value[activeChatId.value] || '',
+      set: (value) => {
+        if (activeChatId.value) {
+          chatInputs.value[activeChatId.value] = value
+        }
+      }
+    })
+    
+    // 현재 활성 채팅방의 에러 상태 computed
+    const showError = computed(() => {
+      return chatErrors.value[activeChatId.value]?.show || false
+    })
+    
+    const currentError = computed(() => {
+      return chatErrors.value[activeChatId.value]?.message || ''
+    })
 const showOriginalTime = ref(false) // 원본 시간 표시 토글
     
     // 리사이즈 관련 refs
@@ -519,7 +537,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     })
     
     const results = computed(() => {
-      return chatResults.value[activeChatId.value] || []
+      const activeResults = chatResults.value[activeChatId.value] || []
+      console.log(`📈 Computing results for room ${activeChatId.value}:`, activeResults.length, 'results')
+      return activeResults
     })
     
     // 현재 활성화된 결과의 데이터를 가져오는 computed
@@ -730,12 +750,15 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         }
       }
       
-      // 에러 상태 설정
-      currentError.value = errorText
-      showError.value = true
+      // 현재 채팅방의 에러 상태 설정
+      if (!chatErrors.value[activeChatId.value]) {
+        chatErrors.value[activeChatId.value] = {}
+      }
+      chatErrors.value[activeChatId.value].message = errorText
+      chatErrors.value[activeChatId.value].show = true
       
-      // 원본 메시지를 입력창에 자동 입력
-      currentMessage.value = originalMessageText
+      // 원본 메시지를 현재 채팅방의 입력창에 자동 입력
+      chatInputs.value[activeChatId.value] = originalMessageText
       
       // 입력창에 포커스
       nextTick(() => {
@@ -759,9 +782,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         }
       }
       
-      // 에러 상태 초기화
-      currentError.value = ''
-      showError.value = false
+      // 현재 채팅방의 에러 상태 초기화
+      if (chatErrors.value[activeChatId.value]) {
+        chatErrors.value[activeChatId.value].message = ''
+        chatErrors.value[activeChatId.value].show = false
+      }
     }
 
 
@@ -928,7 +953,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         currentResults.push(newResult)
         chatResults.value[activeChatId.value] = currentResults
         
-        addMessage('bot', ' 데이터가 새로고침되었습니다!')
+        addMessage('bot', '🔄 데이터가 새로고침되었습니다!')
       } catch (error) {
         console.error('Failed to refresh data:', error)
         addMessage('bot', '⚠️ 데이터 새로고침 중 오류가 발생했습니다.')
@@ -946,7 +971,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     const processStreamingChat = async (message) => {
       try {
         // 선택된 데이터 타입으로 메시지를 백엔드로 전송하고 백엔드에서 유효성을 검사하도록 함
-        addMessage('bot', ' 메시지를 처리하는 중...')
+        addMessage('bot', '🔄 메시지를 처리하는 중...')
         
         await streamChatAPI(selectedDataType.value, message, activeChatId.value, (data) => {
           // 스트리밍 데이터 처리
@@ -969,14 +994,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             // 실제 응답 데이터 처리
             currentChatResponse.value = data
 
-            console.log(' Processing response:', data.response)
-            console.log(' Response result:', data.response.result)
-            console.log(' Real data exists:', !!data.response.real_data)
-            console.log(' Real data type:', typeof data.response.real_data)
-            console.log(' Real data length:', data.response.real_data?.length)
+            console.log('🔍 Processing response:', data.response)
+            console.log('🔍 Response result:', data.response.result)
+            console.log('🔍 Real data exists:', !!data.response.real_data)
+            console.log('🔍 Real data type:', typeof data.response.real_data)
+            console.log('🔍 Real data length:', data.response.real_data?.length)
             
             if (data.response.real_data && data.response.real_data.length > 0) {
-              console.log(' Real data sample:', data.response.real_data.slice(0, 2))
+              console.log('🔍 Real data sample:', data.response.real_data.slice(0, 2))
             }
             
             if (data.response.result === 'lot_start') {
@@ -1055,8 +1080,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // PCM Commonality 데이터 처리
               let realData = data.response.real_data
               
-              console.log(' Commonality real_data type:', typeof realData)
-              console.log(' Commonality real_data keys:', realData ? Object.keys(realData) : 'no data')
+              console.log('🔍 Commonality real_data type:', typeof realData)
+              console.log('🔍 Commonality real_data keys:', realData ? Object.keys(realData) : 'no data')
               
               // real_data가 객체인 경우 배열로 변환 (백엔드 수정 전 임시 처리)
               if (realData && typeof realData === 'object' && !Array.isArray(realData)) {
@@ -1204,7 +1229,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       
       // Add user message (모든 사용자 메시지는 수정 가능)
       addMessage('user', message, true)
-      currentMessage.value = ''
+      chatInputs.value[activeChatId.value] = ''
       isLoading.value = true
       
       // 채팅방 정보 업데이트
@@ -1271,8 +1296,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       const lastResult = currentResults[currentResults.length - 1]
       const originalChatId = lastResult?.chatId || null
       
-      console.log(' Found original chat_id:', originalChatId)
-      console.log(' Last result:', lastResult)
+      console.log('🔍 Found original chat_id:', originalChatId)
+      console.log('🔍 Last result:', lastResult)
       
       if (!originalChatId) {
         console.warn('⚠️ 기존 chat_id를 찾을 수 없어 일반 채팅으로 처리합니다.')
@@ -1312,7 +1337,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         
         // 메시지 수정 API 호출
         isLoading.value = true
-        addMessage('bot', ' 메시지를 수정하는 중...')
+        addMessage('bot', '🔄 메시지를 수정하는 중...')
         
         const editResponse = await editMessageAPI(
           selectedDataType.value, 
@@ -1411,7 +1436,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           
           // 빈 배열일 때 기본 채팅방 생성 시도
           try {
-            console.log(' Attempting to create default chatroom...')
+            console.log('🔄 Attempting to create default chatroom...')
             const defaultRoom = await createChatRoom()
             console.log('✅ Created default room:', defaultRoom)
             
@@ -1464,14 +1489,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 let botResponseText = conv.bot_response
                 let responseData = null
                 
-                console.log(' Parsing bot response:', conv.bot_response)
+                console.log('🔍 Parsing bot response:', conv.bot_response)
                 
                 try {
                   const parsed = JSON.parse(conv.bot_response)
                   console.log('✅ Parsed response data:', parsed)
                   
                   if (parsed.result) {
-                    console.log(' Processing result:', parsed.result)
+                    console.log('🔍 Processing result:', parsed.result)
                     // 실제 응답 데이터를 기반으로 구체적인 메시지 생성
                     if (parsed.result === 'lot_start') {
                       botResponseText = `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
@@ -1587,14 +1612,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           let botResponseText = conv.bot_response
           let responseData = null
           
-          console.log(' Parsing bot response (refresh):', conv.bot_response)
+          console.log('🔍 Parsing bot response (refresh):', conv.bot_response)
           
           try {
             const parsed = JSON.parse(conv.bot_response)
             console.log('✅ Parsed response data (refresh):', parsed)
             
             if (parsed.result) {
-              console.log(' Processing result (refresh):', parsed.result)
+              console.log('🔍 Processing result (refresh):', parsed.result)
               // 실제 응답 데이터를 기반으로 구체적인 메시지 생성
               if (parsed.result === 'lot_start') {
                 botResponseText = `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
@@ -1656,16 +1681,21 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     
     // 채팅방 관련 함수들
     const selectChatRoom = async (roomId) => {
-      console.log(`Selecting chatroom ${roomId}`)
-      console.log('Current chatMessages state:', chatMessages.value)
-      console.log(`Messages for room ${roomId}:`, chatMessages.value[roomId])
+      console.log(`🔄 Selecting chatroom ${roomId}`)
+      console.log('📊 Previous activeChatId:', activeChatId.value)
+      console.log('💬 All chatMessages:', Object.keys(chatMessages.value))
+      console.log('📈 All chatResults:', Object.keys(chatResults.value))
+      console.log(`💬 Messages for room ${roomId}:`, chatMessages.value[roomId]?.length || 0, 'messages')
+      console.log(`📈 Results for room ${roomId}:`, chatResults.value[roomId]?.length || 0, 'results')
       
       activeChatId.value = roomId
       const selectedRoom = chatRooms.value.find(room => room.id === roomId)
       if (selectedRoom) {
         selectedDataType.value = selectedRoom.dataType
         // 히스토리는 이미 loadChatRooms에서 로드되므로 별도 로드 불필요
-        console.log(`Selected chatroom ${roomId} with ${(chatMessages.value[roomId] || []).length} messages`)
+        console.log(`✅ Selected chatroom ${roomId} with data type: ${selectedRoom.dataType}`)
+        console.log(`💬 Final messages count: ${(chatMessages.value[roomId] || []).length}`)
+        console.log(`📈 Final results count: ${(chatResults.value[roomId] || []).length}`)
       }
     }
 
@@ -1697,6 +1727,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // 새 채팅방의 결과 배열 초기화
         chatResults.value[createdRoom.id] = []
         
+        // 새 채팅방의 입력 및 에러 상태 초기화
+        chatInputs.value[createdRoom.id] = ''
+        chatErrors.value[createdRoom.id] = { show: false, message: '' }
+        
         // 새 채팅방 표시 활성화
         newChatroomDisplay.value[createdRoom.id] = true
         
@@ -1724,6 +1758,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           // 채팅방 데이터 삭제
           delete chatMessages.value[roomId]
           delete chatResults.value[roomId]
+          delete chatInputs.value[roomId]
+          delete chatErrors.value[roomId]
           delete newChatroomDisplay.value[roomId] // 채팅방 삭제 시 표시 상태도 제거
           
           // 삭제된 채팅방이 현재 활성화된 채팅방이었다면 다른 채팅방으로 전환
@@ -1768,7 +1804,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // 채팅방 이름 수정 핸들러 (새로 추가)
     const handleUpdateRoomName = ({ roomId, name }) => {
-      console.log(' Chatroom name updated:', { roomId, name })
+      console.log('🔄 Chatroom name updated:', { roomId, name })
       // 로컬 상태는 이미 ChatRoomList에서 업데이트되었으므로 추가 작업 불필요
     }
 
@@ -1833,6 +1869,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // 에러 상태
         currentError,
         showError,
+        chatInputs,
+        chatErrors,
         showOriginalTime,
         // 전체화면 모달
         fullscreenResult,
