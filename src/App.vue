@@ -518,7 +518,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         }]
       }
       
-      const roomMessages = chatMessages.value[activeChatId.value] || []
+      const roomMessages = chatMessages.value[requestChatId] || []
       
       // 새 채팅방 표시가 활성화되어 있으면 디자인적인 메시지 추가
       if (newChatroomDisplay.value[activeChatId.value]) {
@@ -537,7 +537,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     })
     
     const results = computed(() => {
-      const activeResults = chatResults.value[activeChatId.value] || []
+      const activeResults = chatResults.value[requestChatId] || []
       console.log(`📈 Computing results for room ${activeChatId.value}:`, activeResults.length, 'results')
       return activeResults
     })
@@ -682,7 +682,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     }
 
     const addMessage = (type, text, isEditable = false, originalMessage = null, messageType = 'text', files = null) => {
-      if (!chatMessages.value[activeChatId.value]) {
+      if (!chatMessages.value[requestChatId]) {
         chatMessages.value = {
           ...chatMessages.value,
           [activeChatId.value]: []
@@ -691,7 +691,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       
       // 오류 메시지 중복 방지
       if (type === 'bot' && text.includes('❌')) {
-        const existingError = chatMessages.value[activeChatId.value].find(msg => 
+        const existingError = chatMessages.value[requestChatId].find(msg => 
           msg.isError && msg.text.includes('❌')
         )
         if (existingError) {
@@ -717,7 +717,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         editText: ''
       }
       
-      const currentMessages = [...(chatMessages.value[activeChatId.value] || [])]
+      const currentMessages = [...(chatMessages.value[requestChatId] || [])]
       currentMessages.push(newMessage)
       chatMessages.value = {
         ...chatMessages.value,
@@ -726,7 +726,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       
       // 수정 가능한 메시지를 맨 아래로 이동
       if (isEditable) {
-        const messages = chatMessages.value[activeChatId.value]
+        const messages = chatMessages.value[requestChatId]
         const lastIndex = messages.length - 1
         if (lastIndex > 0) {
           // 수정 가능한 메시지를 맨 뒤로 이동
@@ -741,7 +741,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     // 에러 메시지 처리 함수
     const handleErrorMessage = (errorText, originalMessageText) => {
       // 에러 메시지를 채팅에서 제거 (이미 추가된 에러 메시지가 있다면)
-      const messages = chatMessages.value[activeChatId.value]
+      const messages = chatMessages.value[requestChatId]
       if (messages && messages.length > 0) {
         // 마지막 에러 메시지 제거
         const lastMessage = messages[messages.length - 1]
@@ -772,7 +772,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // 에러 메시지들 제거 함수
     const clearErrorMessages = () => {
-      const messages = chatMessages.value[activeChatId.value]
+      const messages = chatMessages.value[requestChatId]
       if (messages) {
         // 에러 메시지들을 뒤에서부터 제거
         for (let i = messages.length - 1; i >= 0; i--) {
@@ -919,10 +919,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         }
         
         // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
-        const currentResults = chatResults.value[activeChatId.value] || []
+        const currentResults = chatResults.value[requestChatId] || []
         currentResults.forEach(r => r.isActive = false)
         currentResults.push(newResult)
-        chatResults.value[activeChatId.value] = currentResults
+        chatResults.value[requestChatId] = currentResults
         
         addMessage('bot', '✅ PCM 데이터를 성공적으로 로드했습니다!')
       } catch (error) {
@@ -948,10 +948,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         }
         
         // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
-        const currentResults = chatResults.value[activeChatId.value] || []
+        const currentResults = chatResults.value[requestChatId] || []
         currentResults.forEach(r => r.isActive = false)
         currentResults.push(newResult)
-        chatResults.value[activeChatId.value] = currentResults
+        chatResults.value[requestChatId] = currentResults
         
         addMessage('bot', '🔄 데이터가 새로고침되었습니다!')
       } catch (error) {
@@ -973,7 +973,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // 선택된 데이터 타입으로 메시지를 백엔드로 전송하고 백엔드에서 유효성을 검사하도록 함
         addMessage('bot', '🔄 메시지를 처리하는 중...')
         
-        await streamChatAPI(selectedDataType.value, message, activeChatId.value, (data) => {
+        // 요청 시점의 채팅방 ID를 캡처 (응답이 올 때까지 유지)
+        const requestChatId = activeChatId.value
+        console.log(`🎯 Starting request for chatroom ${requestChatId}`)
+        
+        await streamChatAPI(selectedDataType.value, message, requestChatId, (data) => {
           // 스트리밍 데이터 처리
           console.log(' Received streaming data:', data)
           
@@ -1014,8 +1018,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               }
               const chartData = generatePCMDataWithRealData(realData)
               
-              // 현재 유저 메시지 찾기
-              const currentMessages = chatMessages.value[activeChatId.value] || []
+              // 요청한 채팅방의 유저 메시지 찾기 (채팅방 이동에 관계없이 원래 채팅방 사용)
+              console.log(`📍 Processing PCM trend response for original chatroom ${requestChatId}`)
+              const currentMessages = chatMessages.value[requestChatId] || []
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
               
               const newResult = {
@@ -1034,11 +1039,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 userMessage: userMessage ? userMessage.text : 'Unknown message'
               }
               
-              // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
-              const currentResults = chatResults.value[activeChatId.value] || []
+              // 요청한 채팅방의 결과들을 비활성화하고 새 결과 추가
+              const currentResults = chatResults.value[requestChatId] || []
               currentResults.forEach(r => r.isActive = false)
               currentResults.push(newResult)
-              chatResults.value[activeChatId.value] = currentResults
+              chatResults.value[requestChatId] = currentResults
               
               addMessage('bot', `✅ PCM 트렌드 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
               
@@ -1051,8 +1056,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // PCM 트렌드 포인트 데이터 처리
               const realData = data.response.real_data
               
-              // 현재 유저 메시지 찾기
-              const currentMessages = chatMessages.value[activeChatId.value] || []
+              // 요청한 채팅방의 유저 메시지 찾기
+              console.log(`📍 Processing PCM trend point response for original chatroom ${requestChatId}`)
+              const currentMessages = chatMessages.value[requestChatId] || []
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
               
               const newResult = {
@@ -1069,11 +1075,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 realData: realData,
                 userMessage: userMessage ? userMessage.text : 'Unknown message'
               }
-              // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
-              const currentResults = chatResults.value[activeChatId.value] || []
+              // 요청한 채팅방의 결과들을 비활성화하고 새 결과 추가
+              const currentResults = chatResults.value[requestChatId] || []
               currentResults.forEach(r => r.isActive = false)
               currentResults.push(newResult)
-              chatResults.value[activeChatId.value] = currentResults
+              chatResults.value[requestChatId] = currentResults
               addMessage('bot', `✅ PCM 트렌드 포인트 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
               addMessage('bot', `Chart Summary:\n• Total Records: ${realData.length}\n• PCM_SITE: ${[...new Set(realData.map(row => row.PCM_SITE))].join(', ')}\n• Date Range: ${Math.min(...realData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...realData.map(row => row.DATE_WAFER_ID))}`)
             } else if (data.response.result === 'commonality_start') {
@@ -1103,7 +1109,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               }
               
               // 현재 유저 메시지 찾기
-              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const currentMessages = chatMessages.value[requestChatId] || []
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
               
               const newResult = {
@@ -1125,10 +1131,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               }
               
               // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
-              const currentResults = chatResults.value[activeChatId.value] || []
+              const currentResults = chatResults.value[requestChatId] || []
               currentResults.forEach(r => r.isActive = false)
               currentResults.push(newResult)
-              chatResults.value[activeChatId.value] = currentResults
+              chatResults.value[requestChatId] = currentResults
               
               addMessage('bot', `✅ PCM Commonality 분석이 완료되었습니다!\n• SQL: ${data.response.SQL}\n• Chat ID: ${data.chat_id}`)
               
@@ -1145,7 +1151,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               const realData = data.response.real_data
               
               // 현재 유저 메시지 찾기
-              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const currentMessages = chatMessages.value[requestChatId] || []
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
               
               const newResult = {
@@ -1164,10 +1170,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               }
               
               // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
-              const currentResults = chatResults.value[activeChatId.value] || []
+              const currentResults = chatResults.value[requestChatId] || []
               currentResults.forEach(r => r.isActive = false)
               currentResults.push(newResult)
-              chatResults.value[activeChatId.value] = currentResults
+              chatResults.value[requestChatId] = currentResults
               
               addMessage('bot', `✅ ${data.response.result.toUpperCase()} 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`)
             }
@@ -1247,7 +1253,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // 메시지 수정 관련 함수들
     const startEdit = (messageIndex) => {
-      const messages = chatMessages.value[activeChatId.value]
+      const messages = chatMessages.value[requestChatId]
       if (!messages || !messages[messageIndex]) return
       
       const message = messages[messageIndex]
@@ -1268,7 +1274,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     }
     
     const cancelEdit = (messageIndex) => {
-      const messages = chatMessages.value[activeChatId.value]
+      const messages = chatMessages.value[requestChatId]
       if (!messages || !messages[messageIndex]) return
       
       const message = messages[messageIndex]
@@ -1277,7 +1283,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     }
     
     const saveEdit = async (messageIndex) => {
-      const messages = chatMessages.value[activeChatId.value]
+      const messages = chatMessages.value[requestChatId]
       if (!messages || !messages[messageIndex]) return
       
       const message = messages[messageIndex]
@@ -1292,7 +1298,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
       
       // 기존 응답에서 chat_id 찾기
-      const currentResults = chatResults.value[activeChatId.value] || []
+      const currentResults = chatResults.value[requestChatId] || []
       const lastResult = currentResults[currentResults.length - 1]
       const originalChatId = lastResult?.chatId || null
       
@@ -1368,7 +1374,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             newResult.isActive = true
             
             // 기존 결과를 새 결과로 교체
-            const currentResults = chatResults.value[activeChatId.value] || []
+            const currentResults = chatResults.value[requestChatId] || []
             if (currentResults.length > 0) {
               // 기존 결과들을 비활성화
               currentResults.forEach(r => r.isActive = false)
@@ -1378,7 +1384,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // 결과가 없으면 새로 추가
               currentResults.push(newResult)
             }
-            chatResults.value[activeChatId.value] = currentResults
+            chatResults.value[requestChatId] = currentResults
             
             console.log('✅ Updated results with new data:', newResult)
           }
@@ -1398,14 +1404,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // 결과 관리 함수들
     const activateResult = (resultId) => {
-      const currentResults = chatResults.value[activeChatId.value] || []
+      const currentResults = chatResults.value[requestChatId] || []
       currentResults.forEach(r => {
         r.isActive = r.id === resultId
       })
     }
 
     const removeResult = (resultId) => {
-      const currentResults = chatResults.value[activeChatId.value] || []
+      const currentResults = chatResults.value[requestChatId] || []
       const index = currentResults.findIndex(r => r.id === resultId)
       if (index !== -1) {
         const removed = currentResults.splice(index, 1)[0]
@@ -1418,7 +1424,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     }
 
     const clearAllResults = () => {
-      chatResults.value[activeChatId.value] = []
+      chatResults.value[requestChatId] = []
       addMessage('bot', 'All results cleared.')
     }
 
