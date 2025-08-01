@@ -438,8 +438,11 @@ export default defineComponent({
         height: props.height,
         showlegend: true,
         legend: {
-          x: 0,
+          orientation: 'v', 
+          x: 1, 
+          xanchor: 'left', 
           y: 1,
+          yanchor: 'top', 
           bgcolor: 'rgba(255, 255, 255, 0.8)',
           bordercolor: '#ccc',
           borderwidth: 1
