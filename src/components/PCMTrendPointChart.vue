@@ -91,27 +91,60 @@ export default defineComponent({
     const chartContainer = ref(null)
     const chartRefs = ref([])
 
-    // 실제 데이터 추출 함수 (원본 로직 유지)
+    // 실제 데이터 추출 함수 (real_data 구조 처리)
     const getRealData = () => {
-      if (!props.data || props.data.length === 0) {
+      console.log('PCMTrendPointChart - props.data 확인:', props.data)
+      
+      // 데이터가 없는 경우
+      if (!props.data) {
         console.log('PCMTrendPointChart - props.data가 없음')
         return []
       }
-      
-      // 원본에서 props.data[0] 형태로 사용했으므로 동일하게 처리
-      const data = props.data[0]
-      if (!data || !Array.isArray(data)) {
-        console.log('PCMTrendPointChart - props.data[0]이 배열이 아님:', data)
-        console.log('PCMTrendPointChart - props.data 전체:', props.data)
-        // 만약 props.data 자체가 배열이라면 그대로 사용
-        if (Array.isArray(props.data) && props.data.length > 0 && props.data[0].DATE_WAFER_ID !== undefined) {
-          console.log('PCMTrendPointChart - props.data를 직접 사용')
+
+      // real_data 구조인지 확인
+      if (props.data.real_data && typeof props.data.real_data === 'object') {
+        console.log('PCMTrendPointChart - real_data 구조 감지:', props.data.real_data)
+        // real_data 안의 모든 PARA 데이터를 하나의 배열로 합치기
+        const allData = []
+        Object.keys(props.data.real_data).forEach(paraKey => {
+          const paraData = props.data.real_data[paraKey]
+          if (Array.isArray(paraData)) {
+            // 각 데이터에 PARA 정보 추가
+            paraData.forEach(row => {
+              allData.push({
+                ...row,
+                PARA: paraKey
+              })
+            })
+          }
+        })
+        console.log('PCMTrendPointChart - real_data에서 추출한 전체 데이터:', allData.length, '개')
+        return allData
+      }
+
+      // 기존 구조 처리 (배열)
+      if (Array.isArray(props.data)) {
+        if (props.data.length === 0) {
+          console.log('PCMTrendPointChart - props.data가 빈 배열')
+          return []
+        }
+        
+        // props.data[0]이 배열인 경우 (기존 방식)
+        const data = props.data[0]
+        if (Array.isArray(data)) {
+          console.log('PCMTrendPointChart - props.data[0] 배열 구조 사용')
+          return data
+        }
+        
+        // props.data 자체가 데이터 배열인 경우
+        if (props.data[0] && props.data[0].DATE_WAFER_ID !== undefined) {
+          console.log('PCMTrendPointChart - props.data 직접 사용')
           return props.data
         }
-        return []
       }
       
-      return data
+      console.log('PCMTrendPointChart - 알 수 없는 데이터 구조')
+      return []
     }
 
     // PARA 타입별로 데이터 그룹화
