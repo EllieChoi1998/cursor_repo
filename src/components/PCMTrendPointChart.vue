@@ -25,7 +25,7 @@
       <div v-if="paraTypes.length === 1" class="para-chart-header">
         <h3>{{ title }} - PARA: {{ paraTypes[0] }}</h3>
         <div class="para-chart-info">
-          <span class="data-count">{{ data.length }} records</span>
+          <span class="data-count">{{ actualData.length }} records</span>
         </div>
       </div>
       <div ref="chartContainer" class="chart-container"></div>
@@ -91,27 +91,45 @@ export default defineComponent({
     const chartContainer = ref(null)
     const chartRefs = ref([])
 
-    // PARA 타입별로 데이터 그룹화
-    const paraTypes = computed(() => {
+    // 실제 데이터 추출 (props.data[0] 형태로 전달됨)
+    const actualData = computed(() => {
       if (!props.data || props.data.length === 0) {
-        console.log('PCMTrendPointChart - 데이터가 없음')
+        console.log('PCMTrendPointChart - props.data가 없음')
         return []
       }
       
-      const types = [...new Set(props.data.map(row => row.PARA).filter(para => para !== undefined && para !== null))]
+      // 원본에서 props.data[0] 형태로 사용했으므로 동일하게 처리
+      const data = props.data[0]
+      if (!data || !Array.isArray(data)) {
+        console.log('PCMTrendPointChart - props.data[0]이 배열이 아님:', data)
+        return []
+      }
+      
+      return data
+    })
+
+    // PARA 타입별로 데이터 그룹화
+    const paraTypes = computed(() => {
+      const data = actualData.value
+      if (!data || data.length === 0) {
+        console.log('PCMTrendPointChart - 실제 데이터가 없음')
+        return []
+      }
+      
+      const types = [...new Set(data.map(row => row.PARA).filter(para => para !== undefined && para !== null))]
       console.log('PCMTrendPointChart - PARA 타입 확인:', types)
-      console.log('PCMTrendPointChart - 전체 데이터 개수:', props.data.length)
-      console.log('PCMTrendPointChart - 첫 번째 데이터 샘플:', props.data[0])
+      console.log('PCMTrendPointChart - 전체 데이터 개수:', data.length)
+      console.log('PCMTrendPointChart - 첫 번째 데이터 샘플:', data[0])
       
       // 모든 데이터에 PARA 컬럼이 있는지 확인
-      const hasParaCount = props.data.filter(row => row.PARA !== undefined && row.PARA !== null).length
-      console.log(`PCMTrendPointChart - PARA 컬럼이 있는 데이터: ${hasParaCount}/${props.data.length}`)
+      const hasParaCount = data.filter(row => row.PARA !== undefined && row.PARA !== null).length
+      console.log(`PCMTrendPointChart - PARA 컬럼이 있는 데이터: ${hasParaCount}/${data.length}`)
       
       return types.sort()
     })
 
     const getParaData = (paraType) => {
-      return props.data.filter(row => row.PARA === paraType)
+      return actualData.value.filter(row => row.PARA === paraType)
     }
 
     const setChartRef = (el, index) => {
@@ -217,7 +235,8 @@ export default defineComponent({
 
     const createCharts = async () => {
       // 데이터가 없거나 유효하지 않으면 차트 생성하지 않음
-      if (!props.data || props.data.length === 0) {
+      const data = actualData.value
+      if (!data || data.length === 0) {
         console.log('PCMTrendPointChart: 데이터가 없어서 차트 생성 중단')
         return
       }
@@ -245,13 +264,13 @@ export default defineComponent({
             createSingleChart(container, paraData, `${props.title} - PARA: ${paraType}`)
           }
         })
-      } else {
-        // 단일 PARA 또는 PARA 컬럼이 없는 경우
-        console.log('PCMTrendPointChart: 단일 차트 생성, PARA 타입:', paraTypes.value)
-        if (chartContainer.value) {
-          createSingleChart(chartContainer.value, props.data, props.title)
+              } else {
+          // 단일 PARA 또는 PARA 컬럼이 없는 경우
+          console.log('PCMTrendPointChart: 단일 차트 생성, PARA 타입:', paraTypes.value)
+          if (chartContainer.value) {
+            createSingleChart(chartContainer.value, data, props.title)
+          }
         }
-      }
     }
 
     onMounted(() => {
@@ -270,6 +289,7 @@ export default defineComponent({
       chartContainer,
       chartRefs,
       paraTypes,
+      actualData,
       getParaData,
       setChartRef
     }
