@@ -25,7 +25,7 @@
       <div v-if="paraTypes.length === 1" class="para-chart-header">
         <h3>{{ title }} - PARA: {{ paraTypes[0] }}</h3>
         <div class="para-chart-info">
-          <span class="data-count">{{ actualData.length }} records</span>
+          <span class="data-count">{{ getRealData().length }} records</span>
         </div>
       </div>
       <div ref="chartContainer" class="chart-container"></div>
@@ -91,8 +91,8 @@ export default defineComponent({
     const chartContainer = ref(null)
     const chartRefs = ref([])
 
-    // 실제 데이터 추출 (props.data[0] 형태로 전달됨)
-    const actualData = computed(() => {
+    // 실제 데이터 추출 함수 (원본 로직 유지)
+    const getRealData = () => {
       if (!props.data || props.data.length === 0) {
         console.log('PCMTrendPointChart - props.data가 없음')
         return []
@@ -102,15 +102,21 @@ export default defineComponent({
       const data = props.data[0]
       if (!data || !Array.isArray(data)) {
         console.log('PCMTrendPointChart - props.data[0]이 배열이 아님:', data)
+        console.log('PCMTrendPointChart - props.data 전체:', props.data)
+        // 만약 props.data 자체가 배열이라면 그대로 사용
+        if (Array.isArray(props.data) && props.data.length > 0 && props.data[0].DATE_WAFER_ID !== undefined) {
+          console.log('PCMTrendPointChart - props.data를 직접 사용')
+          return props.data
+        }
         return []
       }
       
       return data
-    })
+    }
 
     // PARA 타입별로 데이터 그룹화
     const paraTypes = computed(() => {
-      const data = actualData.value
+      const data = getRealData()
       if (!data || data.length === 0) {
         console.log('PCMTrendPointChart - 실제 데이터가 없음')
         return []
@@ -121,15 +127,11 @@ export default defineComponent({
       console.log('PCMTrendPointChart - 전체 데이터 개수:', data.length)
       console.log('PCMTrendPointChart - 첫 번째 데이터 샘플:', data[0])
       
-      // 모든 데이터에 PARA 컬럼이 있는지 확인
-      const hasParaCount = data.filter(row => row.PARA !== undefined && row.PARA !== null).length
-      console.log(`PCMTrendPointChart - PARA 컬럼이 있는 데이터: ${hasParaCount}/${data.length}`)
-      
       return types.sort()
     })
 
     const getParaData = (paraType) => {
-      return actualData.value.filter(row => row.PARA === paraType)
+      return getRealData().filter(row => row.PARA === paraType)
     }
 
     const setChartRef = (el, index) => {
@@ -138,8 +140,16 @@ export default defineComponent({
       }
     }
 
-    const createSingleChart = (container, data, chartTitle = null) => {
-      if (!container || !data || data.length === 0) return
+    // 원본 createChart 함수 기반으로 수정
+    const createSingleChart = (container, inputData, chartTitle = null) => {
+      if (!container) return
+      
+      // 입력 데이터가 없으면 전체 데이터 사용
+      const data = inputData || getRealData()
+      if (!data || data.length === 0) {
+        console.log('PCMTrendPointChart - 차트 생성할 데이터가 없음')
+        return
+      }
 
       console.log(`PCMTrendPointChart 차트 생성: ${chartTitle || 'Default'} - ${data.length}개 데이터`)
       
@@ -204,7 +214,7 @@ export default defineComponent({
         height: props.height,
         showlegend: true,
         legend: {
-          orientation: 'v', 
+          orientation: 'v',
           x: 1, 
           xanchor: 'left', 
           y: 1,
@@ -224,18 +234,30 @@ export default defineComponent({
         hovermode: 'closest'
       }
       
+      console.log('PCMTrendPointChart - Plotly 차트 생성 시도:', {
+        container: container,
+        tracesCount: traces.length,
+        dataLength: data.length,
+        siteGroups: Object.keys(siteGroups)
+      })
+      
       Plotly.newPlot(container, traces, layout, {
         responsive: true,
         displayModeBar: true,
         modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
         displaylogo: false,
         scrollZoom: true
+      }).then(() => {
+        console.log('PCMTrendPointChart - Plotly 차트 생성 완료')
+      }).catch(error => {
+        console.error('PCMTrendPointChart - Plotly 차트 생성 실패:', error)
       })
     }
 
     const createCharts = async () => {
-      // 데이터가 없거나 유효하지 않으면 차트 생성하지 않음
-      const data = actualData.value
+      console.log('PCMTrendPointChart - createCharts 시작')
+      
+      const data = getRealData()
       if (!data || data.length === 0) {
         console.log('PCMTrendPointChart: 데이터가 없어서 차트 생성 중단')
         return
@@ -264,22 +286,27 @@ export default defineComponent({
             createSingleChart(container, paraData, `${props.title} - PARA: ${paraType}`)
           }
         })
-              } else {
-          // 단일 PARA 또는 PARA 컬럼이 없는 경우
-          console.log('PCMTrendPointChart: 단일 차트 생성, PARA 타입:', paraTypes.value)
-          if (chartContainer.value) {
-            createSingleChart(chartContainer.value, data, props.title)
-          }
+      } else {
+        // 단일 PARA 또는 PARA 컬럼이 없는 경우
+        console.log('PCMTrendPointChart: 단일 차트 생성, PARA 타입:', paraTypes.value)
+        if (chartContainer.value) {
+          createSingleChart(chartContainer.value, data, props.title)
         }
+      }
     }
 
     onMounted(() => {
-      console.log('PCMTrendPointChart 마운트됨 - 기본 데이터:', props.data)
+      console.log('PCMTrendPointChart 마운트됨')
+      console.log('PCMTrendPointChart 마운트됨 - props.data:', props.data)
+      console.log('PCMTrendPointChart 마운트됨 - getRealData():', getRealData())
       console.log('PCMTrendPointChart 마운트됨 - PARA 타입들:', paraTypes.value)
       createCharts()
     })
 
-    watch(() => props.data, createCharts, { deep: true })
+    watch(() => props.data, () => {
+      console.log('PCMTrendPointChart - props.data 변경됨:', props.data)
+      createCharts()
+    }, { deep: true })
     watch(() => props.height, createCharts)
     watch(() => props.title, createCharts)
     watch(() => props.maxLabels, createCharts)
@@ -289,7 +316,7 @@ export default defineComponent({
       chartContainer,
       chartRefs,
       paraTypes,
-      actualData,
+      getRealData,
       getParaData,
       setChartRef
     }
