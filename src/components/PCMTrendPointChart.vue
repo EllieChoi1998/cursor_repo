@@ -125,9 +125,7 @@ export default defineComponent({
               paraData.forEach(row => {
                 allData.push({
                   ...row,
-                  PARA: paraKey,
-                  // START_TIME을 DATE_WAFER_ID로 매핑 (필요한 경우)
-                  DATE_WAFER_ID: row.DATE_WAFER_ID || row.START_TIME
+                  PARA: paraKey
                 })
               })
             }
@@ -150,8 +148,7 @@ export default defineComponent({
             paraData.forEach(row => {
               allData.push({
                 ...row,
-                PARA: paraKey,
-                DATE_WAFER_ID: row.DATE_WAFER_ID || row.START_TIME
+                PARA: paraKey
               })
             })
           }
@@ -176,7 +173,7 @@ export default defineComponent({
         }
         
         // props.data 자체가 데이터 배열인 경우
-        if (props.data[0] && (props.data[0].DATE_WAFER_ID !== undefined || props.data[0].START_TIME !== undefined)) {
+        if (props.data[0] && props.data[0].DATE_WAFER_ID !== undefined) {
           console.log('PCMTrendPointChart - props.data 직접 사용')
           return props.data
         }
@@ -229,9 +226,7 @@ export default defineComponent({
       const siteGroups = {}
       data.forEach(row => {
         if (!siteGroups[row.PCM_SITE]) siteGroups[row.PCM_SITE] = { x: [], y: [] }
-        // DATE_WAFER_ID 또는 START_TIME 사용
-        const xValue = row.DATE_WAFER_ID || row.START_TIME
-        siteGroups[row.PCM_SITE].x.push(xValue)
+        siteGroups[row.PCM_SITE].x.push(row.DATE_WAFER_ID)
         siteGroups[row.PCM_SITE].y.push(row.VALUE)
       })
       
@@ -247,13 +242,7 @@ export default defineComponent({
       }))
       
       // x축 라벨 생성 (적절한 간격으로 표시)
-      const xOrder = [...new Set(data.map(row => row.DATE_WAFER_ID || row.START_TIME))].sort((a, b) => {
-        // 숫자인 경우 숫자 정렬, 문자열인 경우 문자열 정렬
-        if (typeof a === 'number' && typeof b === 'number') {
-          return a - b
-        }
-        return String(a).localeCompare(String(b))
-      })
+      const xOrder = [...new Set(data.map(row => row.DATE_WAFER_ID))].sort((a, b) => a - b)
       const maxLabels = 50
       const step = Math.max(1, Math.floor(xOrder.length / maxLabels))
       const sampledLabels = xOrder.filter((_, index) => index % step === 0)
@@ -267,7 +256,7 @@ export default defineComponent({
           }
         },
         xaxis: {
-          title: data[0] && data[0].START_TIME ? 'Start Time' : 'Date Wafer ID',
+          title: 'Date Wafer ID',
           type: 'category',
           showgrid: true,
           gridcolor: '#f0f0f0',
