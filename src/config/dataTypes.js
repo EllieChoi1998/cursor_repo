@@ -7,7 +7,7 @@ export const DATA_TYPES = {
     name: 'PCM',
     displayName: 'Process Control Monitor',
     description: 'PCM 트렌드 분석 및 데이터 시각화',
-    supportedResults: ['lot_start', 'commonality_start', 'lot_point', 'sameness_to_trend'],
+    supportedResults: ['lot_start', 'commonality_start', 'lot_point', 'sameness_to_trend', 'commonality_to_trend'],
     chartTypes: {
       lot_start: {
         type: 'box',
@@ -31,6 +31,12 @@ export const DATA_TYPES = {
         type: 'box',
         component: 'SamenessTrendChart',
         title: 'EQ-CH Trend (Sameness)',
+        description: 'EQ_CHAM별 key 축 상자그림과 관리선'
+      },
+      commonality_to_trend: {
+        type: 'box',
+        component: 'SamenessTrendChart',
+        title: 'EQ-CH Trend (Commonality)',
         description: 'EQ_CHAM별 key 축 상자그림과 관리선'
       }
     },

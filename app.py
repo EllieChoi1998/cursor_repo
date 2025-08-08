@@ -614,6 +614,15 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
                 'SQL': 'SELECT * FROM sameness_trend_source',
                 'timestamp': datetime.now().isoformat()
             }
+        elif command_type == 'commonality_to_trend':
+            data = generate_sameness_trend_data()
+            response = {
+                'result': 'commonality_to_trend',
+                'real_data': data,
+                'determined': {"note": "generated for commonality_to_trend"},
+                'SQL': 'SELECT * FROM commonality_trend_source',
+                'timestamp': datetime.now().isoformat()
+            }
         elif command_type == 'point':
             data = generate_pcm_point_data()
             response = {
@@ -839,6 +848,15 @@ async def edit_message_endpoint(request: EditMessageRequest):
                     'real_data': data,
                     'determined': {"note": "generated for sameness_to_trend"},
                     'SQL': 'SELECT * FROM sameness_trend_source',
+                    'timestamp': datetime.now().isoformat()
+                }
+            elif command_type == 'commonality_to_trend':
+                data = generate_sameness_trend_data()
+                response = {
+                    'result': 'commonality_to_trend',
+                    'real_data': data,
+                    'determined': {"note": "generated for commonality_to_trend"},
+                    'SQL': 'SELECT * FROM commonality_trend_source',
                     'timestamp': datetime.now().isoformat()
                 }
             elif command_type == 'point':
