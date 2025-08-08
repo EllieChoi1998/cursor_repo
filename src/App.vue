@@ -1106,6 +1106,32 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               chatResults.value[activeChatId.value] = currentResults
               addMessage('bot', `✅ PCM 트렌드 포인트 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
               addMessage('bot', `Chart Summary:\n• Total Records: ${realData.length}\n• PCM_SITE: ${[...new Set(realData.map(row => row.PCM_SITE))].join(', ')}\n• Date Range: ${Math.min(...realData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...realData.map(row => row.DATE_WAFER_ID))}`)
+            } else if (data.response.result === 'sameness_to_trend' || data.response.result === 'commonality_to_trend') {
+              // EQ-CH 트렌드 (Sameness/Commonality 공용)
+              const realData = data.response.real_data
+              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
+              const title = data.response.result === 'sameness_to_trend' ? 'EQ-CH Trend (Sameness)' : 'EQ-CH Trend (Commonality)'
+              const newResult = {
+                id: data.response_id || `local_${Date.now()}`,
+                type: 'pcm_sameness_trend',
+                title,
+                data: realData,
+                isActive: true,
+                timestamp: new Date(),
+                chatId: data.chat_id,
+                messageId: data.message_id,
+                responseId: data.response_id,
+                sql: data.response.sql || data.response.SQL,
+                realData: realData,
+                resultType: data.response.result,
+                userMessage: userMessage ? userMessage.text : 'Unknown message'
+              }
+              const currentResults = chatResults.value[activeChatId.value] || []
+              currentResults.forEach(r => r.isActive = false)
+              currentResults.push(newResult)
+              chatResults.value[activeChatId.value] = currentResults
+              addMessage('bot', `✅ ${title} 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.SQL || data.response.sql}\n• Chat ID: ${data.chat_id}`)
             } else if (data.response.result === 'commonality_start') {
               // PCM Commonality 데이터 처리
               let realData = data.response.real_data
