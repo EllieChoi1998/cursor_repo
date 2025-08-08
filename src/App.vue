@@ -218,10 +218,7 @@
                     <span class="result-type">{{ result.type }}</span>
                     <span class="result-time">{{ formatTime(result.timestamp) }}</span>
                     <span v-if="result.chatId" class="chat-id">Chat ID: {{ result.chatId }}</span>
-                    <div v-if="result.userMessage" class="user-message">
-                      <span class="user-message-label"> User Message:</span>
-                      <span class="user-message-text">{{ result.userMessage }}</span>
-                    </div>
+
                   </div>
                   <div class="result-actions">
                     <button 
@@ -318,10 +315,7 @@
             <span class="result-time">{{ formatTime(fullscreenResult?.timestamp) }}</span>
             <button @click="closeFullscreen" class="close-fullscreen-btn">✕</button>
           </div>
-          <div v-if="fullscreenResult?.userMessage" class="fullscreen-user-message">
-            <span class="user-message-label"> User Message:</span>
-            <span class="user-message-text">{{ fullscreenResult.userMessage }}</span>
-          </div>
+
         </div>
         
         <div class="fullscreen-body">
@@ -1912,8 +1906,9 @@ body {
 
 .app-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  height: 80px;
   color: white;
-  padding: 1.5rem 0;
+  padding: 1rem 0;
   text-align: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
