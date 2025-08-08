@@ -7,7 +7,7 @@ export const DATA_TYPES = {
     name: 'PCM',
     displayName: 'Process Control Monitor',
     description: 'PCM 트렌드 분석 및 데이터 시각화',
-    supportedResults: ['lot_start', 'commonality_start', 'lot_point'],
+    supportedResults: ['lot_start', 'commonality_start', 'lot_point', 'sameness_to_trend'],
     chartTypes: {
       lot_start: {
         type: 'box',
@@ -26,6 +26,12 @@ export const DATA_TYPES = {
         component: 'CommonalityTable',
         title: 'Commonality Analysis',
         description: 'Detailed table with commonality analysis results'
+      },
+      sameness_to_trend: {
+        type: 'box',
+        component: 'SamenessTrendChart',
+        title: 'EQ-CH Trend (Sameness)',
+        description: 'EQ_CHAM별 key 축 상자그림과 관리선'
       }
     },
     dataProcessor: 'generatePCMDataWithRealData',
@@ -104,7 +110,8 @@ export const CHART_COMPONENTS = {
   CPAnalysisChart: 'CPAnalysisChart', // 향후 구현
   CPTrendChart: 'CPTrendChart', // 향후 구현
   RAGAnalysisChart: 'RAGAnalysisChart', // 향후 구현
-  RAGSummaryComponent: 'RAGSummaryComponent' // 향후 구현
+  RAGSummaryComponent: 'RAGSummaryComponent', // 향후 구현
+  SamenessTrendChart: 'SamenessTrendChart'
 }
 
 // API 엔드포인트 설정 - 모든 데이터는 스트리밍 채팅 API를 통해 처리

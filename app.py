@@ -472,6 +472,49 @@ def generate_pcm_point_data() -> list:
         {'DATE_WAFER_ID': '2025-06-25:36:57:54_A12345678998999', 'PCM_SITE': '5', 'VALUE': 11},
     ]
 
+def generate_sameness_trend_data() -> list:
+    """EQ_CHAM 별 key 축 상자그림 + 관리선 데이터 생성"""
+    routes = ["ROUTE_A", "ROUTE_B"]
+    opers = ["OPER_10", "OPER_20"]
+    eq_chams = ["EQ01-A", "EQ01-B", "EQ02-A"]
+    keys = [f"K{i:03d}" for i in range(1, 51)]
+
+    data: list[dict] = []
+    for route in routes:
+        for oper in opers:
+            # 기준선은 그룹마다 고정값으로 설정
+            usl = 80.0
+            lsl = 10.0
+            tgt = 45.0
+            ucl = 70.0
+            lcl = 20.0
+
+            for key in keys:
+                for eq in eq_chams:
+                    q2 = round(random.uniform(35, 55), 2)
+                    q1 = round(q2 - random.uniform(5, 10), 2)
+                    q3 = round(q2 + random.uniform(5, 10), 2)
+                    min_v = round(q1 - random.uniform(1, 4), 2)
+                    max_v = round(q3 + random.uniform(1, 4), 2)
+                    data.append({
+                        "EQ_CHAM": eq,
+                        "MAIN_ROUTE_DESC": route,
+                        "MAIN_OPER_DESC": oper,
+                        "key": key,
+                        "MIN": min_v,
+                        "Q1": q1,
+                        "Q2": q2,
+                        "Q3": q3,
+                        "MAX": max_v,
+                        "USL": usl,
+                        "LSL": lsl,
+                        "TGT": tgt,
+                        "UCL": ucl,
+                        "LCL": lcl,
+                        "PARA": random.choice(["PARA1", "PARA2"])  # 참조용
+                    })
+    return data
+
 def generate_cp_analysis_data() -> list:
     """CP 분석 데이터 생성"""
     data = []
@@ -563,12 +606,12 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
                 'timestamp': datetime.now().isoformat()
             }
         elif command_type == 'sameness':
-            data, commonality = generate_commonality_data()
+            data = generate_sameness_trend_data()
             response = {
-                'result': 'sameness_start',
+                'result': 'sameness_to_trend',
                 'real_data': data,
-                'determined': commonality,
-                'SQL': 'SELECT * FROM pcm_data WHERE lot_type IN ("good", "bad")',
+                'determined': {"note": "generated for sameness_to_trend"},
+                'SQL': 'SELECT * FROM sameness_trend_source',
                 'timestamp': datetime.now().isoformat()
             }
         elif command_type == 'point':
@@ -787,6 +830,15 @@ async def edit_message_endpoint(request: EditMessageRequest):
                     'real_data': data,
                     'determined': commonality,
                     'SQL': 'SELECT * FROM pcm_data WHERE lot_type IN ("good", "bad")',
+                    'timestamp': datetime.now().isoformat()
+                }
+            elif command_type == 'sameness':
+                data = generate_sameness_trend_data()
+                response = {
+                    'result': 'sameness_to_trend',
+                    'real_data': data,
+                    'determined': {"note": "generated for sameness_to_trend"},
+                    'SQL': 'SELECT * FROM sameness_trend_source',
                     'timestamp': datetime.now().isoformat()
                 }
             elif command_type == 'point':

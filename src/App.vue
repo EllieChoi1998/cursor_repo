@@ -661,6 +661,22 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             realData: realData,
             userMessage: userMessage
           }
+        } else if (responseData.result === 'sameness_to_trend') {
+          // Sameness -> Trend (EQ_CHAM by key) 데이터 처리
+          result = {
+            id: `history_${chatId}_${Date.now()}`,
+            type: 'pcm_sameness_trend',
+            title: `EQ-CH Trend (Sameness)`,
+            data: realData,
+            isActive: false,
+            timestamp: new Date(),
+            chatId: chatId,
+            sql: responseData.sql || responseData.SQL,
+            realData: realData,
+            determined: responseData.determined,
+            resultType: responseData.result,
+            userMessage: userMessage
+          }
         } else if (responseData.result) {
           // real_data가 없어도 메타데이터만으로 결과 생성
           result = {
@@ -1518,13 +1534,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                       botResponseText = `✅ PCM 트렌드 포인트 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
                     } else if (parsed.result === 'commonality_start') {
                       botResponseText = `✅ PCM 커먼 분석이 완료되었습니다!\n• SQL: ${parsed.SQL || 'N/A'}\n• Determined: ${JSON.stringify(parsed.determined) || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+                    } else if (parsed.result === 'sameness_to_trend') {
+                      botResponseText = `✅ Sameness 기반 EQ-CH 트렌드가 준비되었습니다!\n• SQL: ${parsed.SQL || parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
                     } else if (parsed.result === 'rag') {
                       if (parsed.files) {
-                        botResponseText = `✅ RAG 검색이 완료되었습니다!\n• ${parsed.files.length}개의 파일을 찾았습니다.\n• Chat ID: ${conv.chat_id}`
-                      } else if (parsed.response) {
-                        botResponseText = `✅ RAG 응답: ${parsed.response}\n• Chat ID: ${conv.chat_id}`
+                        botResponseText = `✅ 파일 검색 결과를 찾았습니다! 총 ${parsed.files.length}개 파일`
                       } else {
-                        botResponseText = `✅ RAG 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
+                        botResponseText = `✅ 답변이 생성되었습니다!`
                       }
                     } else {
                       botResponseText = `✅ ${parsed.result.toUpperCase()} 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
@@ -1641,13 +1657,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 botResponseText = `✅ PCM 트렌드 포인트 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
               } else if (parsed.result === 'commonality_start') {
                 botResponseText = `✅ PCM 커먼 분석이 완료되었습니다!\n• SQL: ${parsed.SQL || 'N/A'}\n• Determined: ${JSON.stringify(parsed.determined) || 'N/A'}\n• Chat ID: ${conv.chat_id}`
+              } else if (parsed.result === 'sameness_to_trend') {
+                botResponseText = `✅ Sameness 기반 EQ-CH 트렌드가 준비되었습니다!\n• SQL: ${parsed.SQL || parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
               } else if (parsed.result === 'rag') {
                 if (parsed.files) {
-                  botResponseText = `✅ RAG 검색이 완료되었습니다!\n• ${parsed.files.length}개의 파일을 찾았습니다.\n• Chat ID: ${conv.chat_id}`
-                } else if (parsed.response) {
-                  botResponseText = `✅ RAG 응답: ${parsed.response}\n• Chat ID: ${conv.chat_id}`
+                  botResponseText = `✅ 파일 검색 결과를 찾았습니다! 총 ${parsed.files.length}개 파일`
                 } else {
-                  botResponseText = `✅ RAG 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
+                  botResponseText = `✅ 답변이 생성되었습니다!`
                 }
               } else {
                 botResponseText = `✅ ${parsed.result.toUpperCase()} 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
@@ -8106,4 +8122,466 @@ body {
 }
 
 /* PCM Sameness Trend Chart */
-.pcm-sameness
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend
