@@ -290,6 +290,15 @@
                       :title="result.resultType || result.title || 'Data Table'"
                     />
                   </div>
+
+                  <!-- PCM Sameness Trend Chart -->
+                  <div v-else-if="result.type === 'pcm_sameness_trend'" class="chart-section">
+                    <SamenessTrendChart
+                      :data="result.data"
+                      :height="chartHeight"
+                      :title="result.title"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -387,6 +396,15 @@
               :title="fullscreenResult.title || 'Data Table'"
             />
           </div>
+
+          <!-- PCM Sameness Trend Chart -->
+          <div v-else-if="fullscreenResult?.type === 'pcm_sameness_trend'" class="fullscreen-chart">
+            <SamenessTrendChart
+              :data="fullscreenResult.data"
+              :height="800"
+              :title="fullscreenResult.title"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -400,6 +418,7 @@ import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
 import DynamicTable from './components/DynamicTable.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
+import SamenessTrendChart from './components/SamenessTrendChart.vue'
 import {
   streamChatAPI,
   editMessageAPI,
@@ -421,7 +440,8 @@ export default defineComponent({
     PCMTrendPointChart,
     DynamicTable,
     ChatRoomList,
-    RAGAnswerList
+    RAGAnswerList,
+    SamenessTrendChart
   },
   setup() {
 
@@ -3212,4 +3232,4878 @@ body {
   background: #adb5bd;
   cursor: not-allowed;
 }
-</style> 
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness-trend-chart {
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* PCM Sameness Trend Chart */
+.pcm-sameness
