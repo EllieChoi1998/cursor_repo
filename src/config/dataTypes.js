@@ -29,13 +29,13 @@ export const DATA_TYPES = {
       },
       sameness_to_trend: {
         type: 'box',
-        component: 'SamenessTrendChart',
+        component: 'pcmtotrend',
         title: 'EQ-CH Trend (Sameness)',
         description: 'EQ_CHAM별 key 축 상자그림과 관리선'
       },
       commonality_to_trend: {
         type: 'box',
-        component: 'SamenessTrendChart',
+        component: 'pcmtotrend',
         title: 'EQ-CH Trend (Commonality)',
         description: 'EQ_CHAM별 key 축 상자그림과 관리선'
       }
@@ -117,7 +117,7 @@ export const CHART_COMPONENTS = {
   CPTrendChart: 'CPTrendChart', // 향후 구현
   RAGAnalysisChart: 'RAGAnalysisChart', // 향후 구현
   RAGSummaryComponent: 'RAGSummaryComponent', // 향후 구현
-  SamenessTrendChart: 'SamenessTrendChart'
+  pcmtotrend: 'pcmtotrend'
 }
 
 // API 엔드포인트 설정 - 모든 데이터는 스트리밍 채팅 API를 통해 처리

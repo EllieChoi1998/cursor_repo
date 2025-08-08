@@ -33,7 +33,7 @@ import { defineComponent, ref, onMounted, watch, computed, nextTick } from 'vue'
 import Plotly from 'plotly.js-dist'
 
 export default defineComponent({
-  name: 'SamenessTrendChart',
+  name: 'pcmtotrend',
   props: {
     data: {
       type: Array,
@@ -45,7 +45,7 @@ export default defineComponent({
     },
     title: {
       type: String,
-      default: 'EQ-CH Trend (Sameness)'
+      default: 'EQ-CH Trend'
     },
     maxLabels: {
       type: Number,

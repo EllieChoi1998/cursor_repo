@@ -291,12 +291,12 @@
                     />
                   </div>
 
-                  <!-- PCM Sameness Trend Chart -->
+                  <!-- PCM To Trend Chart -->
                   <div v-else-if="result.type === 'pcm_sameness_trend'" class="chart-section">
-                    <SamenessTrendChart
+                    <pcmtotrend
                       :data="result.data"
                       :height="chartHeight"
-                      :title="result.title"
+                      :title="result.resultType === 'sameness_to_trend' ? 'sameness_to_trend' : (result.resultType === 'commonality_to_trend' ? 'commonality_to_trend' : result.title)"
                     />
                   </div>
                 </div>
@@ -397,12 +397,12 @@
             />
           </div>
 
-          <!-- PCM Sameness Trend Chart -->
+          <!-- PCM To Trend Chart (Fullscreen) -->
           <div v-else-if="fullscreenResult?.type === 'pcm_sameness_trend'" class="fullscreen-chart">
-            <SamenessTrendChart
+            <pcmtotrend
               :data="fullscreenResult.data"
               :height="800"
-              :title="fullscreenResult.title"
+              :title="fullscreenResult.resultType === 'sameness_to_trend' ? 'sameness_to_trend' : (fullscreenResult.resultType === 'commonality_to_trend' ? 'commonality_to_trend' : fullscreenResult.title)"
             />
           </div>
         </div>
@@ -418,7 +418,7 @@ import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
 import DynamicTable from './components/DynamicTable.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
-import SamenessTrendChart from './components/SamenessTrendChart.vue'
+import pcmtotrend from './components/pcmtotrend.vue'
 import {
   streamChatAPI,
   editMessageAPI,
@@ -441,7 +441,7 @@ export default defineComponent({
     DynamicTable,
     ChatRoomList,
     RAGAnswerList,
-    SamenessTrendChart
+    pcmtotrend
   },
   setup() {
 
