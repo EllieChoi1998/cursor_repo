@@ -647,110 +647,255 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
     # 유효한 메시지만 저장
     user_message = chat_storage.add_message(chatroom_id, message, 'user', detected_type)
     
-    # 처리 중 메시지 (저장하지 않고 프론트엔드에서만 표시)
-    yield f"data: {json.dumps({'status': 'processing'})}\n\n"
-    await asyncio.sleep(0.5)
+    # 처리 시작 메시지
+    yield f"data: {json.dumps({'progress_message': '🔄 메시지를 처리하는 중...'})}\n\n"
+    await asyncio.sleep(0.3)
+    
+    # 분석 시작 메시지
+    yield f"data: {json.dumps({'progress_message': '⚙️ 데이터를 분석하고 있습니다...'})}\n\n"
+    await asyncio.sleep(0.2)
     
     # 백엔드가 결정한 데이터 타입별 처리
     if detected_type == 'pcm':
         if command_type == 'trend':
+            # PCM 트렌드 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '📈 PCM TREND 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
             data = generate_pcm_trend_data()
+            
+            # 성공 메시지 생성 (Chart Summary 포함)
+            total_records = len(data) if isinstance(data, list) else 0
+            device_types = []
+            date_range = "N/A"
+            
+            if isinstance(data, list) and len(data) > 0:
+                # Device types 추출
+                device_types = list(set(row.get('DEVICE', 'Unknown') for row in data if isinstance(row, dict)))
+                # Date range 추출  
+                date_ids = [row.get('DATE_WAFER_ID', 0) for row in data if isinstance(row, dict) and row.get('DATE_WAFER_ID')]
+                if date_ids:
+                    date_range = f"{min(date_ids)} - {max(date_ids)}"
+            
+            success_message = f"✅ PCM TREND 데이터를 성공적으로 받았습니다!\n• Result Type: lot_start\n• Total Records: {total_records}\n• Chat ID: {chatroom_id}\n\nChart Summary:\n• Device Types: {', '.join(device_types) if device_types else 'N/A'}\n• Date Range: {date_range}"
+            
             response = {
                 'result': 'lot_start',
                 'real_data': data,
                 'sql': 'SELECT * FROM pcm_data WHERE date >= "2024-01-01" ORDER BY date_wafer_id',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
         elif command_type == 'commonality':
+            # commonality 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '📊 COMMONALITY 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
             # commonality 처리 (DynamicTable.vue 사용)
             data, commonality_info = generate_commonality_data()
+            
+            # 성공 메시지 생성
+            success_message = f"✅ COMMONALITY 데이터를 성공적으로 받았습니다!\n• Result Type: commonality\n• Total Records: {len(data) if isinstance(data, list) else sum(len(v) if isinstance(v, list) else 0 for v in data.values()) if isinstance(data, dict) else 0}\n• Chat ID: {chatroom_id}"
+            
             response = {
                 'result': 'commonality',
                 'real_data': data,
                 'commonality_info': commonality_info,
                 'sql': 'SELECT * FROM pcm_data WHERE type = "commonality"',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
         elif command_type == 'sameness':
+            # sameness 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '📊 SAMENESS 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
             # sameness 처리 (DynamicTable.vue 사용)
             data, _ = generate_commonality_data()  # sameness도 동일한 데이터 구조 사용
+            
+            # 성공 메시지 생성
+            success_message = f"✅ SAMENESS 데이터를 성공적으로 받았습니다!\n• Result Type: sameness\n• Total Records: {len(data) if isinstance(data, list) else sum(len(v) if isinstance(v, list) else 0 for v in data.values()) if isinstance(data, dict) else 0}\n• Chat ID: {chatroom_id}"
+            
             response = {
                 'result': 'sameness',
                 'real_data': data,
                 'sql': 'SELECT * FROM pcm_data WHERE type = "sameness"',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
         elif command_type == 'point':
+            # PCM 포인트 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '📍 PCM POINT 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
             data = generate_pcm_point_data()
+            
+            # 성공 메시지 생성 (Chart Summary 포함)
+            total_records = len(data) if isinstance(data, list) else 0
+            pcm_sites = []
+            date_range = "N/A"
+            
+            if isinstance(data, list) and len(data) > 0:
+                # PCM_SITE 추출
+                pcm_sites = list(set(row.get('PCM_SITE', 'Unknown') for row in data if isinstance(row, dict)))
+                # Date range 추출  
+                date_ids = [row.get('DATE_WAFER_ID', 0) for row in data if isinstance(row, dict) and row.get('DATE_WAFER_ID')]
+                if date_ids:
+                    date_range = f"{min(date_ids)} - {max(date_ids)}"
+            
+            success_message = f"✅ PCM POINT 데이터를 성공적으로 받았습니다!\n• Result Type: lot_point\n• Total Records: {total_records}\n• Chat ID: {chatroom_id}\n\nChart Summary:\n• PCM Sites: {', '.join(pcm_sites) if pcm_sites else 'N/A'}\n• Date Range: {date_range}"
+            
             response = {
                 'result': 'lot_point',
                 'real_data': data,
                 'sql': 'SELECT * FROM pcm_data WHERE type = "point"',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
         elif command_type == 'sameness_to_trend':
+            # sameness_to_trend 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '📈 SAMENESS TO TREND 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
             # sameness_to_trend 처리 (PCMToTrend.vue 사용)
             data = generate_pcm_to_trend_data()
+            
+            # 데이터 개수 계산
+            total_records = 0
+            if isinstance(data, list):
+                total_records = len(data)
+            elif isinstance(data, dict):
+                total_records = sum(len(v) if isinstance(v, list) else 0 for v in data.values())
+            
+            # 성공 메시지 생성
+            success_message = f"✅ SAMENESS TO TREND 데이터를 성공적으로 받았습니다!\n• Result Type: sameness_to_trend\n• Total Records: {total_records}\n• Chat ID: {chatroom_id}"
+            
             response = {
                 'result': 'sameness_to_trend',
                 'real_data': data,
                 'sql': 'SELECT * FROM pcm_to_trend WHERE type = "sameness"',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
         elif command_type == 'commonality_to_trend':
+            # commonality_to_trend 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '📈 COMMONALITY TO TREND 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
             # commonality_to_trend 처리 (PCMToTrend.vue 사용)
             data = generate_pcm_to_trend_data()
+            
+            # 데이터 개수 계산
+            total_records = 0
+            if isinstance(data, list):
+                total_records = len(data)
+            elif isinstance(data, dict):
+                total_records = sum(len(v) if isinstance(v, list) else 0 for v in data.values())
+            
+            # 성공 메시지 생성
+            success_message = f"✅ COMMONALITY TO TREND 데이터를 성공적으로 받았습니다!\n• Result Type: commonality_to_trend\n• Total Records: {total_records}\n• Chat ID: {chatroom_id}"
+            
             response = {
                 'result': 'commonality_to_trend',
                 'real_data': data,
                 'sql': 'SELECT * FROM pcm_to_trend WHERE type = "commonality"',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
         elif command_type == 'to_trend':
+            # PCM TO TREND 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '📈 PCM TO TREND 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
             data = generate_pcm_to_trend_data()
+            
+            # 데이터 개수 계산
+            total_records = 0
+            if isinstance(data, list):
+                total_records = len(data)
+            elif isinstance(data, dict):
+                total_records = sum(len(v) if isinstance(v, list) else 0 for v in data.values())
+            
+            # 성공 메시지 생성
+            success_message = f"✅ PCM TO TREND 데이터를 성공적으로 받았습니다!\n• Result Type: pcm_to_trend\n• Total Records: {total_records}\n• Chat ID: {chatroom_id}"
+            
             response = {
                 'result': 'pcm_to_trend',
                 'real_data': data,
                 'sql': 'SELECT * FROM pcm_to_trend WHERE date >= "2024-01-01"',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
     
     elif detected_type == 'cp':
         if command_type == 'analysis':
+            # CP 분석 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '🔬 CP ANALYSIS 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
             data = generate_cp_analysis_data()
+            
+            # 성공 메시지 생성
+            success_message = f"✅ CP ANALYSIS 데이터를 성공적으로 받았습니다!\n• Result Type: cp_analysis\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}"
+            
             response = {
                 'result': 'cp_analysis',
                 'real_data': data,
                 'sql': 'SELECT * FROM cp_data WHERE analysis_date >= "2024-01-01"',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
         elif command_type == 'performance':
+            # CP 성능 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '⚡ CP PERFORMANCE 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
             data = generate_cp_analysis_data()
+            
+            # 성공 메시지 생성
+            success_message = f"✅ CP PERFORMANCE 데이터를 성공적으로 받았습니다!\n• Result Type: cp_performance\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}"
+            
             response = {
                 'result': 'cp_performance',
                 'real_data': data,
                 'sql': 'SELECT * FROM cp_performance WHERE date >= "2024-01-01"',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
     
     elif detected_type == 'rag':
+        # RAG 데이터 검색 중 메시지
+        yield f"data: {json.dumps({'progress_message': '🔍 RAG 데이터를 검색하고 있습니다...'})}\n\n"
+        await asyncio.sleep(0.3)
+        
         # RAG 처리 - 백엔드에서 완전히 결정
         if command_type == 'search':
             # 파일 검색 결과 반환
             answer = generate_rag_answer_data()
+            
+            # 성공 메시지 생성
+            success_message = f"✅ RAG 파일 검색이 완료되었습니다!\n• Result Type: rag\n• Found Files: {len(answer) if isinstance(answer, list) else 0}\n• Chat ID: {chatroom_id}"
+            
             response = {
                 'result': 'rag',
                 'files': answer,  # 파일 리스트
                 'response': None,
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
         else:
             # 일반적인 질문에 대한 텍스트 응답
+            response_text = f"'{message}'에 대한 답변입니다. 요청하신 내용을 분석하여 적절한 정보를 제공드립니다."
+            
+            # 성공 메시지 생성
+            success_message = f"✅ RAG 답변 생성이 완료되었습니다!\n• Result Type: rag\n• Response Length: {len(response_text)} characters\n• Chat ID: {chatroom_id}"
+            
             response = {
                 'result': 'rag',
                 'files': None,
-                'response': f"'{message}'에 대한 답변입니다. 요청하신 내용을 분석하여 적절한 정보를 제공드립니다.",
-                'timestamp': datetime.now().isoformat()
+                'response': response_text,
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
             }
     
     # 성공한 경우에만 저장

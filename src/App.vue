@@ -980,6 +980,18 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
+    // 현재 업데이트 중인 bot 메시지 인덱스 추적
+    const currentBotMessageIndex = ref(-1)
+
+    // Bot 메시지 업데이트 함수
+    const updateBotMessage = (messageIndex, newText) => {
+      const messages = chatMessages.value[activeChatId.value]
+      if (messages && messages[messageIndex] && messages[messageIndex].type === 'bot') {
+        messages[messageIndex].text = newText
+        messages[messageIndex].timestamp = new Date()
+      }
+    }
+
     const processUserMessage = async (message) => {
       // 모든 메시지를 백엔드로 전송하여 백엔드에서 처리하도록 함
       await processStreamingChat(message)
@@ -989,14 +1001,24 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     const processStreamingChat = async (message) => {
       try {
         // 선택된 데이터 타입으로 메시지를 백엔드로 전송하고 백엔드에서 유효성을 검사하도록 함
-        addMessage('bot', '🔄 메시지를 처리하는 중...')
+        // 초기화 - bot 메시지 인덱스 리셋
+        currentBotMessageIndex.value = -1
         
         await streamChatAPI(selectedDataType.value, message, activeChatId.value, (data) => {
           // 스트리밍 데이터 처리
           console.log(' Received streaming data:', data)
           
-          if (data.status === 'processing') {
-            addMessage('bot', '⚙️ 데이터를 처리하고 있습니다...')
+          if (data.progress_message) {
+            // 진행 상황 메시지 처리 - 같은 메시지 업데이트
+            if (currentBotMessageIndex.value === -1) {
+              // 첫 번째 진행 메시지 - 새 메시지 추가
+              addMessage('bot', data.progress_message)
+              const messages = chatMessages.value[activeChatId.value]
+              currentBotMessageIndex.value = messages.length - 1
+            } else {
+              // 기존 메시지 업데이트
+              updateBotMessage(currentBotMessageIndex.value, data.progress_message)
+            }
           } else if (data.error) {
             // 에러 발생 시 처리 - 채팅에 에러 메시지 추가하지 않음
             handleErrorMessage(`❌ 오류: ${data.error}`, message)
@@ -1008,6 +1030,19 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           } else if (data.response) {
             // 성공한 경우 에러 메시지들 제거
             clearErrorMessages()
+            
+            // 백엔드에서 전송한 성공 메시지가 있으면 표시
+            if (data.response.success_message) {
+              if (currentBotMessageIndex.value === -1) {
+                // 첫 번째 메시지인 경우 새로 추가
+                addMessage('bot', data.response.success_message)
+                const messages = chatMessages.value[activeChatId.value]
+                currentBotMessageIndex.value = messages.length - 1
+              } else {
+                // 기존 메시지 업데이트
+                updateBotMessage(currentBotMessageIndex.value, data.response.success_message)
+              }
+            }
             
             // 실제 응답 데이터 처리
             currentChatResponse.value = data
@@ -1058,12 +1093,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               
-              addMessage('bot', `✅ PCM 트렌드 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
-              
-              addMessage('bot', `Chart Summary:
-• Total Records: ${chartData.length}
-• Device Types: ${[...new Set(chartData.map(row => row.DEVICE))].join(', ')}
-• Date Range: ${Math.min(...chartData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...chartData.map(row => row.DATE_WAFER_ID))}`)
+              // 성공 메시지와 요약은 백엔드에서 success_message로 전송됨
               
             } else if (data.response.result === 'lot_point') {
               // PCM 트렌드 포인트 데이터 처리
@@ -1092,8 +1122,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.forEach(r => r.isActive = false)
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
-              addMessage('bot', `✅ PCM 트렌드 포인트 데이터를 성공적으로 받았습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}`)
-              addMessage('bot', `Chart Summary:\n• Total Records: ${realData.length}\n• PCM_SITE: ${[...new Set(realData.map(row => row.PCM_SITE))].join(', ')}\n• Date Range: ${Math.min(...realData.map(row => row.DATE_WAFER_ID))} - ${Math.max(...realData.map(row => row.DATE_WAFER_ID))}`)
+              // 성공 메시지와 요약은 백엔드에서 success_message로 전송됨
             } else if (data.response.result === 'commonality_start') {
               // PCM Commonality 데이터 처리
               let realData = data.response.real_data
@@ -1148,7 +1177,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               
-              addMessage('bot', `✅ PCM Commonality 분석이 완료되었습니다!\n• SQL: ${data.response.SQL}\n• Chat ID: ${data.chat_id}`)
+              // 성공 메시지는 백엔드에서 success_message로 전송됨
               
               // Commonality 정보 요약
               const determined = data.response.determined
@@ -1195,7 +1224,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               
-              addMessage('bot', `✅ SAMENESS_TO_TREND 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${totalRecords}\n• Chat ID: ${data.chat_id}`)
+              // 성공 메시지는 백엔드에서 success_message로 전송됨
               
             } else if (data.response.result === 'commonality_to_trend') {
               // PCM Commonality to Trend 데이터 처리
@@ -1235,7 +1264,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               
-              addMessage('bot', `✅ COMMONALITY_TO_TREND 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${totalRecords}\n• Chat ID: ${data.chat_id}`)
+              // 성공 메시지는 백엔드에서 success_message로 전송됨
               
             } else if (data.response.result === 'sameness') {
               // PCM Sameness 데이터 처리 (DynamicTable.vue 사용)
@@ -1267,7 +1296,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               
-              addMessage('bot', `✅ SAMENESS 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`)
+              // 성공 메시지는 백엔드에서 success_message로 전송됨
               
             } else if (data.response.result === 'commonality') {
               // PCM Commonality 데이터 처리 (DynamicTable.vue 사용)
@@ -1299,7 +1328,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               
-              addMessage('bot', `✅ COMMONALITY 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`)
+              // 성공 메시지는 백엔드에서 success_message로 전송됨
               
             }
             // 그래프나 RAG가 아닌 모든 응답은 테이블로 처리
@@ -1331,7 +1360,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               
-              addMessage('bot', `✅ ${data.response.result.toUpperCase()} 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`)
+              // 성공 메시지는 백엔드에서 success_message로 전송됨
             }
 
             else if (data.response.result === 'rag') {
