@@ -372,6 +372,36 @@ export default defineComponent({
           }
         ]
 
+        // Calculate optimal tick interval for x-axis
+        const calculateTickInterval = (totalKeys) => {
+          if (totalKeys <= 20) return 1
+          if (totalKeys <= 50) return 5
+          if (totalKeys <= 100) return 10
+          if (totalKeys <= 200) return 20
+          if (totalKeys <= 500) return 50
+          return Math.ceil(totalKeys / 10)
+        }
+
+        const tickInterval = calculateTickInterval(keys.length)
+        const tickIndices = []
+        for (let i = 0; i < keys.length; i += tickInterval) {
+          tickIndices.push(i)
+        }
+        // Always include the last index if it's not already included
+        if (tickIndices[tickIndices.length - 1] !== keys.length - 1) {
+          tickIndices.push(keys.length - 1)
+        }
+
+        const filteredTickVals = tickIndices.map(i => keys[i])
+        const filteredTickText = tickIndices.map(i => keys[i].toString())
+
+        console.log(`PCMToTrend - X-axis tick 설정:`, {
+          totalKeys: keys.length,
+          tickInterval: tickInterval,
+          tickIndices: tickIndices,
+          filteredTickVals: filteredTickVals
+        })
+
         // Combine all traces
         const allTraces = [...boxTraces, ...scatterTraces]
 
@@ -392,10 +422,10 @@ export default defineComponent({
             showticklabels: true,
             tickangle: 90,
             tickmode: 'array',
-            tickvals: keys,
-            ticktext: keys.map(val => val.toString()),
+            tickvals: filteredTickVals,
+            ticktext: filteredTickText,
             tickfont: {
-              size: 9,
+              size: 10,
               color: '#333'
             },
             side: 'bottom',
