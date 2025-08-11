@@ -756,6 +756,19 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       scrollToBottom()
     }
 
+    // 타이핑 애니메이션과 함께 bot 메시지 추가
+    const addBotMessageWithTyping = (text) => {
+      if (!activeChatId.value) return
+      
+      // 빈 메시지로 시작
+      addMessage('bot', '')
+      const messages = chatMessages.value[activeChatId.value]
+      const messageIndex = messages.length - 1
+      
+      // 타이핑 애니메이션 시작
+      typeText(messageIndex, text)
+    }
+
     // 에러 메시지 처리 함수
     const handleErrorMessage = (errorText, originalMessageText) => {
       // 에러 메시지를 채팅에서 제거 (이미 추가된 에러 메시지가 있다면)
@@ -982,13 +995,62 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // 현재 업데이트 중인 bot 메시지 인덱스 추적
     const currentBotMessageIndex = ref(-1)
+    
+    // 타이핑 애니메이션 관련 변수
+    const isTyping = ref(false)
+    const typingTimeout = ref(null)
+    const currentTypingText = ref('')
 
-    // Bot 메시지 업데이트 함수
-    const updateBotMessage = (messageIndex, newText) => {
+    // 타이핑 애니메이션 함수
+    const typeText = (messageIndex, targetText, speed = 50) => {
+      return new Promise((resolve) => {
+        const messages = chatMessages.value[activeChatId.value]
+        if (!messages || !messages[messageIndex] || messages[messageIndex].type !== 'bot') {
+          resolve()
+          return
+        }
+
+        // 이전 타이핑 중단
+        if (typingTimeout.value) {
+          clearTimeout(typingTimeout.value)
+        }
+
+        isTyping.value = true
+        currentTypingText.value = ''
+        let currentIndex = 0
+
+        const typeNextChar = () => {
+          if (currentIndex < targetText.length) {
+            currentTypingText.value += targetText[currentIndex]
+            messages[messageIndex].text = currentTypingText.value + '|'  // 타이핑 커서 추가
+            messages[messageIndex].timestamp = new Date()
+            currentIndex++
+            
+            typingTimeout.value = setTimeout(typeNextChar, speed)
+          } else {
+            // 타이핑 완료 시 커서 제거
+            messages[messageIndex].text = targetText
+            isTyping.value = false
+            currentTypingText.value = ''
+            resolve()
+          }
+        }
+
+        typeNextChar()
+      })
+    }
+
+    // Bot 메시지 업데이트 함수 (타이핑 애니메이션 포함)
+    const updateBotMessage = async (messageIndex, newText) => {
       const messages = chatMessages.value[activeChatId.value]
       if (messages && messages[messageIndex] && messages[messageIndex].type === 'bot') {
-        messages[messageIndex].text = newText
-        messages[messageIndex].timestamp = new Date()
+        // 이전 타이핑 중단
+        if (typingTimeout.value) {
+          clearTimeout(typingTimeout.value)
+        }
+        
+        // 타이핑 애니메이션으로 텍스트 업데이트
+        await typeText(messageIndex, newText)
       }
     }
 
@@ -1012,11 +1074,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             // 진행 상황 메시지 처리 - 같은 메시지 업데이트
             if (currentBotMessageIndex.value === -1) {
               // 첫 번째 진행 메시지 - 새 메시지 추가
-              addMessage('bot', data.progress_message)
+              addMessage('bot', '')  // 빈 메시지로 시작
               const messages = chatMessages.value[activeChatId.value]
               currentBotMessageIndex.value = messages.length - 1
+              // 타이핑 애니메이션으로 텍스트 표시
+              typeText(currentBotMessageIndex.value, data.progress_message)
             } else {
-              // 기존 메시지 업데이트
+              // 기존 메시지 업데이트 (타이핑 애니메이션 포함)
               updateBotMessage(currentBotMessageIndex.value, data.progress_message)
             }
           } else if (data.error) {
@@ -1035,11 +1099,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             if (data.response.success_message) {
               if (currentBotMessageIndex.value === -1) {
                 // 첫 번째 메시지인 경우 새로 추가
-                addMessage('bot', data.response.success_message)
+                addMessage('bot', '')  // 빈 메시지로 시작
                 const messages = chatMessages.value[activeChatId.value]
                 currentBotMessageIndex.value = messages.length - 1
+                // 타이핑 애니메이션으로 텍스트 표시
+                typeText(currentBotMessageIndex.value, data.response.success_message)
               } else {
-                // 기존 메시지 업데이트
+                // 기존 메시지 업데이트 (타이핑 애니메이션 포함)
                 updateBotMessage(currentBotMessageIndex.value, data.response.success_message)
               }
             }
@@ -1391,7 +1457,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         
       } catch (error) {
         console.error('Streaming chat error:', error)
-        addMessage('bot', `❌ 스트리밍 API 오류: ${error.message}`)
+        addBotMessageWithTyping(`❌ 스트리밍 API 오류: ${error.message}`)
       }
     }
 
