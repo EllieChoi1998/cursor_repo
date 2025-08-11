@@ -12,6 +12,24 @@ import pandas as pd
 import numpy as np
 import uuid
 
+# 전역 변수로 마스킹된 데이터프레임 저장
+masking_df = None
+
+def load_masking_data():
+    """마스킹된 엑셀 데이터 로드"""
+    global masking_df
+    try:
+        masking_df = pd.read_excel('masking_df.xlsx')
+        print(f"📊 마스킹 데이터 로드 완료: {masking_df.shape[0]}행 {masking_df.shape[1]}열")
+        print(f"📊 컬럼 목록: {list(masking_df.columns)}")
+        return True
+    except FileNotFoundError:
+        print("⚠️ masking_df.xlsx 파일을 찾을 수 없습니다. 샘플 데이터를 사용합니다.")
+        return False
+    except Exception as e:
+        print(f"❌ 마스킹 데이터 로드 오류: {e}")
+        return False
+
 app = FastAPI(title="Data Analysis Chat API", version="1.0.0")
 
 # CORS 설정
@@ -323,8 +341,20 @@ def initialize_default_chatrooms():
     else:
         print(f"✅ Default chatrooms already exist: {list(chat_storage.chatrooms.keys())}")
 
-# 앱 시작 시 기본 채팅방 생성
-initialize_default_chatrooms()
+def initialize_application():
+    """애플리케이션 초기화"""
+    print("🚀 애플리케이션 초기화 시작...")
+    
+    # 마스킹된 엑셀 데이터 로드 시도
+    load_masking_data()
+    
+    # 기본 채팅방 생성
+    initialize_default_chatrooms()
+    
+    print("✅ 애플리케이션 초기화 완료")
+
+# 앱 시작 시 초기화
+initialize_application()
 
 # 데이터 타입별 지원되는 명령어
 SUPPORTED_COMMANDS = {
@@ -360,7 +390,13 @@ def analyze_query(message: str) -> tuple[str, str, str]:
         if keyword in message_lower:
             return 'rag', 'search', ""
     
-    # PCM 관련 키워드 검사
+    # sameness_to_trend, commonality_to_trend 키워드 검사 (가장 구체적인 키워드부터 먼저 검사)
+    if 'sameness_to_trend' in message_lower:
+        return 'pcm', 'sameness_to_trend', ""
+    elif 'commonality_to_trend' in message_lower:
+        return 'pcm', 'commonality_to_trend', ""
+    
+    # PCM 관련 키워드 검사 (일반적인 키워드들은 나중에 검사)
     pcm_keywords = ['pcm', 'trend', '트렌드', '차트', '그래프', 'commonality', '커먼', '공통', 'sameness', 'point', '포인트', 'site', '사이트']
     for keyword in pcm_keywords:
         if keyword in message_lower:
@@ -517,6 +553,78 @@ def generate_rag_answer_data() -> list:
         }
     ]
 
+def generate_pcm_to_trend_data() -> dict:
+    """PCM To Trend 데이터 생성 (실제 마스킹된 엑셀 데이터 또는 샘플 데이터 사용)"""
+    global masking_df
+    
+    # 실제 엑셀 데이터가 있으면 사용
+    if masking_df is not None and not masking_df.empty:
+        print("📊 실제 마스킹 데이터 사용")
+        data = {}
+        
+        # PARA 컬럼이 있는지 확인
+        if 'PARA' in masking_df.columns:
+            # PARA별로 데이터 그룹화
+            para_groups = masking_df.groupby('PARA')
+            for para_name, para_data in para_groups:
+                # 데이터프레임을 딕셔너리 리스트로 변환
+                data[para_name] = para_data.to_dict('records')
+                print(f"📊 PARA {para_name}: {len(para_data)}개 레코드")
+        else:
+            # PARA 컬럼이 없으면 전체 데이터를 하나의 그룹으로 처리
+            data['ALL_DATA'] = masking_df.to_dict('records')
+            print(f"📊 전체 데이터: {len(masking_df)}개 레코드")
+        
+        return data
+    
+    # 엑셀 파일이 없으면 샘플 데이터 생성
+    print("📊 샘플 데이터 생성 (엑셀 파일 없음)")
+    data = {}
+    para_list = ["PARA_A", "PARA_B", "PARA_C"]
+    route_list = ["route1", "route2", "route3"]
+    oper_list = ["oper1", "oper2", "oper3", "oper4"]
+    
+    for para in para_list:
+        single = []
+        for i in range(1, 16):  # 15개 스텝 데이터 생성
+            # 실제 데이터 구조와 동일한 범위로 값 생성
+            min_val = round(random.uniform(350, 450), 4)
+            max_val = round(random.uniform(600, 700), 4)
+            q1_val = round(random.uniform(min_val + 30, min_val + 80), 4)
+            q2_val = round(random.uniform(q1_val + 30, q1_val + 80), 4)
+            q3_val = round(random.uniform(q2_val + 30, max_val - 30), 4)
+            
+            single.append({
+                # 마스킹된 컬럼들 (실제로는 ID나 인덱스 정보)
+                'Unnamed: 0.1': i,  # 마스킹된 컬럼 1
+                'Unnamed: 0': i,    # 마스킹된 컬럼 2
+                
+                # 실제 데이터 컬럼들
+                'key': f'{i}',  # 실제 데이터에서는 숫자 형태
+                'MAIN_ROUTE_DESC': random.choice(route_list),
+                'MAIN_OPER_DESC': random.choice(oper_list),
+                'EQ_CHAM': random.choice(['P0', 'P1', 'P2']),
+                'PARA': para,
+                
+                # 통계값들 (실제 데이터 범위 반영)
+                'MIN': min_val,
+                'MAX': max_val,
+                'Q1': q1_val,
+                'Q2': q2_val,
+                'Q3': q3_val,
+                
+                # 제어선들 (실제 데이터 범위 반영)
+                'USL': 550,
+                'TGT': 420,
+                'LSL': 300,
+                'UCL': 500,
+                'LCL': 360
+            })
+        data[para] = single
+    
+    # PARA별로 분리된 데이터 반환
+    return data
+
 async def process_chat_request(choice: str, message: str, chatroom_id: int):
     """채팅 요청 처리"""
     # 채팅방 확인
@@ -554,21 +662,22 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
                 'timestamp': datetime.now().isoformat()
             }
         elif command_type == 'commonality':
-            data, commonality = generate_commonality_data()
+            # commonality 처리 (DynamicTable.vue 사용)
+            data, commonality_info = generate_commonality_data()
             response = {
-                'result': 'commonality_start',
+                'result': 'commonality',
                 'real_data': data,
-                'determined': commonality,
-                'SQL': 'SELECT * FROM pcm_data WHERE lot_type IN ("good", "bad")',
+                'commonality_info': commonality_info,
+                'sql': 'SELECT * FROM pcm_data WHERE type = "commonality"',
                 'timestamp': datetime.now().isoformat()
             }
         elif command_type == 'sameness':
-            data, commonality = generate_commonality_data()
+            # sameness 처리 (DynamicTable.vue 사용)
+            data, _ = generate_commonality_data()  # sameness도 동일한 데이터 구조 사용
             response = {
-                'result': 'sameness_start',
+                'result': 'sameness',
                 'real_data': data,
-                'determined': commonality,
-                'SQL': 'SELECT * FROM pcm_data WHERE lot_type IN ("good", "bad")',
+                'sql': 'SELECT * FROM pcm_data WHERE type = "sameness"',
                 'timestamp': datetime.now().isoformat()
             }
         elif command_type == 'point':
@@ -577,6 +686,32 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
                 'result': 'lot_point',
                 'real_data': data,
                 'sql': 'SELECT * FROM pcm_data WHERE type = "point"',
+                'timestamp': datetime.now().isoformat()
+            }
+        elif command_type == 'sameness_to_trend':
+            # sameness_to_trend 처리 (PCMToTrend.vue 사용)
+            data = generate_pcm_to_trend_data()
+            response = {
+                'result': 'sameness_to_trend',
+                'real_data': data,
+                'sql': 'SELECT * FROM pcm_to_trend WHERE type = "sameness"',
+                'timestamp': datetime.now().isoformat()
+            }
+        elif command_type == 'commonality_to_trend':
+            # commonality_to_trend 처리 (PCMToTrend.vue 사용)
+            data = generate_pcm_to_trend_data()
+            response = {
+                'result': 'commonality_to_trend',
+                'real_data': data,
+                'sql': 'SELECT * FROM pcm_to_trend WHERE type = "commonality"',
+                'timestamp': datetime.now().isoformat()
+            }
+        elif command_type == 'to_trend':
+            data = generate_pcm_to_trend_data()
+            response = {
+                'result': 'pcm_to_trend',
+                'real_data': data,
+                'sql': 'SELECT * FROM pcm_to_trend WHERE date >= "2024-01-01"',
                 'timestamp': datetime.now().isoformat()
             }
     
@@ -797,6 +932,32 @@ async def edit_message_endpoint(request: EditMessageRequest):
                     'sql': 'SELECT * FROM pcm_data WHERE type = "point"',
                     'timestamp': datetime.now().isoformat()
                 }
+            elif command_type == 'sameness_to_trend':
+                # sameness_to_trend 처리 (PCMToTrend.vue 사용)
+                data = generate_pcm_to_trend_data()
+                response = {
+                    'result': 'sameness_to_trend',
+                    'real_data': data,
+                    'sql': 'SELECT * FROM pcm_to_trend WHERE type = "sameness"',
+                    'timestamp': datetime.now().isoformat()
+                }
+            elif command_type == 'commonality_to_trend':
+                # commonality_to_trend 처리 (PCMToTrend.vue 사용)
+                data = generate_pcm_to_trend_data()
+                response = {
+                    'result': 'commonality_to_trend',
+                    'real_data': data,
+                    'sql': 'SELECT * FROM pcm_to_trend WHERE type = "commonality"',
+                    'timestamp': datetime.now().isoformat()
+                }
+            elif command_type == 'to_trend':
+                data = generate_pcm_to_trend_data()
+                response = {
+                    'result': 'pcm_to_trend',
+                    'real_data': data,
+                    'sql': 'SELECT * FROM pcm_to_trend WHERE date >= "2024-01-01"',
+                    'timestamp': datetime.now().isoformat()
+                }
         
         elif detected_type == 'cp':
             if command_type == 'analysis':
@@ -913,6 +1074,67 @@ async def root():
 async def health_check():
     """헬스 체크 엔드포인트"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.get("/api/masking-data-info")
+async def get_masking_data_info():
+    """마스킹된 데이터 정보 조회"""
+    global masking_df
+    
+    if masking_df is None:
+        return {
+            "status": "no_data",
+            "message": "마스킹된 엑셀 파일이 로드되지 않았습니다",
+            "file_exists": os.path.exists('masking_df.xlsx')
+        }
+    
+    if masking_df.empty:
+        return {
+            "status": "empty_data",
+            "message": "마스킹된 데이터가 비어있습니다"
+        }
+    
+    # 데이터 정보 반환
+    info = {
+        "status": "loaded",
+        "message": "마스킹된 데이터가 성공적으로 로드되었습니다",
+        "shape": {
+            "rows": int(masking_df.shape[0]),
+            "columns": int(masking_df.shape[1])
+        },
+        "columns": list(masking_df.columns),
+        "data_types": {col: str(dtype) for col, dtype in masking_df.dtypes.items()},
+        "sample_data": masking_df.head(3).to_dict('records') if len(masking_df) > 0 else []
+    }
+    
+    # PARA 컬럼 정보
+    if 'PARA' in masking_df.columns:
+        para_counts = masking_df['PARA'].value_counts().to_dict()
+        info["para_info"] = {
+            "unique_paras": list(para_counts.keys()),
+            "counts": para_counts
+        }
+    
+    return info
+
+@app.post("/api/reload-masking-data")
+async def reload_masking_data():
+    """마스킹된 엑셀 데이터 다시 로드"""
+    success = load_masking_data()
+    
+    if success:
+        return {
+            "status": "success",
+            "message": "마스킹된 데이터를 성공적으로 다시 로드했습니다",
+            "shape": {
+                "rows": int(masking_df.shape[0]),
+                "columns": int(masking_df.shape[1])
+            } if masking_df is not None else None
+        }
+    else:
+        return {
+            "status": "error",
+            "message": "마스킹된 데이터 로드에 실패했습니다"
+        }
 
 if __name__ == "__main__":
     import uvicorn

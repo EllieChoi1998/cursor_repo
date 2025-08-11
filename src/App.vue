@@ -259,6 +259,17 @@
                       :dataSampling="false"
                     />
                   </div>
+                  
+                            <!-- PCM To Trend Chart (sameness_to_trend, commonality_to_trend) -->
+          <div v-else-if="result.type === 'sameness_to_trend' || result.type === 'commonality_to_trend'" class="chart-section">
+                    <PCMToTrend 
+                      :data="result.data"
+                      :height="chartHeight"
+                      :resultType="result.type"
+                      :maxLabels="50"
+                      :dataSampling="false"
+                    />
+                  </div>
 
                   <!-- RAG Answer List (기존 RAG 로직 유지) -->
                   <div v-else-if="result.type === 'rag_search'" class="chart-section">
@@ -341,6 +352,17 @@
             />
           </div>
           
+          <!-- PCM To Trend Chart (sameness_to_trend, commonality_to_trend) -->
+          <div v-else-if="fullscreenResult?.type === 'sameness_to_trend' || fullscreenResult?.type === 'commonality_to_trend'" class="fullscreen-chart">
+            <PCMToTrend 
+              :data="fullscreenResult.data"
+              :height="800"
+              :resultType="fullscreenResult.type"
+              :maxLabels="50"
+              :dataSampling="false"
+            />
+          </div>
+          
           <!-- Commonality Table -->
           <div v-else-if="fullscreenResult?.type === 'commonality'" class="fullscreen-chart">
             <DynamicTable 
@@ -397,6 +419,7 @@
 import { defineComponent, ref, computed, nextTick, onMounted } from 'vue'
 import PCMTrendChart from './components/PCMTrendChart.vue'
 import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
+import PCMToTrend from './components/PCMToTrend.vue'
 import DynamicTable from './components/DynamicTable.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
@@ -419,6 +442,7 @@ export default defineComponent({
   components: {
     PCMTrendChart,
     PCMTrendPointChart,
+    PCMToTrend,
     DynamicTable,
     ChatRoomList,
     RAGAnswerList
@@ -1133,6 +1157,150 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 • Bad Lots: ${determined.bad_lot_name_list?.length || 0}개
 • Good Wafers: ${determined.good_wafer_name_list?.length || 0}개
 • Bad Wafers: ${determined.bad_wafer_name_list?.length || 0}개`)
+            } else if (data.response.result === 'sameness_to_trend') {
+              // PCM Sameness to Trend 데이터 처리
+              const realData = data.response.real_data
+              
+              // 현재 유저 메시지 찾기
+              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
+              
+              // 데이터 개수 계산 (객체인 경우 PARA별 데이터 합계)
+              let totalRecords = 0
+              if (Array.isArray(realData)) {
+                totalRecords = realData.length
+              } else if (typeof realData === 'object' && realData !== null) {
+                totalRecords = Object.values(realData).reduce((sum, paraData) => sum + (Array.isArray(paraData) ? paraData.length : 0), 0)
+              }
+              
+              const newResult = {
+                id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
+                type: 'sameness_to_trend',
+                title: `PCM Sameness to Trend Analysis`,
+                data: realData,
+                isActive: true,
+                timestamp: new Date(),
+                chatId: data.chat_id,
+                messageId: data.message_id,
+                responseId: data.response_id,
+                sql: data.response.sql,
+                realData: realData,
+                resultType: data.response.result,
+                userMessage: userMessage ? userMessage.text : 'Unknown message'
+              }
+              
+              // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
+              const currentResults = chatResults.value[activeChatId.value] || []
+              currentResults.forEach(r => r.isActive = false)
+              currentResults.push(newResult)
+              chatResults.value[activeChatId.value] = currentResults
+              
+              addMessage('bot', `✅ SAMENESS_TO_TREND 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${totalRecords}\n• Chat ID: ${data.chat_id}`)
+              
+            } else if (data.response.result === 'commonality_to_trend') {
+              // PCM Commonality to Trend 데이터 처리
+              const realData = data.response.real_data
+              
+              // 현재 유저 메시지 찾기
+              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
+              
+              // 데이터 개수 계산 (객체인 경우 PARA별 데이터 합계)
+              let totalRecords = 0
+              if (Array.isArray(realData)) {
+                totalRecords = realData.length
+              } else if (typeof realData === 'object' && realData !== null) {
+                totalRecords = Object.values(realData).reduce((sum, paraData) => sum + (Array.isArray(paraData) ? paraData.length : 0), 0)
+              }
+              
+              const newResult = {
+                id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
+                type: 'commonality_to_trend',
+                title: `PCM Commonality to Trend Analysis`,
+                data: realData,
+                isActive: true,
+                timestamp: new Date(),
+                chatId: data.chat_id,
+                messageId: data.message_id,
+                responseId: data.response_id,
+                sql: data.response.sql,
+                realData: realData,
+                resultType: data.response.result,
+                userMessage: userMessage ? userMessage.text : 'Unknown message'
+              }
+              
+              // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
+              const currentResults = chatResults.value[activeChatId.value] || []
+              currentResults.forEach(r => r.isActive = false)
+              currentResults.push(newResult)
+              chatResults.value[activeChatId.value] = currentResults
+              
+              addMessage('bot', `✅ COMMONALITY_TO_TREND 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${totalRecords}\n• Chat ID: ${data.chat_id}`)
+              
+            } else if (data.response.result === 'sameness') {
+              // PCM Sameness 데이터 처리 (DynamicTable.vue 사용)
+              const realData = data.response.real_data
+              
+              // 현재 유저 메시지 찾기
+              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
+              
+              const newResult = {
+                id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
+                type: 'dynamic_table',
+                title: `PCM Sameness Analysis`,
+                data: realData,
+                isActive: true,
+                timestamp: new Date(),
+                chatId: data.chat_id,
+                messageId: data.message_id,
+                responseId: data.response_id,
+                sql: data.response.sql,
+                realData: realData,
+                resultType: data.response.result,
+                userMessage: userMessage ? userMessage.text : 'Unknown message'
+              }
+              
+              // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
+              const currentResults = chatResults.value[activeChatId.value] || []
+              currentResults.forEach(r => r.isActive = false)
+              currentResults.push(newResult)
+              chatResults.value[activeChatId.value] = currentResults
+              
+              addMessage('bot', `✅ SAMENESS 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`)
+              
+            } else if (data.response.result === 'commonality') {
+              // PCM Commonality 데이터 처리 (DynamicTable.vue 사용)
+              const realData = data.response.real_data
+              
+              // 현재 유저 메시지 찾기
+              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
+              
+              const newResult = {
+                id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
+                type: 'dynamic_table',
+                title: `PCM Commonality Analysis`,
+                data: realData,
+                isActive: true,
+                timestamp: new Date(),
+                chatId: data.chat_id,
+                messageId: data.message_id,
+                responseId: data.response_id,
+                sql: data.response.sql,
+                realData: realData,
+                resultType: data.response.result,
+                userMessage: userMessage ? userMessage.text : 'Unknown message'
+              }
+              
+              // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
+              const currentResults = chatResults.value[activeChatId.value] || []
+              currentResults.forEach(r => r.isActive = false)
+              currentResults.push(newResult)
+              chatResults.value[activeChatId.value] = currentResults
+              
+              addMessage('bot', `✅ COMMONALITY 데이터를 성공적으로 받았습니다!\n• Result Type: ${data.response.result}\n• Total Records: ${realData.length}\n• Chat ID: ${data.chat_id}`)
+              
             }
             // 그래프나 RAG가 아닌 모든 응답은 테이블로 처리
             else if (data.response.real_data && data.response.real_data.length > 0) {
@@ -2852,7 +3020,7 @@ body {
   width: 100%;
   height: 100%;
   display: flex;
-  //align-items: center;
+  /* align-items: center; */
   justify-content: center;
   min-width: 1200px;
   overflow-x: auto;
