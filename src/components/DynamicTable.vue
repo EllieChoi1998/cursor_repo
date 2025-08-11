@@ -24,6 +24,12 @@
       <table class="data-table">
         <thead>
           <tr>
+            <!-- 인덱스 컬럼 헤더 -->
+            <th v-if="showIndex" class="table-header-cell index-header">
+              <div class="header-content">
+                <span class="header-text">색인</span>
+              </div>
+            </th>
             <th v-for="column in columns" :key="column.key" class="table-header-cell">
               <div class="header-content" @click="toggleColumnFilter(column.key)">
                 <span class="header-text">{{ column.label }}</span>
@@ -87,6 +93,10 @@
         </thead>
         <tbody>
           <tr v-for="(row, index) in filteredAndSortedData" :key="index" class="table-row">
+            <!-- 인덱스 컬럼 -->
+            <td v-if="showIndex" class="table-cell index-cell">
+              <span class="index-number">{{ startIndex + index }}</span>
+            </td>
             <td v-for="column in columns" :key="column.key" class="table-cell">
               <span v-if="column.type === 'number'" class="number-value">
                 {{ formatNumber(row[column.key]) }}
@@ -144,6 +154,10 @@ export default defineComponent({
     title: {
       type: String,
       default: 'Data Table'
+    },
+    showIndex: {
+      type: Boolean,
+      default: true
     }
   },
   setup(props) {
@@ -633,6 +647,38 @@ export default defineComponent({
 
 .table-cell:last-child {
   border-right: none;
+}
+
+/* 인덱스 컬럼 스타일 */
+.index-header {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  text-align: center;
+  background: #e9ecef !important;
+}
+
+.index-header .header-content {
+  justify-content: center;
+  padding: 1rem 0.5rem;
+}
+
+.index-cell {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  text-align: center;
+  padding: 1rem 0.5rem;
+  background: #f8f9fa;
+  font-weight: 500;
+  color: #6c757d;
+  border-right: 2px solid #dee2e6;
+}
+
+.index-number {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #495057;
 }
 
 .number-value {
