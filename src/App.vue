@@ -1191,7 +1191,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               // 성공 메시지와 요약은 백엔드에서 success_message로 전송됨
-            } else if (data.response.result === 'commonality_start') {
+            } else if (data.response.result === 'commonality_module') {
               // PCM Commonality 데이터 처리
               let realData = data.response.real_data
               
@@ -1763,7 +1763,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                       botResponseText = `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
                     } else if (parsed.result === 'lot_point') {
                       botResponseText = `✅ PCM 트렌드 포인트 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
-                    } else if (parsed.result === 'commonality_start') {
+                    } else if (parsed.result === 'commonality_module') {
                       botResponseText = `✅ PCM 커먼 분석이 완료되었습니다!\n• SQL: ${parsed.SQL || 'N/A'}\n• Determined: ${JSON.stringify(parsed.determined) || 'N/A'}\n• Chat ID: ${conv.chat_id}`
                     } else if (parsed.result === 'rag') {
                       if (parsed.files) {
@@ -1886,7 +1886,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 botResponseText = `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
               } else if (parsed.result === 'lot_point') {
                 botResponseText = `✅ PCM 트렌드 포인트 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
-              } else if (parsed.result === 'commonality_start') {
+              } else if (parsed.result === 'commonality_module') {
                 botResponseText = `✅ PCM 커먼 분석이 완료되었습니다!\n• SQL: ${parsed.SQL || 'N/A'}\n• Determined: ${JSON.stringify(parsed.determined) || 'N/A'}\n• Chat ID: ${conv.chat_id}`
               } else if (parsed.result === 'rag') {
                 if (parsed.files) {
