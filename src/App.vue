@@ -366,7 +366,7 @@
           </div>
           
           <!-- Commonality Table -->
-          <div v-else-if="fullscreenResult?.type === 'commonality'" class="fullscreen-chart">
+          <div v-else-if="fullscreenResult?.type === 'commonality_module'" class="fullscreen-chart">
             <DynamicTable 
               :data="fullscreenResult.data || fullscreenResult.realData"
               :title="fullscreenResult.title || 'Commonality Analysis'"
@@ -1336,7 +1336,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // 성공 메시지는 백엔드에서 success_message로 전송됨
               
-            } else if (data.response.result === 'sameness') {
+            } else if (data.response.result === 'sameness_module') {
               // PCM Sameness 데이터 처리 (DynamicTable.vue 사용)
               const realData = data.response.real_data
               
@@ -1368,7 +1368,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // 성공 메시지는 백엔드에서 success_message로 전송됨
               
-            } else if (data.response.result === 'commonality') {
+            } else if (data.response.result === 'commonality_module') {
               // PCM Commonality 데이터 처리 (DynamicTable.vue 사용)
               const realData = data.response.real_data
               
