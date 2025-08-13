@@ -110,6 +110,10 @@ export default defineComponent({
       type: String,
       default: 'sameness_to_trend'
     },
+    graphName: {
+      type: String,
+      default: ''
+    },
     maxLabels: {
       type: Number,
       default: 50
@@ -124,8 +128,14 @@ export default defineComponent({
     const chartRefs = ref([])
     const columns = ['Unnamed: 0.1', 'Unnamed: 0', 'key', 'MAIN_ROUTE_DESC', 'MAIN_OPER_DESC', 'EQ_CHAM', 'PARA', 'MIN', 'MAX', 'Q1', 'Q2', 'Q3', 'USL', 'TGT', 'LSL', 'UCL', 'LCL']
 
-    // 결과 타입에 따른 이름 매핑
+    // 결과 타입에 따른 이름 매핑 (백엔드 graph_name 우선 사용)
     const resultTypeName = computed(() => {
+      // 백엔드에서 graph_name이 제공되면 그것을 사용
+      if (props.graphName && props.graphName.trim() !== '') {
+        return props.graphName
+      }
+      
+      // 그렇지 않으면 기존 매핑 사용 (하위 호환성)
       const typeMap = {
         'sameness_to_trend': 'Sameness to Trend',
         'commonality_to_trend': 'Commonality to Trend'

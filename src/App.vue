@@ -266,6 +266,7 @@
                       :data="result.data"
                       :height="chartHeight"
                       :resultType="result.type"
+                      :graphName="result.graphName"
                       :maxLabels="50"
                       :dataSampling="false"
                     />
@@ -358,6 +359,7 @@
               :data="fullscreenResult.data"
               :height="800"
               :resultType="fullscreenResult.type"
+              :graphName="fullscreenResult.graphName"
               :maxLabels="50"
               :dataSampling="false"
             />
@@ -1281,6 +1283,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 sql: data.response.sql,
                 realData: realData,
                 resultType: data.response.result,
+                graphName: data.response.graph_name || '', // 백엔드에서 제공하는 그래프 이름
                 userMessage: userMessage ? userMessage.text : 'Unknown message'
               }
               
@@ -1321,6 +1324,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 sql: data.response.sql,
                 realData: realData,
                 resultType: data.response.result,
+                graphName: data.response.graph_name || '', // 백엔드에서 제공하는 그래프 이름
                 userMessage: userMessage ? userMessage.text : 'Unknown message'
               }
               
