@@ -95,7 +95,7 @@
           <tr v-for="(row, index) in filteredAndSortedData" :key="index" class="table-row">
             <!-- 인덱스 컬럼 -->
             <td v-if="showIndex" class="table-cell index-cell">
-              <span class="index-number">{{ startIndex + index }}</span>
+              <span class="index-number">{{ startIndex + index + 1 }}</span>
             </td>
             <td v-for="column in columns" :key="column.key" class="table-cell">
               <span v-if="column.type === 'number'" class="number-value">
