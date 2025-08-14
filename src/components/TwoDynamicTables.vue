@@ -323,21 +323,30 @@ export default defineComponent({
     // 현재 활성화된 필터 컬럼
     const activeFilterColumn = ref({ table: null, column: null })
 
-    // 데이터 추출 및 JSON 파싱
+    // 데이터 추출 (이미 파싱된 JSON 객체/배열 처리)
     const lotHoldData = computed(() => {
       if (!props.data || props.data.length === 0) return []
       
-      try {
-        const firstItem = props.data[0]
-        if (firstItem && firstItem.lot_hold) {
-          // JSON 문자열을 배열로 파싱
-          const parsed = typeof firstItem.lot_hold === 'string' 
-            ? JSON.parse(firstItem.lot_hold) 
-            : firstItem.lot_hold
-          return Array.isArray(parsed) ? parsed : []
+      console.log('🔍 TwoDynamicTables received data:', props.data)
+      console.log('🔍 First item:', props.data[0])
+      console.log('🔍 lot_hold type:', typeof props.data[0]?.lot_hold)
+      console.log('🔍 lot_hold data:', props.data[0]?.lot_hold)
+      
+      const firstItem = props.data[0]
+      if (firstItem && firstItem.lot_hold) {
+        // 이미 파싱된 데이터를 그대로 사용 (문자열인 경우만 파싱)
+        if (typeof firstItem.lot_hold === 'string') {
+          try {
+            const parsed = JSON.parse(firstItem.lot_hold)
+            return Array.isArray(parsed) ? parsed : []
+          } catch (error) {
+            console.error('Error parsing lot_hold string:', error)
+            return []
+          }
+        } else {
+          // 이미 객체/배열인 경우 그대로 사용
+          return Array.isArray(firstItem.lot_hold) ? firstItem.lot_hold : []
         }
-      } catch (error) {
-        console.error('Error parsing lot_hold data:', error)
       }
       return []
     })
@@ -345,19 +354,26 @@ export default defineComponent({
     const inlineLotData = computed(() => {
       if (!props.data || props.data.length === 0) return []
       
-      try {
-        const firstItem = props.data[0]
-        // pe_confirm_module 또는 pe_module 지원
-        const peData = firstItem?.pe_confirm_module || firstItem?.pe_module
-        if (peData) {
-          // JSON 문자열을 배열로 파싱
-          const parsed = typeof peData === 'string' 
-            ? JSON.parse(peData) 
-            : peData
-          return Array.isArray(parsed) ? parsed : []
+      const firstItem = props.data[0]
+      // pe_confirm_module 또는 pe_module 지원
+      const peData = firstItem?.pe_confirm_module || firstItem?.pe_module
+      
+      console.log('🔍 PE data type:', typeof peData)
+      console.log('🔍 PE data:', peData)
+      if (peData) {
+        // 이미 파싱된 데이터를 그대로 사용 (문자열인 경우만 파싱)
+        if (typeof peData === 'string') {
+          try {
+            const parsed = JSON.parse(peData)
+            return Array.isArray(parsed) ? parsed : []
+          } catch (error) {
+            console.error('Error parsing PE module string:', error)
+            return []
+          }
+        } else {
+          // 이미 객체/배열인 경우 그대로 사용
+          return Array.isArray(peData) ? peData : []
         }
-      } catch (error) {
-        console.error('Error parsing PE module data:', error)
       }
       return []
     })
