@@ -347,15 +347,17 @@ export default defineComponent({
       
       try {
         const firstItem = props.data[0]
-        if (firstItem && firstItem.pe_confirm_module) {
+        // pe_confirm_module 또는 pe_module 지원
+        const peData = firstItem?.pe_confirm_module || firstItem?.pe_module
+        if (peData) {
           // JSON 문자열을 배열로 파싱
-          const parsed = typeof firstItem.pe_confirm_module === 'string' 
-            ? JSON.parse(firstItem.pe_confirm_module) 
-            : firstItem.pe_confirm_module
+          const parsed = typeof peData === 'string' 
+            ? JSON.parse(peData) 
+            : peData
           return Array.isArray(parsed) ? parsed : []
         }
       } catch (error) {
-        console.error('Error parsing pe_confirm_module data:', error)
+        console.error('Error parsing PE module data:', error)
       }
       return []
     })
