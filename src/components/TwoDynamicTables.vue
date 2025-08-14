@@ -24,7 +24,7 @@
       <!-- Lot Hold Module Table -->
       <div class="table-wrapper">
         <div class="table-section-header">
-          <h4>Lot Hold Module</h4>
+          <h4>Lot Hold</h4>
           <span class="table-count">{{ lotHoldData.length }} items</span>
         </div>
         <div class="dynamic-table">
@@ -152,7 +152,7 @@
       <!-- Inline Lot Module Table -->
       <div class="table-wrapper">
         <div class="table-section-header">
-          <h4>Inline Lot Module</h4>
+          <h4>PE Confirm Module</h4>
           <span class="table-count">{{ inlineLotData.length }} items</span>
         </div>
         <div class="dynamic-table">
@@ -287,11 +287,8 @@ export default defineComponent({
   name: 'TwoDynamicTables',
   props: {
     data: {
-      type: Object,
-      default: () => ({
-        lot_hold_module: [],
-        inline_lot_module: []
-      })
+      type: Array,
+      default: () => []
     },
     title: {
       type: String,
@@ -326,9 +323,42 @@ export default defineComponent({
     // 현재 활성화된 필터 컬럼
     const activeFilterColumn = ref({ table: null, column: null })
 
-    // 데이터 추출
-    const lotHoldData = computed(() => props.data.lot_hold_module || [])
-    const inlineLotData = computed(() => props.data.inline_lot_module || [])
+    // 데이터 추출 및 JSON 파싱
+    const lotHoldData = computed(() => {
+      if (!props.data || props.data.length === 0) return []
+      
+      try {
+        const firstItem = props.data[0]
+        if (firstItem && firstItem.lot_hold) {
+          // JSON 문자열을 배열로 파싱
+          const parsed = typeof firstItem.lot_hold === 'string' 
+            ? JSON.parse(firstItem.lot_hold) 
+            : firstItem.lot_hold
+          return Array.isArray(parsed) ? parsed : []
+        }
+      } catch (error) {
+        console.error('Error parsing lot_hold data:', error)
+      }
+      return []
+    })
+
+    const inlineLotData = computed(() => {
+      if (!props.data || props.data.length === 0) return []
+      
+      try {
+        const firstItem = props.data[0]
+        if (firstItem && firstItem.pe_confirm_module) {
+          // JSON 문자열을 배열로 파싱
+          const parsed = typeof firstItem.pe_confirm_module === 'string' 
+            ? JSON.parse(firstItem.pe_confirm_module) 
+            : firstItem.pe_confirm_module
+          return Array.isArray(parsed) ? parsed : []
+        }
+      } catch (error) {
+        console.error('Error parsing pe_confirm_module data:', error)
+      }
+      return []
+    })
 
     // 동적 컬럼 생성
     const lotHoldColumns = computed(() => {

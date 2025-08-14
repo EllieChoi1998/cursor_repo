@@ -295,11 +295,11 @@
                     </div>
                   </div>
 
-                  <!-- Two Dynamic Tables (lot_hold_module, inline_lot_module) -->
-                  <div v-else-if="result.type === 'lot_hold_module' || result.type === 'inline_lot_module'" class="chart-section">
+                  <!-- Two Dynamic Tables (lot_hold_pe_confirm_module) -->
+                  <div v-else-if="result.type === 'lot_hold_pe_confirm_module'" class="chart-section">
                     <TwoDynamicTables 
                       :data="result.realData"
-                      :title="result.title || 'Lot Analysis Tables'"
+                      :title="result.title || 'Lot Hold & PE Confirm Analysis'"
                     />
                   </div>
 
@@ -412,11 +412,11 @@
             </div>
           </div>
           
-          <!-- Two Dynamic Tables for fullscreen (lot_hold_module, inline_lot_module) -->
-          <div v-else-if="fullscreenResult?.type === 'lot_hold_module' || fullscreenResult?.type === 'inline_lot_module'" class="fullscreen-chart">
+          <!-- Two Dynamic Tables for fullscreen (lot_hold_pe_confirm_module) -->
+          <div v-else-if="fullscreenResult?.type === 'lot_hold_pe_confirm_module'" class="fullscreen-chart">
             <TwoDynamicTables 
               :data="fullscreenResult.data || fullscreenResult.realData"
-              :title="fullscreenResult.title || 'Lot Analysis Tables'"
+              :title="fullscreenResult.title || 'Lot Hold & PE Confirm Analysis'"
             />
           </div>
 
@@ -685,33 +685,34 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             realData: realData,
             userMessage: userMessage
           }
-        } else if (responseData.result === 'lot_hold_module' || responseData.result === 'inline_lot_module') {
+        } else if (responseData.result_type === 'lot_hold_pe_confirm_module') {
           // Two Dynamic Tables 데이터 처리
           result = {
             id: `history_${chatId}_${Date.now()}`,
-            type: responseData.result, // 'lot_hold_module' or 'inline_lot_module'
-            title: `${responseData.result.replace(/_/g, ' ').toUpperCase()} Analysis`,
+            type: 'lot_hold_pe_confirm_module',
+            title: 'LOT HOLD PE CONFIRM MODULE Analysis',
             data: null,
             isActive: false,
             timestamp: new Date(),
             chatId: chatId,
             sql: responseData.sql,
             realData: realData,
-            resultType: responseData.result,
+            resultType: responseData.result_type,
             userMessage: userMessage
           }
-        } else if (responseData.result) {
+        } else if (responseData.result_type || responseData.result) {
           // real_data가 없어도 메타데이터만으로 결과 생성
+          const resultType = responseData.result_type || responseData.result
           result = {
             id: `history_${chatId}_${Date.now()}`,
             type: 'metadata_only',
-            title: `${responseData.result?.toUpperCase() || 'Data'} Analysis`,
+            title: `${resultType?.toUpperCase() || 'Data'} Analysis`,
             isActive: false,
             timestamp: new Date(),
             chatId: chatId,
             sql: responseData.sql || responseData.SQL,
             realData: realData,
-            resultType: responseData.result,
+            resultType: resultType,
             userMessage: userMessage,
             metadata: responseData // 전체 메타데이터 저장
           }
@@ -1433,11 +1434,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // 성공 메시지는 백엔드에서 success_message로 전송됨
               
-            } else if (data.response.result === 'lot_hold_module' || data.response.result === 'inline_lot_module') {
+            } else if (data.response.result_type === 'lot_hold_pe_confirm_module') {
               // Two Dynamic Tables 데이터 처리
               const realData = data.response.real_data
               
-              console.log('🔍 Two Tables data processing:', data.response.result)
+              console.log('🔍 Two Tables data processing:', data.response.result_type)
               console.log('🔍 Real data type:', typeof realData)
               console.log('🔍 Real data content:', realData)
               
@@ -1447,14 +1448,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               const newResult = {
                 id: `two_tables_${activeChatId.value}_${Date.now()}`,
-                type: data.response.result, // 'lot_hold_module' or 'inline_lot_module'
-                title: `${data.response.result.replace(/_/g, ' ').toUpperCase()} Analysis`,
+                type: 'lot_hold_pe_confirm_module',
+                title: 'LOT HOLD PE CONFIRM MODULE Analysis',
                 data: null,
                 realData: realData,
                 timestamp: new Date(),
                 isActive: true,
                 chatId: data.chat_id,
-                resultType: data.response.result,
+                resultType: data.response.result_type,
                 sql: data.response.sql,
                 userMessage: userMessage?.content || 'Unknown query'
               }
