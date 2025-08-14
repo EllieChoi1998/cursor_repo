@@ -1151,9 +1151,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
             console.log('🔍 Processing response:', data.response)
             console.log('🔍 Response result:', data.response.result)
+            console.log('🔍 Response result_type:', data.response.result_type)
             console.log('🔍 Real data exists:', !!data.response.real_data)
             console.log('🔍 Real data type:', typeof data.response.real_data)
             console.log('🔍 Real data length:', data.response.real_data?.length)
+            
+            // Debug: Check all response fields
+            console.log('🚨 ALL RESPONSE FIELDS:', Object.keys(data.response || {}))
+            console.log('🚨 CHECKING lot_hold_pe_confirm_module:', data.response.result_type === 'lot_hold_pe_confirm_module')
             
             if (data.response.real_data && data.response.real_data.length > 0) {
               console.log('🔍 Real data sample:', data.response.real_data.slice(0, 2))
@@ -1438,9 +1443,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // Two Dynamic Tables 데이터 처리
               const realData = data.response.real_data
               
-              console.log('🔍 Two Tables data processing:', data.response.result_type)
+              console.log('✅ TWO TABLES DETECTED! Processing:', data.response.result_type)
+              console.log('🔍 Full response:', JSON.stringify(data.response, null, 2))
               console.log('🔍 Real data type:', typeof realData)
               console.log('🔍 Real data content:', realData)
+              console.log('🔍 Real data first item:', realData?.[0])
               
               // 현재 유저 메시지 찾기
               const currentMessages = chatMessages.value[activeChatId.value] || []
@@ -1479,10 +1486,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               const currentMessages = chatMessages.value[activeChatId.value] || []
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
               
+              const resultType = data.response.result_type || data.response.result
               const newResult = {
                 id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
                 type: 'dynamic_table',
-                title: `${data.response.result.toUpperCase()} Analysis`,
+                title: `${resultType?.toUpperCase()} Analysis`,
                 isActive: true,
                 timestamp: new Date(),
                 chatId: data.chat_id,
