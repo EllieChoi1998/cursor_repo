@@ -295,6 +295,14 @@
                     </div>
                   </div>
 
+                  <!-- Two Dynamic Tables (lot_hold_module, inline_lot_module) -->
+                  <div v-else-if="result.type === 'lot_hold_module' || result.type === 'inline_lot_module'" class="chart-section">
+                    <TwoDynamicTables 
+                      :data="result.realData"
+                      :title="result.title || 'Lot Analysis Tables'"
+                    />
+                  </div>
+
                   <!-- 그 외 모든 result는 DynamicTable로 표시 (real_data가 있으면) -->
                   <div v-else-if="result.realData && result.realData.length > 0" class="chart-section">
                     <DynamicTable 
@@ -404,6 +412,14 @@
             </div>
           </div>
           
+          <!-- Two Dynamic Tables for fullscreen (lot_hold_module, inline_lot_module) -->
+          <div v-else-if="fullscreenResult?.type === 'lot_hold_module' || fullscreenResult?.type === 'inline_lot_module'" class="fullscreen-chart">
+            <TwoDynamicTables 
+              :data="fullscreenResult.data || fullscreenResult.realData"
+              :title="fullscreenResult.title || 'Lot Analysis Tables'"
+            />
+          </div>
+
           <!-- 모든 기타 데이터 타입 -->
           <div v-else-if="fullscreenResult?.data || fullscreenResult?.realData" class="fullscreen-chart">
             <DynamicTable 
@@ -423,6 +439,7 @@ import PCMTrendChart from './components/PCMTrendChart.vue'
 import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
 import PCMToTrend from './components/PCMToTrend.vue'
 import DynamicTable from './components/DynamicTable.vue'
+import TwoDynamicTables from './components/TwoDynamicTables.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
 import {
@@ -446,6 +463,7 @@ export default defineComponent({
     PCMTrendPointChart,
     PCMToTrend,
     DynamicTable,
+    TwoDynamicTables,
     ChatRoomList,
     RAGAnswerList
   },
@@ -665,6 +683,21 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             chatId: chatId,
             sql: responseData.sql,
             realData: realData,
+            userMessage: userMessage
+          }
+        } else if (responseData.result === 'lot_hold_module' || responseData.result === 'inline_lot_module') {
+          // Two Dynamic Tables 데이터 처리
+          result = {
+            id: `history_${chatId}_${Date.now()}`,
+            type: responseData.result, // 'lot_hold_module' or 'inline_lot_module'
+            title: `${responseData.result.replace(/_/g, ' ').toUpperCase()} Analysis`,
+            data: null,
+            isActive: false,
+            timestamp: new Date(),
+            chatId: chatId,
+            sql: responseData.sql,
+            realData: realData,
+            resultType: responseData.result,
             userMessage: userMessage
           }
         } else if (responseData.result) {
@@ -1395,6 +1428,42 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // 현재 채팅방의 결과들을 비활성화하고 새 결과 추가
               const currentResults = chatResults.value[activeChatId.value] || []
               currentResults.forEach(r => r.isActive = false)
+              currentResults.push(newResult)
+              chatResults.value[activeChatId.value] = currentResults
+              
+              // 성공 메시지는 백엔드에서 success_message로 전송됨
+              
+            } else if (data.response.result === 'lot_hold_module' || data.response.result === 'inline_lot_module') {
+              // Two Dynamic Tables 데이터 처리
+              const realData = data.response.real_data
+              
+              console.log('🔍 Two Tables data processing:', data.response.result)
+              console.log('🔍 Real data type:', typeof realData)
+              console.log('🔍 Real data content:', realData)
+              
+              // 현재 유저 메시지 찾기
+              const currentMessages = chatMessages.value[activeChatId.value] || []
+              const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
+              
+              const newResult = {
+                id: `two_tables_${activeChatId.value}_${Date.now()}`,
+                type: data.response.result, // 'lot_hold_module' or 'inline_lot_module'
+                title: `${data.response.result.replace(/_/g, ' ').toUpperCase()} Analysis`,
+                data: null,
+                realData: realData,
+                timestamp: new Date(),
+                isActive: true,
+                chatId: data.chat_id,
+                resultType: data.response.result,
+                sql: data.response.sql,
+                userMessage: userMessage?.content || 'Unknown query'
+              }
+              
+              // 기존 결과들 비활성화
+              const currentResults = chatResults.value[activeChatId.value] || []
+              currentResults.forEach(result => result.isActive = false)
+              
+              // 새 결과 추가
               currentResults.push(newResult)
               chatResults.value[activeChatId.value] = currentResults
               
