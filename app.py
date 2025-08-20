@@ -373,6 +373,82 @@ SUPPORTED_COMMANDS = {
     }
 }
 
+def analyze_query_with_choice(choice: str, message: str) -> tuple[str, str, str]:
+    """
+    choice와 메시지를 함께 분석하여 어떤 타입의 처리가 필요한지 결정
+    choice가 우선적으로 고려됨
+    Returns: (data_type, command_type, error_message)
+    """
+    message_lower = message.lower().strip()
+    choice_lower = choice.lower().strip() if choice else ""
+    
+    # 빈 메시지 체크
+    if not message_lower:
+        return "", "", "메시지를 입력해주세요."
+    
+    # choice가 'pcm'인 경우
+    if choice_lower == 'pcm':
+        return analyze_pcm_query(message_lower)
+    
+    # choice가 'cp'인 경우
+    elif choice_lower == 'cp':
+        return analyze_cp_query(message_lower)
+    
+    # choice가 'rag'인 경우
+    elif choice_lower == 'rag':
+        return analyze_rag_query(message_lower)
+    
+    # choice가 없거나 인식되지 않은 경우 기존 analyze_query 로직 사용
+    else:
+        return analyze_query(message_lower)
+
+def analyze_pcm_query(message_lower: str) -> tuple[str, str, str]:
+    """PCM choice에 대한 메시지 분석"""
+    # Two Tables 키워드 우선 검사 (PCM choice + 'two' 메시지)
+    if 'two' in message_lower:
+        # 테스트 시나리오 체크
+        if 'empty' in message_lower:
+            if 'lot' in message_lower and 'pe' not in message_lower:
+                return 'two', 'two_tables_empty_lot', ""
+            elif 'pe' in message_lower and 'lot' not in message_lower:
+                return 'two', 'two_tables_empty_pe', ""
+            else:
+                return 'two', 'two_tables_empty_both', ""
+        return 'two', 'two_tables', ""
+    
+    # sameness_to_trend, commonality_to_trend 키워드 검사 (가장 구체적인 키워드부터 먼저 검사)
+    elif 'sameness_to_trend' in message_lower:
+        return 'pcm', 'sameness_to_trend', ""
+    elif 'commonality_to_trend' in message_lower:
+        return 'pcm', 'commonality_to_trend', ""
+    elif 'to_trend' in message_lower:
+        return 'pcm', 'to_trend', ""
+    elif any(k in message_lower for k in ['trend', '트렌드', '차트', '그래프']):
+        return 'pcm', 'trend', ""
+    elif any(k in message_lower for k in ['commonality', '커먼', '공통']):
+        return 'pcm', 'commonality', ""
+    elif any(k in message_lower for k in ['sameness']):
+        return 'pcm', 'sameness', ""
+    elif any(k in message_lower for k in ['point', '포인트', 'site', '사이트']):
+        return 'pcm', 'point', ""
+    else:
+        return 'pcm', 'trend', ""  # 기본값
+
+def analyze_cp_query(message_lower: str) -> tuple[str, str, str]:
+    """CP choice에 대한 메시지 분석"""
+    if any(k in message_lower for k in ['performance', '성능', '모니터링']):
+        return 'cp', 'performance', ""
+    else:
+        return 'cp', 'analysis', ""
+
+def analyze_rag_query(message_lower: str) -> tuple[str, str, str]:
+    """RAG choice에 대한 메시지 분석"""
+    rag_keywords = ['검색', 'search', '찾기', '조회', '문서', 'document', '파일', 'file']
+    for keyword in rag_keywords:
+        if keyword in message_lower:
+            return 'rag', 'search', ""
+    return 'rag', 'general', ""
+
 def analyze_query(message: str) -> tuple[str, str, str]:
     """
     메시지를 분석하여 어떤 타입의 처리가 필요한지 결정
@@ -384,17 +460,7 @@ def analyze_query(message: str) -> tuple[str, str, str]:
     if not message_lower:
         return "", "", "메시지를 입력해주세요."
     
-    # Two Tables 키워드 우선 검사
-    if 'two' in message_lower:
-        # 테스트 시나리오 체크
-        if 'empty' in message_lower:
-            if 'lot' in message_lower and 'pe' not in message_lower:
-                return 'two', 'two_tables_empty_lot', ""
-            elif 'pe' in message_lower and 'lot' not in message_lower:
-                return 'two', 'two_tables_empty_pe', ""
-            else:
-                return 'two', 'two_tables_empty_both', ""
-        return 'two', 'two_tables', ""
+    # Two Tables 키워드는 choice='two'일 때만 처리하므로 여기서는 제거
     
     # RAG 관련 키워드 우선 검사
     rag_keywords = ['검색', 'search', '찾기', '조회', '문서', 'document', '파일', 'file', '설명', '요약', 'summary']
@@ -693,9 +759,9 @@ def generate_two_tables_data(test_empty_scenario: str = None) -> dict:
     print(f"📊 Generated data - Lot Hold: {len(lot_hold_data)} records, PE Confirm: {len(pe_confirm_data)} records")
     
     return {
-        "result": "lot_hold_pe_module",
+        "result": "lot_hold_pe_confirm_module",
         "real_data": [
-            {"lot_hold": lot_hold_data},
+            {"lot_hold_module": lot_hold_data},
             {"pe_confirm_module": pe_confirm_data}
         ]
     }
@@ -708,8 +774,8 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
         yield f"data: {json.dumps({'msg': '존재하지 않는 채팅방입니다.'})}\n\n"
         return
     
-    # 백엔드에서 질의 분석 (choice 파라미터는 무시하고 백엔드가 결정)
-    detected_type, command_type, error_msg = analyze_query(message)
+    # choice 파라미터를 우선적으로 고려하여 질의 분석
+    detected_type, command_type, error_msg = analyze_query_with_choice(choice, message)
     
     if error_msg:
         # 실패한 메시지는 저장하지 않고 에러만 반환
@@ -924,16 +990,16 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
             pe_confirm_count = 0
             
             if 'real_data' in data and len(data['real_data']) >= 2:
-                lot_hold_data = data['real_data'][0].get('lot_hold', [])
+                lot_hold_data = data['real_data'][0].get('lot_hold_module', [])
                 pe_confirm_data = data['real_data'][1].get('pe_confirm_module', [])
                 lot_hold_count = len(lot_hold_data) if isinstance(lot_hold_data, list) else 0
                 pe_confirm_count = len(pe_confirm_data) if isinstance(pe_confirm_data, list) else 0
             
             # 성공 메시지 생성
-            success_message = f"✅ TWO TABLES 데이터를 성공적으로 받았습니다!\n• Result Type: lot_hold_pe_module\n• Lot Hold Records: {lot_hold_count}\n• PE Confirm Records: {pe_confirm_count}\n• Chat ID: {chatroom_id}"
+            success_message = f"✅ TWO TABLES 데이터를 성공적으로 받았습니다!\n• Result Type: lot_hold_pe_confirm_module\n• Lot Hold Records: {lot_hold_count}\n• PE Confirm Records: {pe_confirm_count}\n• Chat ID: {chatroom_id}"
             
             response = {
-                'result': 'lot_hold_pe_module',
+                'result': 'lot_hold_pe_confirm_module',
                 'real_data': data['real_data'],
                 'sql': 'SELECT * FROM lot_hold_table, pe_confirm_table',
                 'timestamp': datetime.now().isoformat(),
@@ -1156,8 +1222,8 @@ async def edit_message_endpoint(request: EditMessageRequest):
         existing_chat_id = request.original_chat_id
         print(f"🔧 Using existing chat_id: {existing_chat_id}")
         
-        # 백엔드에서 질의 분석 (choice 파라미터는 무시하고 백엔드가 결정)
-        detected_type, command_type, error_msg = analyze_query(request.message)
+        # choice 파라미터를 우선적으로 고려하여 질의 분석
+        detected_type, command_type, error_msg = analyze_query_with_choice(request.choice, request.message)
         print(f"🔍 Edit message analysis - Type: {detected_type}, Command: {command_type}, Error: {error_msg}")
         
         if error_msg:
@@ -1230,7 +1296,7 @@ async def edit_message_endpoint(request: EditMessageRequest):
                 
                 data = generate_two_tables_data(test_scenario)
                 response = {
-                    'result': 'lot_hold_pe_module',
+                    'result': 'lot_hold_pe_confirm_module',
                     'real_data': data['real_data'],
                     'sql': 'SELECT * FROM lot_hold_table, pe_confirm_table',
                     'timestamp': datetime.now().isoformat()

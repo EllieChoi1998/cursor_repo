@@ -295,8 +295,8 @@
                     </div>
                   </div>
 
-                  <!-- Two Dynamic Tables (lot_hold_pe_module) -->
-                  <div v-else-if="result.type === 'lot_hold_pe_module'" class="chart-section">
+                  <!-- Two Dynamic Tables (lot_hold_pe_confirm_module) -->
+                  <div v-else-if="result.type === 'lot_hold_pe_confirm_module'" class="chart-section">
                     <TwoDynamicTables 
                       :data="result.realData"
                       :title="result.title || 'Lot Hold & PE Module Analysis'"
@@ -412,8 +412,8 @@
             </div>
           </div>
           
-          <!-- Two Dynamic Tables for fullscreen (lot_hold_pe_module) -->
-          <div v-else-if="fullscreenResult?.type === 'lot_hold_pe_module'" class="fullscreen-chart">
+          <!-- Two Dynamic Tables for fullscreen (lot_hold_pe_confirm_module) -->
+          <div v-else-if="fullscreenResult?.type === 'lot_hold_pe_confirm_module'" class="fullscreen-chart">
             <TwoDynamicTables 
               :data="fullscreenResult.data || fullscreenResult.realData"
               :title="fullscreenResult.title || 'Lot Hold & PE Module Analysis'"
@@ -685,11 +685,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             realData: realData,
             userMessage: userMessage
           }
-        } else if (responseData.result === 'lot_hold_pe_module') {
+        } else if (responseData.result === 'lot_hold_pe_confirm_module') {
           // Two Dynamic Tables 데이터 처리
           result = {
             id: `history_${chatId}_${Date.now()}`,
-            type: 'lot_hold_pe_module',
+            type: 'lot_hold_pe_confirm_module',
             title: 'LOT HOLD PE MODULE Analysis',
             data: null,
             isActive: false,
@@ -1158,7 +1158,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             
             // Debug: Check all response fields
             console.log('🚨 ALL RESPONSE FIELDS:', Object.keys(data.response || {}))
-            console.log('🚨 CHECKING lot_hold_pe_module:', data.response.result === 'lot_hold_pe_module')
+            console.log('🚨 CHECKING lot_hold_pe_confirm_module:', data.response.result === 'lot_hold_pe_confirm_module')
             
             if (data.response.real_data && data.response.real_data.length > 0) {
               console.log('🔍 Real data sample:', data.response.real_data.slice(0, 2))
@@ -1439,7 +1439,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // 성공 메시지는 백엔드에서 success_message로 전송됨
               
-            } else if (data.response.result === 'lot_hold_pe_module') {
+            } else if (data.response.result === 'lot_hold_pe_confirm_module') {
               // Two Dynamic Tables 데이터 처리
               const realData = data.response.real_data
               
@@ -1455,7 +1455,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               const newResult = {
                 id: `two_tables_${activeChatId.value}_${Date.now()}`,
-                type: 'lot_hold_pe_module',
+                type: 'lot_hold_pe_confirm_module',
                 title: 'LOT HOLD PE MODULE Analysis',
                 data: null,
                 realData: realData,

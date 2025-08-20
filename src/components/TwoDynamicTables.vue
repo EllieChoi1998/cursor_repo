@@ -158,7 +158,7 @@
       <!-- PE Confirm Module Table (데이터가 있을 때만 표시) -->
       <div v-if="inlineLotData.length > 0" class="table-wrapper">
         <div class="table-section-header">
-          <h4>PE Confirm Module</h4>
+          <h4>PE Confirm</h4>
           <span class="table-count">{{ inlineLotData.length }} items</span>
         </div>
         <div class="dynamic-table">
@@ -336,28 +336,28 @@ export default defineComponent({
       console.log('🔍 TwoDynamicTables received data:', props.data)
       console.log('🔍 Data length:', props.data.length)
       
-      // 첫 번째 항목에서 lot_hold 찾기
-      const lotHoldItem = props.data.find(item => item && item.lot_hold !== undefined)
+      // 첫 번째 항목에서 lot_hold_module 찾기
+      const lotHoldItem = props.data.find(item => item && item.lot_hold_module !== undefined)
       
-      if (lotHoldItem && lotHoldItem.lot_hold) {
-        console.log('🔍 Found lot_hold data:', lotHoldItem.lot_hold)
+      if (lotHoldItem && lotHoldItem.lot_hold_module) {
+        console.log('🔍 Found lot_hold_module data:', lotHoldItem.lot_hold_module)
         
         // 이미 파싱된 데이터를 그대로 사용 (문자열인 경우만 파싱)
-        if (typeof lotHoldItem.lot_hold === 'string') {
+        if (typeof lotHoldItem.lot_hold_module === 'string') {
           try {
-            const parsed = JSON.parse(lotHoldItem.lot_hold)
+            const parsed = JSON.parse(lotHoldItem.lot_hold_module)
             return Array.isArray(parsed) ? parsed : []
           } catch (error) {
-            console.error('Error parsing lot_hold string:', error)
+            console.error('Error parsing lot_hold_module string:', error)
             return []
           }
         } else {
           // 이미 객체/배열인 경우 그대로 사용
-          return Array.isArray(lotHoldItem.lot_hold) ? lotHoldItem.lot_hold : []
+          return Array.isArray(lotHoldItem.lot_hold_module) ? lotHoldItem.lot_hold_module : []
         }
       }
       
-      console.log('🔍 No lot_hold data found')
+      console.log('🔍 No lot_hold_module data found')
       return []
     })
 
