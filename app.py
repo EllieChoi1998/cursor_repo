@@ -384,6 +384,18 @@ def analyze_query(message: str) -> tuple[str, str, str]:
     if not message_lower:
         return "", "", "메시지를 입력해주세요."
     
+    # Two Tables 키워드 우선 검사
+    if 'two' in message_lower:
+        # 테스트 시나리오 체크
+        if 'empty' in message_lower:
+            if 'lot' in message_lower and 'pe' not in message_lower:
+                return 'two', 'two_tables_empty_lot', ""
+            elif 'pe' in message_lower and 'lot' not in message_lower:
+                return 'two', 'two_tables_empty_pe', ""
+            else:
+                return 'two', 'two_tables_empty_both', ""
+        return 'two', 'two_tables', ""
+    
     # RAG 관련 키워드 우선 검사
     rag_keywords = ['검색', 'search', '찾기', '조회', '문서', 'document', '파일', 'file', '설명', '요약', 'summary']
     for keyword in rag_keywords:
@@ -625,6 +637,69 @@ def generate_pcm_to_trend_data() -> dict:
     # PARA별로 분리된 데이터 반환
     return data
 
+def generate_two_tables_data(test_empty_scenario: str = None) -> dict:
+    """Two Tables 데이터 생성 - 서로 다른 컬럼과 데이터를 가진 두 개의 테이블"""
+    global masking_df
+    
+    # 첫 번째 테이블: Lot Hold 데이터 (가상의 lot hold 정보)
+    lot_hold_data = []
+    for i in range(1, 16):
+        lot_hold_data.append({
+            'LOT_ID': f'LOT_{i:03d}',
+            'HOLD_REASON': random.choice(['QUALITY_ISSUE', 'EQUIPMENT_MAINT', 'MATERIAL_SHORTAGE', 'PROCESS_DEVIATION']),
+            'HOLD_DATE': f'2024-12-{random.randint(1, 31):02d}',
+            'HOLD_STATUS': random.choice(['ACTIVE', 'RELEASED', 'CANCELLED']),
+            'PRIORITY': random.choice(['HIGH', 'MEDIUM', 'LOW']),
+            'WAFER_COUNT': random.randint(10, 25),
+            'AFFECTED_STEP': random.choice(['PHOTO', 'ETCH', 'DIFFUSION', 'METAL']),
+            'OWNER': random.choice(['ENGINEER_A', 'ENGINEER_B', 'ENGINEER_C'])
+        })
+    
+    # 두 번째 테이블: PE Confirm Module 데이터 (가상의 PE 확인 모듈 정보)
+    pe_confirm_data = []
+    for i in range(1, 12):  # 다른 개수로 설정
+        pe_confirm_data.append({
+            'MODULE_ID': f'PE_MOD_{i:02d}',
+            'CONFIRM_STATUS': random.choice(['CONFIRMED', 'PENDING', 'REJECTED']),
+            'CONFIRM_DATE': f'2024-12-{random.randint(1, 31):02d}',
+            'PARAMETER_NAME': random.choice(['TEMPERATURE', 'PRESSURE', 'FLOW_RATE', 'POWER']),
+            'TARGET_VALUE': round(random.uniform(100, 500), 2),
+            'ACTUAL_VALUE': round(random.uniform(95, 505), 2),
+            'TOLERANCE': round(random.uniform(5, 15), 1),
+            'RESULT': random.choice(['PASS', 'FAIL', 'WARNING']),
+            'INSPECTOR': random.choice(['INSPECTOR_X', 'INSPECTOR_Y', 'INSPECTOR_Z'])
+        })
+    
+    # 실제 엑셀 데이터가 있으면 첫 번째 테이블에 활용
+    if masking_df is not None and not masking_df.empty:
+        # 실제 데이터의 일부를 첫 번째 테이블로 사용 (최대 10개 레코드)
+        sample_size = min(10, len(masking_df))
+        lot_hold_data = masking_df.head(sample_size).to_dict('records')
+        print(f"📊 Using real data for lot_hold: {sample_size} records")
+    
+    # 테스트 시나리오 처리 (특별한 경우에만)
+    if test_empty_scenario:
+        if test_empty_scenario == 'empty_lot_hold':
+            lot_hold_data = []
+            print("🔄 Test scenario: Empty lot_hold data")
+        elif test_empty_scenario == 'empty_pe_confirm':
+            pe_confirm_data = []
+            print("🔄 Test scenario: Empty pe_confirm data")
+        elif test_empty_scenario == 'both_empty':
+            lot_hold_data = []
+            pe_confirm_data = []
+            print("🔄 Test scenario: Both tables empty")
+    
+    print(f"📊 Generated data - Lot Hold: {len(lot_hold_data)} records, PE Confirm: {len(pe_confirm_data)} records")
+    
+    return {
+        "result": "lot_hold_pe_module",
+        "real_data": [
+            {"lot_hold": lot_hold_data},
+            {"pe_confirm_module": pe_confirm_data}
+        ]
+    }
+
 async def process_chat_request(choice: str, message: str, chatroom_id: int):
     """채팅 요청 처리"""
     # 채팅방 확인
@@ -823,6 +898,44 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
                 'result': 'pcm_to_trend',
                 'real_data': data,
                 'sql': 'SELECT * FROM pcm_to_trend WHERE date >= "2024-01-01"',
+                'timestamp': datetime.now().isoformat(),
+                'success_message': success_message
+            }
+    
+    elif detected_type == 'two':
+        if command_type in ['two_tables', 'two_tables_empty_lot', 'two_tables_empty_pe', 'two_tables_empty_both']:
+            # Two Tables 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '📊 TWO TABLES 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
+            # 테스트 시나리오 매핑
+            test_scenario = None
+            if command_type == 'two_tables_empty_lot':
+                test_scenario = 'empty_lot_hold'
+            elif command_type == 'two_tables_empty_pe':
+                test_scenario = 'empty_pe_confirm'
+            elif command_type == 'two_tables_empty_both':
+                test_scenario = 'both_empty'
+            
+            data = generate_two_tables_data(test_scenario)
+            
+            # 각 테이블의 데이터 개수 계산
+            lot_hold_count = 0
+            pe_confirm_count = 0
+            
+            if 'real_data' in data and len(data['real_data']) >= 2:
+                lot_hold_data = data['real_data'][0].get('lot_hold', [])
+                pe_confirm_data = data['real_data'][1].get('pe_confirm_module', [])
+                lot_hold_count = len(lot_hold_data) if isinstance(lot_hold_data, list) else 0
+                pe_confirm_count = len(pe_confirm_data) if isinstance(pe_confirm_data, list) else 0
+            
+            # 성공 메시지 생성
+            success_message = f"✅ TWO TABLES 데이터를 성공적으로 받았습니다!\n• Result Type: lot_hold_pe_module\n• Lot Hold Records: {lot_hold_count}\n• PE Confirm Records: {pe_confirm_count}\n• Chat ID: {chatroom_id}"
+            
+            response = {
+                'result': 'lot_hold_pe_module',
+                'real_data': data['real_data'],
+                'sql': 'SELECT * FROM lot_hold_table, pe_confirm_table',
                 'timestamp': datetime.now().isoformat(),
                 'success_message': success_message
             }
@@ -1101,6 +1214,25 @@ async def edit_message_endpoint(request: EditMessageRequest):
                     'result': 'pcm_to_trend',
                     'real_data': data,
                     'sql': 'SELECT * FROM pcm_to_trend WHERE date >= "2024-01-01"',
+                    'timestamp': datetime.now().isoformat()
+                }
+        
+        elif detected_type == 'two':
+            if command_type in ['two_tables', 'two_tables_empty_lot', 'two_tables_empty_pe', 'two_tables_empty_both']:
+                # 테스트 시나리오 매핑
+                test_scenario = None
+                if command_type == 'two_tables_empty_lot':
+                    test_scenario = 'empty_lot_hold'
+                elif command_type == 'two_tables_empty_pe':
+                    test_scenario = 'empty_pe_confirm'
+                elif command_type == 'two_tables_empty_both':
+                    test_scenario = 'both_empty'
+                
+                data = generate_two_tables_data(test_scenario)
+                response = {
+                    'result': 'lot_hold_pe_module',
+                    'real_data': data['real_data'],
+                    'sql': 'SELECT * FROM lot_hold_table, pe_confirm_table',
                     'timestamp': datetime.now().isoformat()
                 }
         

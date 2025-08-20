@@ -2,7 +2,7 @@
   <div class="two-dynamic-tables">
     <div class="tables-header">
       <h3>{{ title }}</h3>
-      <div class="global-controls">
+      <div v-if="hasAnyData" class="global-controls">
         <input 
           v-model="globalSearchTerm" 
           type="text" 
@@ -20,25 +20,31 @@
       </div>
     </div>
     
-    <div class="tables-container">
-      <!-- Lot Hold Module Table -->
-      <div class="table-wrapper">
+        <div class="tables-container">
+      <!-- 데이터가 아예 없을 때 메시지 -->
+      <div v-if="!hasAnyData" class="no-data-message">
+        <div class="no-data-icon">📭</div>
+        <div class="no-data-text">사용 가능한 데이터가 없습니다</div>
+      </div>
+      
+      <!-- Lot Hold Module Table (데이터가 있을 때만 표시) -->
+      <div v-if="lotHoldData.length > 0" class="table-wrapper">
         <div class="table-section-header">
           <h4>Lot Hold</h4>
           <span class="table-count">{{ lotHoldData.length }} items</span>
         </div>
         <div class="dynamic-table">
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <!-- 인덱스 컬럼 헤더 -->
-                  <th v-if="showIndex" class="table-header-cell index-header">
-                    <div class="header-content">
-                      <span class="header-text">색인</span>
-                    </div>
-                  </th>
-                  <th v-for="column in lotHoldColumns" :key="column.key" class="table-header-cell">
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <!-- 인덱스 컬럼 헤더 -->
+                <th v-if="showIndex" class="table-header-cell index-header">
+                  <div class="header-content">
+                    <span class="header-text">색인</span>
+                  </div>
+                </th>
+                <th v-for="column in lotHoldColumns" :key="column.key" class="table-header-cell">
                     <div class="header-content" @click="toggleColumnFilter('lotHold', column.key)">
                       <span class="header-text">{{ column.label }}</span>
                       <div class="header-actions">
@@ -149,8 +155,8 @@
         </div>
       </div>
 
-      <!-- Inline Lot Module Table -->
-      <div class="table-wrapper">
+      <!-- PE Confirm Module Table (데이터가 있을 때만 표시) -->
+      <div v-if="inlineLotData.length > 0" class="table-wrapper">
         <div class="table-section-header">
           <h4>PE Confirm Module</h4>
           <span class="table-count">{{ inlineLotData.length }} items</span>
@@ -323,21 +329,23 @@ export default defineComponent({
     // 현재 활성화된 필터 컬럼
     const activeFilterColumn = ref({ table: null, column: null })
 
-    // 데이터 추출 (이미 파싱된 JSON 객체/배열 처리)
+    // 데이터 추출 (백엔드에서 배열로 전달된 구조 처리)
     const lotHoldData = computed(() => {
-      if (!props.data || props.data.length === 0) return []
+      if (!props.data || !Array.isArray(props.data) || props.data.length === 0) return []
       
       console.log('🔍 TwoDynamicTables received data:', props.data)
-      console.log('🔍 First item:', props.data[0])
-      console.log('🔍 lot_hold type:', typeof props.data[0]?.lot_hold)
-      console.log('🔍 lot_hold data:', props.data[0]?.lot_hold)
+      console.log('🔍 Data length:', props.data.length)
       
-      const firstItem = props.data[0]
-      if (firstItem && firstItem.lot_hold) {
+      // 첫 번째 항목에서 lot_hold 찾기
+      const lotHoldItem = props.data.find(item => item && item.lot_hold !== undefined)
+      
+      if (lotHoldItem && lotHoldItem.lot_hold) {
+        console.log('🔍 Found lot_hold data:', lotHoldItem.lot_hold)
+        
         // 이미 파싱된 데이터를 그대로 사용 (문자열인 경우만 파싱)
-        if (typeof firstItem.lot_hold === 'string') {
+        if (typeof lotHoldItem.lot_hold === 'string') {
           try {
-            const parsed = JSON.parse(firstItem.lot_hold)
+            const parsed = JSON.parse(lotHoldItem.lot_hold)
             return Array.isArray(parsed) ? parsed : []
           } catch (error) {
             console.error('Error parsing lot_hold string:', error)
@@ -345,36 +353,45 @@ export default defineComponent({
           }
         } else {
           // 이미 객체/배열인 경우 그대로 사용
-          return Array.isArray(firstItem.lot_hold) ? firstItem.lot_hold : []
+          return Array.isArray(lotHoldItem.lot_hold) ? lotHoldItem.lot_hold : []
         }
       }
+      
+      console.log('🔍 No lot_hold data found')
       return []
     })
 
     const inlineLotData = computed(() => {
-      if (!props.data || props.data.length === 0) return []
+      if (!props.data || !Array.isArray(props.data) || props.data.length === 0) return []
       
-      const firstItem = props.data[0]
-      // pe_confirm_module 또는 pe_module 지원
-      const peData = firstItem?.pe_confirm_module || firstItem?.pe_module
+      // pe_confirm_module 찾기
+      const peItem = props.data.find(item => item && (item.pe_confirm_module !== undefined || item.pe_module !== undefined))
       
-      console.log('🔍 PE data type:', typeof peData)
-      console.log('🔍 PE data:', peData)
-      if (peData) {
-        // 이미 파싱된 데이터를 그대로 사용 (문자열인 경우만 파싱)
-        if (typeof peData === 'string') {
-          try {
-            const parsed = JSON.parse(peData)
-            return Array.isArray(parsed) ? parsed : []
-          } catch (error) {
-            console.error('Error parsing PE module string:', error)
-            return []
+      if (peItem) {
+        // pe_confirm_module 또는 pe_module 지원
+        const peData = peItem.pe_confirm_module || peItem.pe_module
+        
+        console.log('🔍 Found PE data:', peData)
+        console.log('🔍 PE data type:', typeof peData)
+        
+        if (peData) {
+          // 이미 파싱된 데이터를 그대로 사용 (문자열인 경우만 파싱)
+          if (typeof peData === 'string') {
+            try {
+              const parsed = JSON.parse(peData)
+              return Array.isArray(parsed) ? parsed : []
+            } catch (error) {
+              console.error('Error parsing PE module string:', error)
+              return []
+            }
+          } else {
+            // 이미 객체/배열인 경우 그대로 사용
+            return Array.isArray(peData) ? peData : []
           }
-        } else {
-          // 이미 객체/배열인 경우 그대로 사용
-          return Array.isArray(peData) ? peData : []
         }
       }
+      
+      console.log('🔍 No PE data found')
       return []
     })
 
@@ -580,6 +597,11 @@ export default defineComponent({
              Object.values(inlineLotColumnSelectFilters.value).some(v => v)
     })
 
+    // 두 테이블 모두 비어있는지 확인
+    const hasAnyData = computed(() => {
+      return lotHoldData.value.length > 0 || inlineLotData.value.length > 0
+    })
+
     const hasActiveFilter = (tableType, columnKey) => {
       if (tableType === 'lotHold') {
         return lotHoldColumnFilters.value[columnKey] || lotHoldColumnSelectFilters.value[columnKey]
@@ -735,6 +757,7 @@ export default defineComponent({
       hasAnyActiveFilters,
       hasActiveFilters,
       hasActiveFilter,
+      hasAnyData,
       getUniqueValues,
       toggleColumnFilter,
       closeColumnFilter,
@@ -803,9 +826,9 @@ export default defineComponent({
 }
 
 .tables-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
   padding: 1rem;
   background: #f8f9fa;
 }
@@ -837,6 +860,30 @@ export default defineComponent({
   background: rgba(255, 255, 255, 0.2);
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
+}
+
+.no-data-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #6c757d;
+  text-align: center;
+}
+
+.no-data-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.no-data-text {
+  font-size: 1.1rem;
+  font-weight: 500;
 }
 
 .dynamic-table {
@@ -1181,11 +1228,6 @@ export default defineComponent({
 
 /* 반응형 디자인 */
 @media (max-width: 1200px) {
-  .tables-container {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-  
   .table-container {
     max-height: 500px;
   }
