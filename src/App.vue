@@ -213,7 +213,7 @@
               </div>
             </div>
             
-            <div v-show="!isAnalysisCollapsed" class="results-container">
+            <div v-if="!isAnalysisCollapsed" class="results-container">
               <div 
                 v-for="(result, index) in results" 
                 :key="result.id" 
@@ -336,7 +336,7 @@
                 </button>
               </div>
             </div>
-            <div v-show="!isAnalysisCollapsed" class="no-results-content">
+            <div v-if="!isAnalysisCollapsed" class="no-results-content">
               <div class="no-results-icon"></div>
               <p>Send a message to see analysis results here</p>
             </div>
@@ -522,7 +522,7 @@ export default defineComponent({
       return chatErrors.value[activeChatId.value]?.message || ''
     })
 const showOriginalTime = ref(false) // 원본 시간 표시 토글
-    const isAnalysisCollapsed = ref(false) // Analysis Results 섹션 접기/펼치기 토글
+    const isAnalysisCollapsed = ref(true) // Analysis Results 섹션 접기/펼치기 토글 (초기값: 접힌 상태)
     
     // 리사이즈 관련 refs
     const sidebar = ref(null)
