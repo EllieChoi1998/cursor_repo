@@ -31,27 +31,27 @@ export const DATA_TYPES = {
     dataProcessor: 'generatePCMDataWithRealData',
     commonalityProcessor: 'generateCommonalityDataWithRealData'
   },
-  CP: {
-    name: 'CP',
-    displayName: 'Critical Path',
-    description: 'Critical Path 분석 및 성능 모니터링',
-    supportedResults: ['cp_analysis', 'cp_trend'],
+  INLINE: {
+    name: 'INLINE',
+    displayName: 'Inline Analysis',
+    description: 'Inline Analysis 분석 및 성능 모니터링',
+    supportedResults: ['inline_analysis', 'inline_trend'],
     chartTypes: {
-      cp_analysis: {
+      inline_analysis: {
         type: 'scatter',
-        component: 'CPAnalysisChart',
-        title: 'CP Analysis Chart',
-        description: 'Scatter plot showing CP analysis results'
+        component: 'InlineAnalysisChart',
+        title: 'INLINE Analysis Chart',
+        description: 'Scatter plot showing INLINE analysis results'
       },
-      cp_trend: {
+      inline_trend: {
         type: 'line',
-        component: 'CPTrendChart',
-        title: 'CP Trend Chart',
-        description: 'Line chart showing CP trends over time'
+        component: 'InlineTrendChart',
+        title: 'INLINE Trend Chart',
+        description: 'Line chart showing INLINE trends over time'
       }
     },
-    dataProcessor: 'generateCPDataWithRealData',
-    // 향후 CP 전용 차트 컴포넌트 추가 예정
+    dataProcessor: 'generateInlineDataWithRealData',
+    // 향후 INLINE 전용 차트 컴포넌트 추가 예정
   },
   RAG: {
     name: 'RAG',
@@ -87,8 +87,8 @@ export const DATA_PROCESSORS = {
     // Commonality 데이터 생성 로직 (api.js에서 import)
     return null // 실제로는 api.js에서 import
   },
-  generateCPDataWithRealData: (realData) => {
-    // CP 데이터 생성 로직 (향후 구현)
+  generateInlineDataWithRealData: (realData) => {
+    // INLINE 데이터 생성 로직 (향후 구현)
     return []
   },
   generateRAGDataWithRealData: (realData) => {
@@ -101,8 +101,8 @@ export const DATA_PROCESSORS = {
 export const CHART_COMPONENTS = {
   PCMTrendChart: 'PCMTrendChart',
   CommonalityTable: 'CommonalityTable',
-  CPAnalysisChart: 'CPAnalysisChart', // 향후 구현
-  CPTrendChart: 'CPTrendChart', // 향후 구현
+  InlineAnalysisChart: 'InlineAnalysisChart', // 향후 구현
+  InlineTrendChart: 'InlineTrendChart', // 향후 구현
   RAGAnalysisChart: 'RAGAnalysisChart', // 향후 구현
   RAGSummaryComponent: 'RAGSummaryComponent' // 향후 구현
 }
@@ -128,7 +128,7 @@ export const STREAMING_DATA_FLOW = {
   
   // 요청 구조
   requestFormat: {
-    choice: 'PCM|CP|RAG', // 데이터 타입 선택
+    choice: 'PCM|INLINE|RAG', // 데이터 타입 선택
     message: '사용자 메시지', // 구체적인 요청 내용
     chatroom_id: '채팅방 ID' // 선택사항
   },
@@ -139,7 +139,7 @@ export const STREAMING_DATA_FLOW = {
     data: {
       chat_id: '채팅 ID',
       response: {
-        result: 'lot_start|commonality_start|cp_analysis|...',
+        result: 'lot_start|commonality_start|inline_analysis|...',
         real_data: 'DataFrame JSON 또는 숫자',
         sql: '실행된 SQL 쿼리',
         determined: '추가 데이터 (commonality의 경우)'

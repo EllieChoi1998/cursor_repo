@@ -149,7 +149,7 @@
                       :disabled="isLoading"
                     >
                       <option value="pcm">PCM (Process Control Monitor)</option>
-                      <option value="cp">CP (Chip Probe)</option>
+                      <option value="inline">INLINE (Inline Analysis)</option>
                       <option value="rag">불량 이력 검색</option>
                     </select>
                   </div>
@@ -532,7 +532,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       'chat_1': [
         {
           type: 'bot',
-          text: '안녕하세요! 데이터 분석 채팅 어시스턴트입니다.\n\n 사용 방법:\n1. 데이터 타입을 선택하세요 (PCM, CP, RAG)\n2. 메시지를 입력하고 전송하세요\n3. Enter 키를 누르거나 전송 버튼을 클릭하세요\n\n 지원하는 데이터 타입:\n• PCM (Process Control Monitor) - 트렌드 분석 및 공통성 분석\n• CP (Critical Path) - 성능 모니터링\n• RAG (Retrieval-Augmented Generation) - AI 기반 분석',
+          text: '안녕하세요! 데이터 분석 채팅 어시스턴트입니다.\n\n 사용 방법:\n1. 데이터 타입을 선택하세요 (PCM, INLINE, RAG)\n2. 메시지를 입력하고 전송하세요\n3. Enter 키를 누르거나 전송 버튼을 클릭하세요\n\n 지원하는 데이터 타입:\n• PCM (Process Control Monitor) - 트렌드 분석 및 공통성 분석\n• INLINE (Inline Analysis) - 인라인 분석\n• RAG (Retrieval-Augmented Generation) - AI 기반 분석',
           timestamp: new Date()
         }
       ]
@@ -1902,7 +1902,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             // 히스토리 로드 실패시 기본 메시지만 설정
             const welcomeMessage = {
               type: 'bot',
-              text: '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.',
+              text: '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, INLINE, RAG 분석에 대해 질문해주세요.',
               timestamp: new Date(room.last_activity)
             }
             chatMessages.value = {
