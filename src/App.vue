@@ -200,7 +200,7 @@
         <aside class="results-sidebar" ref="resultsSidebar">
           <div v-if="results.length > 0" class="results-section">
             <div class="results-header">
-              <h3>Analysis Results ({{ results.length }})</h3>
+              <h3>Analysis Results ({{ results.length }}) - {{ isAnalysisCollapsed ? 'Collapsed' : 'Expanded' }}</h3>
               <div class="results-controls">
                 <button 
                   @click="toggleAnalysisSection" 
@@ -325,7 +325,7 @@
           <!-- Results가 없을 때 표시할 메시지 -->
           <div v-else class="no-results">
             <div class="results-header">
-              <h3>Analysis Results (0)</h3>
+              <h3>Analysis Results (0) - {{ isAnalysisCollapsed ? 'Collapsed' : 'Expanded' }}</h3>
               <div class="results-controls">
                 <button 
                   @click="toggleAnalysisSection" 
@@ -1784,7 +1784,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // Analysis Results 섹션 토글 함수
     const toggleAnalysisSection = () => {
+      console.log('🔄 Toggle Analysis Section clicked! Current state:', isAnalysisCollapsed.value)
       isAnalysisCollapsed.value = !isAnalysisCollapsed.value
+      console.log('🔄 New state:', isAnalysisCollapsed.value)
     }
 
     // 채팅방 데이터 로드
