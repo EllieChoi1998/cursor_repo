@@ -202,11 +202,18 @@
             <div class="results-header">
               <h3>Analysis Results ({{ results.length }})</h3>
               <div class="results-controls">
+                <button 
+                  @click="toggleAnalysisSection" 
+                  class="toggle-button"
+                  :title="isAnalysisCollapsed ? '펼치기' : '접기'"
+                >
+                  {{ isAnalysisCollapsed ? '📂' : '📁' }}
+                </button>
                 <button @click="clearAllResults" class="clear-button">Clear All</button>
               </div>
             </div>
             
-            <div class="results-container">
+            <div v-show="!isAnalysisCollapsed" class="results-container">
               <div 
                 v-for="(result, index) in results" 
                 :key="result.id" 
@@ -317,9 +324,22 @@
           
           <!-- Results가 없을 때 표시할 메시지 -->
           <div v-else class="no-results">
-            <div class="no-results-icon"></div>
-            <h3>Analysis Results</h3>
-            <p>Send a message to see analysis results here</p>
+            <div class="results-header">
+              <h3>Analysis Results (0)</h3>
+              <div class="results-controls">
+                <button 
+                  @click="toggleAnalysisSection" 
+                  class="toggle-button"
+                  :title="isAnalysisCollapsed ? '펼치기' : '접기'"
+                >
+                  {{ isAnalysisCollapsed ? '📂' : '📁' }}
+                </button>
+              </div>
+            </div>
+            <div v-show="!isAnalysisCollapsed" class="no-results-content">
+              <div class="no-results-icon"></div>
+              <p>Send a message to see analysis results here</p>
+            </div>
           </div>
         </aside>
       </div>
@@ -502,6 +522,7 @@ export default defineComponent({
       return chatErrors.value[activeChatId.value]?.message || ''
     })
 const showOriginalTime = ref(false) // 원본 시간 표시 토글
+    const isAnalysisCollapsed = ref(false) // Analysis Results 섹션 접기/펼치기 토글
     
     // 리사이즈 관련 refs
     const sidebar = ref(null)
@@ -1761,6 +1782,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       addMessage('bot', 'All results cleared.')
     }
 
+    // Analysis Results 섹션 토글 함수
+    const toggleAnalysisSection = () => {
+      isAnalysisCollapsed.value = !isAnalysisCollapsed.value
+    }
+
     // 채팅방 데이터 로드
     const loadChatRooms = async () => {
       isLoadingChatRooms.value = true
@@ -2211,6 +2237,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         chatInputs,
         chatErrors,
         showOriginalTime,
+        // Analysis Results 토글
+        isAnalysisCollapsed,
+        toggleAnalysisSection,
         // 전체화면 모달
         fullscreenResult,
         showFullscreen,
@@ -2600,10 +2629,32 @@ body {
   color: white;
 }
 
+.toggle-button {
+  padding: 0.5rem;
+  border: 1px solid #6c757d;
+  background: white;
+  color: #6c757d;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+}
+
+.toggle-button:hover {
+  background: #6c757d;
+  color: white;
+  transform: scale(1.05);
+}
+
 .results-container {
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem;
+  transition: all 0.3s ease;
 }
 
 .result-item {
@@ -3072,14 +3123,21 @@ body {
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: #666;
+}
+
+.no-results-content {
   padding: 2rem;
   text-align: center;
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #666;
+  transition: all 0.3s ease;
 }
 
 .no-results-icon {
