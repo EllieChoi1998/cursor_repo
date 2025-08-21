@@ -298,7 +298,7 @@
                   <!-- Two Dynamic Tables (lot_hold_pe_confirm_module) -->
                   <div v-else-if="result.type === 'lot_hold_pe_confirm_module'" class="chart-section">
                     <TwoDynamicTables 
-                      :data="result.realData"
+                      :data="[result.realData]"
                       :title="result.title || 'Lot Hold & PE Module Analysis'"
                     />
                   </div>
@@ -415,7 +415,7 @@
           <!-- Two Dynamic Tables for fullscreen (lot_hold_pe_confirm_module) -->
           <div v-else-if="fullscreenResult?.type === 'lot_hold_pe_confirm_module'" class="fullscreen-chart">
             <TwoDynamicTables 
-              :data="fullscreenResult.data || fullscreenResult.realData"
+              :data="[fullscreenResult.realData || fullscreenResult.data]"
               :title="fullscreenResult.title || 'Lot Hold & PE Module Analysis'"
             />
           </div>
