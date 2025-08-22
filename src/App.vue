@@ -162,6 +162,15 @@
                       {{ showOriginalTime ? '🕐' : '🕑' }} 원본시간
                     </button>
                   </div>
+                  <div class="analysis-toggle">
+                    <button 
+                      @click="toggleAnalysisSection" 
+                      :class="['analysis-toggle-btn', { 'collapsed': isAnalysisCollapsed }]"
+                      :title="isAnalysisCollapsed ? 'Analysis Results 펼치기' : 'Analysis Results 접기'"
+                    >
+                      {{ isAnalysisCollapsed ? '📊' : '📈' }}
+                    </button>
+                  </div>
                 </div>
                 <div class="message-input-group">
                   <input 
@@ -194,13 +203,13 @@
         </div>
         
         <!-- Resize Bar 2 -->
-        <div class="resize-bar" ref="resizeBar2" @mousedown="startResize"></div>
+        <div v-if="!isAnalysisCollapsed" class="resize-bar" ref="resizeBar2" @mousedown="startResize"></div>
         
         <!-- Right Sidebar - Results Section -->
-        <aside class="results-sidebar" ref="resultsSidebar">
+        <aside v-if="!isAnalysisCollapsed" class="results-sidebar" ref="resultsSidebar">
           <div v-if="results.length > 0" class="results-section">
             <div class="results-header">
-              <h3>Analysis Results ({{ results.length }}) - {{ isAnalysisCollapsed ? 'Collapsed' : 'Expanded' }}</h3>
+              <h3>Analysis Results ({{ results.length }})</h3>
               <div class="results-controls">
                 <button 
                   @click="toggleAnalysisSection" 
@@ -325,7 +334,7 @@
           <!-- Results가 없을 때 표시할 메시지 -->
           <div v-else class="no-results">
             <div class="results-header">
-              <h3>Analysis Results (0) - {{ isAnalysisCollapsed ? 'Collapsed' : 'Expanded' }}</h3>
+              <h3>Analysis Results (0)</h3>
               <div class="results-controls">
                 <button 
                   @click="toggleAnalysisSection" 
@@ -522,7 +531,7 @@ export default defineComponent({
       return chatErrors.value[activeChatId.value]?.message || ''
     })
 const showOriginalTime = ref(false) // 원본 시간 표시 토글
-    const isAnalysisCollapsed = ref(true) // Analysis Results 섹션 접기/펼치기 토글 (초기값: 접힌 상태)
+    const isAnalysisCollapsed = ref(false) // Analysis Results 섹션 접기/펼치기 토글 (초기값: 펼쳐진 상태)
     
     // 리사이즈 관련 refs
     const sidebar = ref(null)
@@ -1784,9 +1793,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // Analysis Results 섹션 토글 함수
     const toggleAnalysisSection = () => {
-      console.log('🔄 Toggle Analysis Section clicked! Current state:', isAnalysisCollapsed.value)
       isAnalysisCollapsed.value = !isAnalysisCollapsed.value
-      console.log('🔄 New state:', isAnalysisCollapsed.value)
     }
 
     // 채팅방 데이터 로드
@@ -2497,6 +2504,37 @@ body {
   border-color: #667eea;
   background: #667eea;
   color: white;
+}
+
+.analysis-toggle-btn {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3rem;
+}
+
+.analysis-toggle-btn:hover {
+  border-color: #28a745;
+  background: #f8fff8;
+  transform: scale(1.05);
+}
+
+.analysis-toggle-btn.collapsed {
+  border-color: #dc3545;
+  background: #dc3545;
+  color: white;
+}
+
+.analysis-toggle-btn.collapsed:hover {
+  background: #c82333;
+  border-color: #c82333;
 }
 
 .data-type-selector {
