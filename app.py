@@ -610,7 +610,6 @@ def generate_inline_analysis_data() -> list:
             'optimization_potential': round(random.uniform(0.1, 0.3), 3)
         })
     return data
-
 def generate_inline_trend_initial_data() -> list:
     """INLINE Trend Initial 데이터 생성 (DEVICE 기준)"""
     load_masking_data(excel_name='iqc_data.xlsx')
@@ -630,38 +629,90 @@ def generate_inline_trend_initial_data() -> list:
                     df_clean[col] = df_clean[col].dt.strftime('%Y-%m-%d %H:%M:%S')
                     print(f"📅 날짜 컬럼 변환: {col}")
             
-            # 2. NaN 값들을 None으로 변환
-            df_clean = df_clean.where(pd.notnull(df_clean), None)
+            # 2. NaN, inf, -inf 값들을 None으로 변환 (중요!)
+            df_clean = df_clean.replace([np.nan, np.inf, -np.inf], None)
             
             # 3. numpy 타입들을 Python 기본 타입으로 변환
             for col in df_clean.columns:
                 if df_clean[col].dtype == 'int64':
-                    df_clean[col] = df_clean[col].astype('int')
+                    df_clean[col] = df_clean[col].astype('Int64')  # nullable integer
                 elif df_clean[col].dtype == 'float64':
-                    df_clean[col] = df_clean[col].astype('float')
+                    pass  # float은 그대로
+
+            # 4. (수정) FOR_KEY 단일 필터링 제거 — 모든 FOR_KEY 유지
+            if 'FOR_KEY' in df_clean.columns:
+                df_clean['FOR_KEY'] = df_clean['FOR_KEY'].astype(str).str.strip()
+                uniq = df_clean['FOR_KEY'].dropna().unique().tolist()
+                print(f"📝 FOR_KEY 고유값 수: {len(uniq)} | 예시: {uniq[:5]}")
+
+            # 5. x축용 key 컬럼 생성
+            if 'TRANS_DATE' in df_clean.columns:
+                df_clean['_sort_ts'] = pd.to_datetime(df_clean['TRANS_DATE'], errors='coerce')
+                df_clean = df_clean.sort_values('_sort_ts')
+                df_clean['key'] = df_clean['_sort_ts'].dt.strftime('%Y-%m-%d %H:%M:%S').fillna(df_clean['TRANS_DATE'].astype(str))
+                df_clean = df_clean.drop(columns=['_sort_ts'])
+                print("📝 TRANS_DATE를 key로 사용")
+            elif 'LOT_NO' in df_clean.columns:
+                df_clean['key'] = df_clean['LOT_NO'].astype(str)
+                print("📝 LOT_NO를 key로 사용")
+            elif 'WAFER_ID' in df_clean.columns:
+                df_clean['key'] = df_clean['WAFER_ID'].astype(str)
+                print("📝 WAFER_ID를 key로 사용")
+            elif 'FOR_KEY' in df_clean.columns:
+                df_clean['key'] = df_clean['FOR_KEY'].astype(str)
+                print("📝 FOR_KEY를 key로 사용")
+            else:
+                df_clean['key'] = df_clean.reset_index().index.astype(str)
+                print("📝 인덱스를 key로 사용")
             
-            # 딕셔너리로 변환
+            # 6. 딕셔너리로 변환 후 다시 한번 NaN 체크
             data = df_clean.to_dict(orient='records')
+            
+            # 7. 각 레코드에서 NaN/inf/결측코드 처리 및 key 문자열 보장
+            import math
+            for record in data:
+                for key, value in record.items():
+                    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+                        record[key] = None
+                    elif key.startswith('NO_VAL') and value == 9:
+                        record[key] = None
+                if 'key' in record and record['key'] is not None:
+                    record['key'] = str(record['key'])
+            
             print(f"✅ 데이터 변환 완료: {len(data)}개 레코드")
+            print(f"📊 실제 데이터 컬럼: {list(df_clean.columns)}")
+            if len(data) > 0:
+                print(f"📊 첫 번째 행 샘플: {data[0]}")
+            
             return data
             
         except Exception as e:
             print(f"❌ 실제 데이터 처리 오류: {e}")
             print("📊 샘플 데이터로 대체합니다.")
     
-    # 샘플 데이터 생성
+    # (샘플 데이터 생성부는 기존 그대로 둠)
+    print("📊 박스플롯용 샘플 데이터 생성")
     data = []
-    for i in range(1, 21):
-        data.append({
-            'key': str(i),
-            'NO_VAL1': round(random.uniform(350, 450), 3),
-            'NO_VAL2': round(random.uniform(400, 500), 3), 
-            'NO_VAL3': round(random.uniform(450, 550), 3),
-            'DEVICE': random.choice(['DEVICE_A', 'DEVICE_B', 'DEVICE_C']),
-            'USL': 550,
-            'LSL': 300,
-            'TGT': 420
-        })
+    devices = ['DEVICE_A', 'DEVICE_B', 'DEVICE_C']
+    for i, device in enumerate(devices):
+        base_values = [380 + i*20, 420 + i*20, 460 + i*20]
+        for j in range(5):
+            key_idx = i * 5 + j + 1
+            data.append({
+                'key': f'2024-01-{key_idx:02d} 10:00:00',
+                'FOR_KEY': 'P1931.52926.5',  # 샘플은 그대로
+                'DEVICE': device,
+                'NO_VAL1': round(base_values[0] + random.uniform(-30, 30), 3),
+                'NO_VAL2': round(base_values[1] + random.uniform(-30, 30), 3), 
+                'NO_VAL3': round(base_values[2] + random.uniform(-30, 30), 3),
+                'NO_VAL4': round(base_values[0] + random.uniform(-25, 25), 3),
+                'NO_VAL5': round(base_values[1] + random.uniform(-25, 25), 3),
+                'USL': 550,
+                'LSL': 300,
+                'TGT': 420,
+                'UCL': 500,
+                'LCL': 350
+            })
     return data
 
 def generate_inline_trend_followup_data(criteria: str) -> list:
@@ -671,37 +722,179 @@ def generate_inline_trend_followup_data(criteria: str) -> list:
 
     # 실제 엑셀 데이터가 있으면 사용
     if masking_df is not None and not masking_df.empty:
-        print("📊 실제 마스킹 데이터 사용")
-        data = masking_df.to_dict(orient='records')
-        return data
+        try:
+            print(f"📊 실제 마스킹 데이터 사용 (criteria: {criteria})")
+            import math
+            from datetime import datetime
+            
+            df_clean = masking_df.copy()
+            
+            # 1. datetime/timestamp 컬럼들을 문자열로 변환 (강화)
+            for col in df_clean.columns:
+                if df_clean[col].dtype == 'datetime64[ns]' or pd.api.types.is_datetime64_any_dtype(df_clean[col]):
+                    df_clean[col] = df_clean[col].dt.strftime('%Y-%m-%d %H:%M:%S')
+                    print(f"📅 날짜 컬럼 변환: {col}")
+                elif df_clean[col].dtype == 'object':
+                    sample_val = df_clean[col].dropna().iloc[0] if len(df_clean[col].dropna()) > 0 else None
+                    if sample_val is not None and isinstance(sample_val, (pd.Timestamp, datetime)):
+                        df_clean[col] = df_clean[col].apply(
+                            lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) and isinstance(x, (pd.Timestamp, datetime)) else x
+                        )
+                        print(f"📅 숨겨진 날짜 컬럼 변환: {col}")
+            
+            # 2. NaN, inf, -inf → None
+            df_clean = df_clean.replace([np.nan, np.inf, -np.inf], None)
+            
+            # 3. numpy 스칼라 타입 처리
+            for col in df_clean.columns:
+                if df_clean[col].dtype == 'int64':
+                    df_clean[col] = df_clean[col].astype('Int64')
+                elif df_clean[col].dtype == 'float64':
+                    pass
+
+            # 4. criteria 보정
+            if criteria not in df_clean.columns:
+                print(f"⚠️ criteria '{criteria}' 컬럼이 없습니다. 사용 가능한 컬럼: {list(df_clean.columns)}")
+                available_criteria = ['DEVICE', 'PARA', 'EQ_CHAM', 'LOT_ID', 'OPER', 'ROUTE']
+                for alt_criteria in available_criteria:
+                    if alt_criteria in df_clean.columns:
+                        print(f"📝 대체 criteria 사용: {alt_criteria}")
+                        criteria = alt_criteria
+                        break
+                else:
+                    print("❌ 사용 가능한 criteria가 없습니다. 샘플 데이터로 대체합니다.")
+                    raise ValueError("No valid criteria found")
+            
+            # 5. (수정) FOR_KEY 단일 필터링 제거 — 모든 FOR_KEY 유지
+            if 'FOR_KEY' in df_clean.columns:
+                df_clean['FOR_KEY'] = df_clean['FOR_KEY'].astype(str).str.strip()
+                uniq = df_clean['FOR_KEY'].dropna().unique().tolist()
+                print(f"📝 FOR_KEY 고유값 수: {len(uniq)} | 예시: {uniq[:5]}")
+
+            # 6. x축용 key 컬럼 생성
+            if 'TRANS_DATE' in df_clean.columns:
+                df_clean['_sort_ts'] = pd.to_datetime(df_clean['TRANS_DATE'], errors='coerce')
+                df_clean = df_clean.sort_values('_sort_ts')
+                df_clean['key'] = df_clean['_sort_ts'].dt.strftime('%Y-%m-%d %H:%M:%S').fillna(df_clean['TRANS_DATE'].astype(str))
+                df_clean = df_clean.drop(columns=['_sort_ts'])
+                print("📝 TRANS_DATE를 key로 사용")
+            elif 'LOT_NO' in df_clean.columns:
+                df_clean['key'] = df_clean['LOT_NO'].astype(str)
+                print("📝 LOT_NO를 key로 사용")
+            elif 'WAFER_ID' in df_clean.columns:
+                df_clean['key'] = df_clean['WAFER_ID'].astype(str)
+                print("📝 WAFER_ID를 key로 사용")
+            elif 'FOR_KEY' in df_clean.columns:
+                df_clean['key'] = df_clean['FOR_KEY'].astype(str)
+                print("📝 FOR_KEY를 key로 사용")
+            else:
+                df_clean['key'] = df_clean.reset_index().index.astype(str)
+                print("📝 인덱스를 key로 사용")
+            
+            # 🚨 criteria 컬럼 Timestamp 특별 처리
+            if criteria in df_clean.columns:
+                print(f"🔍 criteria '{criteria}' 컬럼 타입: {df_clean[criteria].dtype}")
+                sample_vals = df_clean[criteria].dropna().head(3).tolist()
+                print(f"🔍 criteria 샘플 값들: {sample_vals}")
+                for i, val in enumerate(sample_vals):
+                    print(f"  {i}: {val} (type: {type(val)})")
+                    if isinstance(val, (pd.Timestamp, datetime)):
+                        df_clean[criteria] = df_clean[criteria].apply(
+                            lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) and isinstance(x, (pd.Timestamp, datetime)) else x
+                        )
+                        print(f"✅ criteria '{criteria}' Timestamp → 문자열 변환 완료")
+                        break
+            
+            # 7. 정렬
+            try:
+                print(f"📊 정렬 전 criteria '{criteria}' 고유값: {df_clean[criteria].nunique()}개")
+                for idx, val in df_clean[criteria].items():
+                    if isinstance(val, (pd.Timestamp, datetime)):
+                        df_clean.at[idx, criteria] = val.strftime('%Y-%m-%d %H:%M:%S')
+                        print(f"🔧 정렬 전 추가 Timestamp 수정: {idx}")
+                df_clean = df_clean.sort_values([criteria, 'key'])
+                print(f"📊 {criteria} 기준 정렬 완료")
+            except Exception as e:
+                print(f"⚠️ 정렬 실패: {e}, 기본 순서 유지")
+            
+            # 8. 딕셔너리 변환
+            data = df_clean.to_dict(orient='records')
+            
+            # 9. JSON 비호환 값 정리
+            for record in data:
+                for key, value in list(record.items()):
+                    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+                        record[key] = None
+                    elif isinstance(value, (pd.Timestamp, datetime)):
+                        record[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+                        print(f"🚨 늦게 발견된 Timestamp 변환: {key}")
+                    elif key.startswith('NO_VAL') and value == 9:
+                        record[key] = None
+                    elif hasattr(value, 'item'):
+                        record[key] = value.item()
+                if 'key' in record and record['key'] is not None:
+                    record['key'] = str(record['key'])
+            
+            print(f"✅ 데이터 변환 완료: {len(data)}개 레코드")
+            print(f"📊 사용된 criteria: {criteria}")
+            
+            # JSON 직렬화 테스트
+            try:
+                import json
+                json.dumps(data[0] if data else {}, default=str)
+                print("✅ JSON 직렬화 테스트 통과")
+            except Exception as json_error:
+                print(f"🚨 JSON 직렬화 테스트 실패: {json_error}")
+                for record in data:
+                    for key, value in list(record.items()):
+                        try:
+                            json.dumps(value)
+                        except:
+                            print(f"🔧 문제 값 수정: {key} = {type(value)} -> str")
+                            record[key] = str(value) if value is not None else None
+            
+            print(f"📊 {criteria} 고유값: {sorted(list(set([r[criteria] for r in data if r.get(criteria) is not None])))}")
+            return data
+            
+        except Exception as e:
+            print(f"❌ 실제 데이터 처리 오류: {e}")
+            print("📊 샘플 데이터로 대체합니다.")
+    
+    # (샘플 데이터 생성부는 기존 그대로 둠)
+    print(f"📊 박스플롯용 샘플 데이터 생성 중 (criteria: {criteria})")
     data = []
-    
-    # criteria에 따라 다른 데이터 생성
     if criteria == "PARA":
-        para_values = ['PARA_X', 'PARA_Y', 'PARA_Z']
-        criteria_key = 'PARA'
-        criteria_values = para_values
+        criteria_values = ['PARA_X', 'PARA_Y', 'PARA_Z']
     elif criteria == "EQ_CHAM":
-        eq_cham_values = ['P0', 'P1', 'P2', 'P3']
-        criteria_key = 'EQ_CHAM'
-        criteria_values = eq_cham_values
+        criteria_values = ['P0', 'P1', 'P2', 'P3']
+    elif criteria == "OPER":
+        criteria_values = ['OPER_1', 'OPER_2', 'OPER_3']
+    elif criteria == "ROUTE":
+        criteria_values = ['ROUTE_A', 'ROUTE_B', 'ROUTE_C']
     else:
-        # 기타 criteria의 경우
-        criteria_key = criteria
-        criteria_values = [f'{criteria}_A', f'{criteria}_B', f'{criteria}_C']
+        criteria_values = ['DEVICE_A', 'DEVICE_B', 'DEVICE_C']
     
-    for i in range(1, 21):
-        data.append({
-            'key': str(i),
-            'NO_VAL1': round(random.uniform(350, 450), 3),
-            'NO_VAL2': round(random.uniform(400, 500), 3),
-            'NO_VAL3': round(random.uniform(450, 550), 3),
-            criteria_key: random.choice(criteria_values),
-            'USL': 550,
-            'LSL': 300,
-            'TGT': 420
-        })
+    for i, criteria_val in enumerate(criteria_values):
+        base_values = [380 + i*20, 420 + i*20, 460 + i*20]
+        for j in range(5):
+            key_idx = i * 5 + j + 1
+            data.append({
+                'key': f'2024-01-{key_idx:02d} 10:00:00',
+                'FOR_KEY': 'P1931.52926.5',  # 샘플은 그대로
+                criteria: criteria_val,
+                'NO_VAL1': round(base_values[0] + random.uniform(-30, 30), 3),
+                'NO_VAL2': round(base_values[1] + random.uniform(-30, 30), 3),
+                'NO_VAL3': round(base_values[2] + random.uniform(-30, 30), 3),
+                'NO_VAL4': round(base_values[0] + random.uniform(-25, 25), 3),
+                'NO_VAL5': round(base_values[1] + random.uniform(-25, 25), 3),
+                'USL': 550,
+                'LSL': 300,
+                'TGT': 420,
+                'UCL': 500,
+                'LCL': 350
+            })
     return data
+
 
 def generate_rag_search_data() -> dict:
     """RAG 검색 데이터 생성"""
