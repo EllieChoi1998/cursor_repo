@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any, List
 import pandas as pd
 import numpy as np
 import uuid
+from plotlyjs_spec_writer import generate_plotly_spec
 
 # 전역 변수로 마스킹된 데이터프레임 저장
 masking_df = None
@@ -652,18 +653,18 @@ def generate_inline_trend_initial_data() -> list:
                 df_clean['key'] = df_clean['_sort_ts'].dt.strftime('%Y-%m-%d %H:%M:%S').fillna(df_clean['TRANS_DATE'].astype(str))
                 df_clean = df_clean.drop(columns=['_sort_ts'])
                 print("📝 TRANS_DATE를 key로 사용")
-            elif 'LOT_NO' in df_clean.columns:
-                df_clean['key'] = df_clean['LOT_NO'].astype(str)
-                print("📝 LOT_NO를 key로 사용")
-            elif 'WAFER_ID' in df_clean.columns:
-                df_clean['key'] = df_clean['WAFER_ID'].astype(str)
-                print("📝 WAFER_ID를 key로 사용")
-            elif 'FOR_KEY' in df_clean.columns:
-                df_clean['key'] = df_clean['FOR_KEY'].astype(str)
-                print("📝 FOR_KEY를 key로 사용")
-            else:
-                df_clean['key'] = df_clean.reset_index().index.astype(str)
-                print("📝 인덱스를 key로 사용")
+            # elif 'LOT_NO' in df_clean.columns:
+            #     df_clean['key'] = df_clean['LOT_NO'].astype(str)
+            #     print("📝 LOT_NO를 key로 사용")
+            # elif 'WAFER_ID' in df_clean.columns:
+            #     df_clean['key'] = df_clean['WAFER_ID'].astype(str)
+            #     print("📝 WAFER_ID를 key로 사용")
+            # elif 'FOR_KEY' in df_clean.columns:
+            #     df_clean['key'] = df_clean['FOR_KEY'].astype(str)
+            #     print("📝 FOR_KEY를 key로 사용")
+            # else:
+            #     df_clean['key'] = df_clean.reset_index().index.astype(str)
+            #     print("📝 인덱스를 key로 사용")
             
             # 6. 딕셔너리로 변환 후 다시 한번 NaN 체크
             data = df_clean.to_dict(orient='records')
@@ -762,7 +763,6 @@ def generate_inline_trend_followup_data(criteria: str) -> list:
                         criteria = alt_criteria
                         break
                 else:
-                    print("❌ 사용 가능한 criteria가 없습니다. 샘플 데이터로 대체합니다.")
                     raise ValueError("No valid criteria found")
             
             # 5. (수정) FOR_KEY 단일 필터링 제거 — 모든 FOR_KEY 유지
@@ -1336,26 +1336,38 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
             yield f"data: {json.dumps({'progress_message': '📊 INLINE TREND FOLLOWUP 데이터를 생성하고 있습니다...'})}\n\n"
             await asyncio.sleep(0.3)
             
-            # 메시지에서 criteria 추출 (기본값: PARA)
-            criteria = 'PARA'
-            if 'eq_cham' in message.lower():
-                criteria = 'EQ_CHAM'
-            elif 'route' in message.lower():
-                criteria = 'ROUTE'
-            elif 'oper' in message.lower():
-                criteria = 'OPER'
-            
-            data = generate_inline_trend_followup_data(criteria)
-            
-            # 성공 메시지 생성
-            success_message = f"✅ INLINE TREND FOLLOWUP 데이터를 성공적으로 받았습니다!\n• Result Type: inline_trend_followup\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}\n• Criteria: {criteria}"
-            
-            response = {
-                'result': 'inline_trend_followup',
-                'criteria': criteria,
-                'real_data': json.dumps(data),
-                'success_message': success_message
-            }
+            if "spec" in message.split(" "):
+                llm_spec = generate_plotly_spec(message)
+                data = generate_inline_trend_initial_data() # 임시 데이터
+                success_message = f"✅ INLINE TREND FOLLOWUP Plotly Spec을 성공적으로 받았습니다!\n• Result Type: inline_trend_followup_spec\n• Chat ID: {chatroom_id}"
+                response = {
+                    'result': 'inline_trend_followup',
+                    'real_data': json.dumps(data),
+                    'llm_spec': json.dumps(llm_spec),
+                    'success_message': success_message
+                }
+
+            else:
+                # 메시지에서 criteria 추출 (기본값: PARA)
+                criteria = 'PARA'
+                if 'eq_cham' in message.lower():
+                    criteria = 'EQ_CHAM'
+                elif 'route' in message.lower():
+                    criteria = 'ROUTE'
+                elif 'oper' in message.lower():
+                    criteria = 'OPER'
+                
+                data = generate_inline_trend_followup_data(criteria, message)
+                
+                # 성공 메시지 생성
+                success_message = f"✅ INLINE TREND FOLLOWUP 데이터를 성공적으로 받았습니다!\n• Result Type: inline_trend_followup\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}\n• Criteria: {criteria}"
+                
+                response = {
+                    'result': 'inline_trend_followup',
+                    'criteria': criteria,
+                    'real_data': json.dumps(data),
+                    'success_message': success_message
+                }
         elif command_type == 'analysis':
             # INLINE 분석 데이터 생성 중 메시지
             yield f"data: {json.dumps({'progress_message': '🔬 INLINE ANALYSIS 데이터를 생성하고 있습니다...'})}\n\n"

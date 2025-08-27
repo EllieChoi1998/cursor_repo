@@ -319,9 +319,31 @@
                     />
                   </div>
 
-                  <!-- INLINE Trend Chart (inline_trend_initial, inline_trend_followup) -->
+                  <!-- INLINE Trend Chart (inline_trend_initial, inline_trend_followup)
                   <div v-else-if="result.type === 'inline_trend_initial' || result.type === 'inline_trend_followup'" class="chart-section inline-vertical">
                     <INLINETrendChart 
+                      :backendData="result.backendData"
+                      :height="chartHeight"
+                      :title="result.title || 'Inline Trend Analysis'"
+                    />
+                  </div> -->
+                  <!-- INLINE Trend Chart (LLM spec가 있으면 LLMDrivenInlineChart로) -->
+                  <div
+                    v-else-if="(result.type === 'inline_trend_initial' || result.type === 'inline_trend_followup') && result.backendData?.llm_spec"
+                    class="chart-section inline-vertical"
+                  >
+                    <LLMDrivenInlineChart
+                      :backendData="result.backendData"
+                      :height="chartHeight"
+                      :title="result.title || 'Inline Trend (LLM Spec)'"
+                    />
+                  </div>
+                  <!-- LLM spec가 없으면 기존 INLINETrendChart로 -->
+                  <div
+                    v-else-if="result.type === 'inline_trend_initial' || result.type === 'inline_trend_followup'"
+                    class="chart-section inline-vertical"
+                  >
+                    <INLINETrendChart
                       :backendData="result.backendData"
                       :height="chartHeight"
                       :title="result.title || 'Inline Trend Analysis'"
@@ -399,9 +421,33 @@
             />
           </div>
           
-          <!-- INLINE Trend Chart (inline_trend_initial, inline_trend_followup) -->
+          <!-- INLINE Trend Chart (inline_trend_initial, inline_trend_followup)
           <div v-else-if="fullscreenResult?.type === 'inline_trend_initial' || fullscreenResult?.type === 'inline_trend_followup'" class="fullscreen-chart inline-vertical">
             <INLINETrendChart 
+              :key="`inline-full-${fullscreenResult?.id}-${showFullscreen}`"
+              :backendData="fullscreenResult.backendData"
+              :height="800"
+              :title="fullscreenResult.title || 'Inline Trend Analysis'"
+            />
+          </div> -->
+          <!-- INLINE Trend Chart (LLM spec가 있으면 LLMDrivenInlineChart로) -->
+          <div
+            v-else-if="(fullscreenResult?.type === 'inline_trend_initial' || fullscreenResult?.type === 'inline_trend_followup') && fullscreenResult?.backendData?.llm_spec"
+            class="fullscreen-chart inline-vertical"
+          >
+            <LLMDrivenInlineChart
+              :key="`llm-inline-full-${fullscreenResult?.id}-${showFullscreen}`"
+              :backendData="fullscreenResult.backendData"
+              :height="800"
+              :title="fullscreenResult.title || 'Inline Trend (LLM Spec)'"
+            />
+          </div>
+          <!-- LLM spec가 없으면 기존 INLINETrendChart로 -->
+          <div
+            v-else-if="fullscreenResult?.type === 'inline_trend_initial' || fullscreenResult?.type === 'inline_trend_followup'"
+            class="fullscreen-chart inline-vertical"
+          >
+            <INLINETrendChart
               :key="`inline-full-${fullscreenResult?.id}-${showFullscreen}`"
               :backendData="fullscreenResult.backendData"
               :height="800"
@@ -491,6 +537,9 @@ import TwoDynamicTables from './components/TwoDynamicTables.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
 import INLINETrendChart from './components/INLINETrendChart.vue'
+
+import LLMDrivenInlineChart from './components/LLMDrivenInlineChart.vue'
+
 import {
   streamChatAPI,
   editMessageAPI,
@@ -515,7 +564,8 @@ export default defineComponent({
     TwoDynamicTables,
     ChatRoomList,
     RAGAnswerList,
-    INLINETrendChart
+    INLINETrendChart,
+    LLMDrivenInlineChart
   },
   setup() {
 
@@ -769,7 +819,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               result: responseData.result,
               criteria: responseData.criteria,
               real_data: responseData.real_data,
-              success_message: responseData.success_message
+              success_message: responseData.success_message,
+              llm_spec: responseData.llm_spec       // 👈 추가
             }
           }
         } else if (responseData.result === 'inline_trend_followup') {
@@ -790,7 +841,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               result: responseData.result,
               criteria: responseData.criteria,
               real_data: responseData.real_data,
-              success_message: responseData.success_message
+              success_message: responseData.success_message,
+              llm_spec: responseData.llm_spec       // 👈 추가
             }
           }
         } else if (responseData.result_type || responseData.result) {
