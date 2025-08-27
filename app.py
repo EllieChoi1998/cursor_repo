@@ -15,11 +15,11 @@ import uuid
 # 전역 변수로 마스킹된 데이터프레임 저장
 masking_df = None
 
-def load_masking_data():
+def load_masking_data(excel_name: str = 'masking_df.xlsx') -> bool:
     """마스킹된 엑셀 데이터 로드"""
     global masking_df
     try:
-        masking_df = pd.read_excel('masking_df.xlsx')
+        masking_df = pd.read_excel(excel_name)
         print(f"📊 마스킹 데이터 로드 완료: {masking_df.shape[0]}행 {masking_df.shape[1]}열")
         print(f"📊 컬럼 목록: {list(masking_df.columns)}")
         return True
@@ -81,7 +81,7 @@ class Message(BaseModel):
     content: str
     message_type: str  # 'user', 'bot'
     timestamp: datetime
-    data_type: str  # 'pcm', 'cp', 'rag'
+    data_type: str  # 'pcm', 'inline', 'rag'
 
 # 응답 모델
 class BotResponse(BaseModel):
@@ -93,13 +93,13 @@ class BotResponse(BaseModel):
 
 # 요청 모델
 class ChatRequest(BaseModel):
-    choice: str  # 'pcm', 'cp', 'rag'
+    choice: str  # 'pcm', 'inline', 'rag'
     message: str
     chatroom_id: int  # 정수로 변경
 
 # 메시지 수정 요청 모델 (새로 추가)
 class EditMessageRequest(BaseModel):
-    choice: str  # 'pcm', 'cp', 'rag'
+    choice: str  # 'pcm', 'inline', 'rag'
     message: str
     chatroom_id: int
     original_chat_id: int  # 기존 chat_id
@@ -317,7 +317,7 @@ def initialize_default_chatrooms():
         general_room = chat_storage.create_chatroom()
         print(f"✅ Created default chatroom with ID: {general_room.id}")
         
-        chat_storage.add_message(general_room.id, '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, CP, RAG 분석에 대해 질문해주세요.', 'bot', 'pcm')
+        chat_storage.add_message(general_room.id, '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, INLINE, RAG 분석에 대해 질문해주세요.', 'bot', 'pcm')
         print(f"📝 Added welcome message to chatroom {general_room.id}")
         
         # 샘플 채팅 히스토리 추가 (시간 차이를 두어 실제 상황 시뮬레이션)
@@ -345,9 +345,6 @@ def initialize_application():
     """애플리케이션 초기화"""
     print("🚀 애플리케이션 초기화 시작...")
     
-    # 마스킹된 엑셀 데이터 로드 시도
-    load_masking_data()
-    
     # 기본 채팅방 생성
     initialize_default_chatrooms()
     
@@ -363,7 +360,7 @@ SUPPORTED_COMMANDS = {
         'commonality': ['commonality', '커먼', '공통', '분석'],
         'point': ['point', '포인트', 'site', '사이트']
     },
-    'cp': {
+    'inline': {
         'analysis': ['analysis', '분석', '성능', '모니터링'],
         'performance': ['performance', '성능', '측정', '평가']
     },
@@ -390,9 +387,9 @@ def analyze_query_with_choice(choice: str, message: str) -> tuple[str, str, str]
     if choice_lower == 'pcm':
         return analyze_pcm_query(message_lower)
     
-    # choice가 'cp'인 경우
-    elif choice_lower == 'cp':
-        return analyze_cp_query(message_lower)
+    # choice가 'inline'인 경우
+    elif choice_lower == 'inline':
+        return analyze_inline_query(message_lower)
     
     # choice가 'rag'인 경우
     elif choice_lower == 'rag':
@@ -434,12 +431,16 @@ def analyze_pcm_query(message_lower: str) -> tuple[str, str, str]:
     else:
         return 'pcm', 'trend', ""  # 기본값
 
-def analyze_cp_query(message_lower: str) -> tuple[str, str, str]:
-    """CP choice에 대한 메시지 분석"""
-    if any(k in message_lower for k in ['performance', '성능', '모니터링']):
-        return 'cp', 'performance', ""
+def analyze_inline_query(message_lower: str) -> tuple[str, str, str]:
+    """INLINE choice에 대한 메시지 분석"""
+    if any(k in message_lower for k in ['initial', '초기', '처음']):
+        return 'inline', 'trend_initial', ""
+    elif any(k in message_lower for k in ['followup', 'follow-up', '후속', '팔로우', 'para', 'eq_cham']):
+        return 'inline', 'trend_followup', ""
+    elif any(k in message_lower for k in ['performance', '성능', '모니터링']):
+        return 'inline', 'performance', ""
     else:
-        return 'cp', 'analysis', ""
+        return 'inline', 'analysis', ""
 
 def analyze_rag_query(message_lower: str) -> tuple[str, str, str]:
     """RAG choice에 대한 메시지 분석"""
@@ -489,14 +490,14 @@ def analyze_query(message: str) -> tuple[str, str, str]:
             else:
                 return 'pcm', 'trend', ""  # 기본값
     
-    # CP 관련 키워드 검사
-    cp_keywords = ['cp', 'critical', 'path', '경로', 'analysis', '분석', 'performance', '성능', '모니터링']
-    for keyword in cp_keywords:
+    # INLINE 관련 키워드 검사
+    inline_keywords = ['inline', 'trend', 'edit']
+    for keyword in inline_keywords:
         if keyword in message_lower:
-            if any(k in message_lower for k in ['performance', '성능', '모니터링']):
-                return 'cp', 'performance', ""
+            if any(k in message_lower for k in ['trend']):
+                return 'inline', 'trend', ""
             else:
-                return 'cp', 'analysis', ""
+                return 'inline', 'edit', ""
     
     # 기본적으로 RAG로 처리 (질문이나 일반적인 요청)
     return 'rag', 'general', ""
@@ -586,8 +587,19 @@ def generate_pcm_point_data() -> list:
         {'DATE_WAFER_ID': '2025-06-25:36:57:54_A12345678998999', 'PCM_SITE': '5', 'VALUE': 11},
     ]
 
-def generate_cp_analysis_data() -> list:
-    """CP 분석 데이터 생성"""
+def generate_inline_analysis_data() -> list:
+    """INLINE 분석 데이터 생성"""
+    # 마스킹된 엑셀 데이터 로드 시도
+    load_masking_data(excel_name='iqc_data.xlsx')
+    global masking_df
+
+    # 실제 엑셀 데이터가 있으면 사용
+    if masking_df is not None and not masking_df.empty:
+        print("📊 실제 마스킹 데이터 사용")
+        data = masking_df.to_dict(orient='records')
+        return data
+    
+    print("📊 샘플 데이터 생성 (엑셀 파일 없음)")
     data = []
     for i in range(1, 16):
         data.append({
@@ -596,6 +608,98 @@ def generate_cp_analysis_data() -> list:
             'performance_score': round(random.uniform(0.7, 0.95), 3),
             'bottleneck_count': random.randint(1, 5),
             'optimization_potential': round(random.uniform(0.1, 0.3), 3)
+        })
+    return data
+
+def generate_inline_trend_initial_data() -> list:
+    """INLINE Trend Initial 데이터 생성 (DEVICE 기준)"""
+    load_masking_data(excel_name='iqc_data.xlsx')
+    global masking_df
+
+    # 실제 엑셀 데이터가 있으면 사용
+    if masking_df is not None and not masking_df.empty:
+        try:
+            print("📊 실제 마스킹 데이터 사용")
+            
+            # 데이터프레임 복사 후 정리
+            df_clean = masking_df.copy()
+            
+            # 1. datetime/timestamp 컬럼들을 문자열로 변환
+            for col in df_clean.columns:
+                if df_clean[col].dtype == 'datetime64[ns]' or pd.api.types.is_datetime64_any_dtype(df_clean[col]):
+                    df_clean[col] = df_clean[col].dt.strftime('%Y-%m-%d %H:%M:%S')
+                    print(f"📅 날짜 컬럼 변환: {col}")
+            
+            # 2. NaN 값들을 None으로 변환
+            df_clean = df_clean.where(pd.notnull(df_clean), None)
+            
+            # 3. numpy 타입들을 Python 기본 타입으로 변환
+            for col in df_clean.columns:
+                if df_clean[col].dtype == 'int64':
+                    df_clean[col] = df_clean[col].astype('int')
+                elif df_clean[col].dtype == 'float64':
+                    df_clean[col] = df_clean[col].astype('float')
+            
+            # 딕셔너리로 변환
+            data = df_clean.to_dict(orient='records')
+            print(f"✅ 데이터 변환 완료: {len(data)}개 레코드")
+            return data
+            
+        except Exception as e:
+            print(f"❌ 실제 데이터 처리 오류: {e}")
+            print("📊 샘플 데이터로 대체합니다.")
+    
+    # 샘플 데이터 생성
+    data = []
+    for i in range(1, 21):
+        data.append({
+            'key': str(i),
+            'NO_VAL1': round(random.uniform(350, 450), 3),
+            'NO_VAL2': round(random.uniform(400, 500), 3), 
+            'NO_VAL3': round(random.uniform(450, 550), 3),
+            'DEVICE': random.choice(['DEVICE_A', 'DEVICE_B', 'DEVICE_C']),
+            'USL': 550,
+            'LSL': 300,
+            'TGT': 420
+        })
+    return data
+
+def generate_inline_trend_followup_data(criteria: str) -> list:
+    """INLINE Trend Followup 데이터 생성 (다양한 criteria 기준)"""
+    load_masking_data(excel_name='iqc_data.xlsx')
+    global masking_df
+
+    # 실제 엑셀 데이터가 있으면 사용
+    if masking_df is not None and not masking_df.empty:
+        print("📊 실제 마스킹 데이터 사용")
+        data = masking_df.to_dict(orient='records')
+        return data
+    data = []
+    
+    # criteria에 따라 다른 데이터 생성
+    if criteria == "PARA":
+        para_values = ['PARA_X', 'PARA_Y', 'PARA_Z']
+        criteria_key = 'PARA'
+        criteria_values = para_values
+    elif criteria == "EQ_CHAM":
+        eq_cham_values = ['P0', 'P1', 'P2', 'P3']
+        criteria_key = 'EQ_CHAM'
+        criteria_values = eq_cham_values
+    else:
+        # 기타 criteria의 경우
+        criteria_key = criteria
+        criteria_values = [f'{criteria}_A', f'{criteria}_B', f'{criteria}_C']
+    
+    for i in range(1, 21):
+        data.append({
+            'key': str(i),
+            'NO_VAL1': round(random.uniform(350, 450), 3),
+            'NO_VAL2': round(random.uniform(400, 500), 3),
+            'NO_VAL3': round(random.uniform(450, 550), 3),
+            criteria_key: random.choice(criteria_values),
+            'USL': 550,
+            'LSL': 300,
+            'TGT': 420
         })
     return data
 
@@ -633,7 +737,11 @@ def generate_rag_answer_data() -> list:
 
 def generate_pcm_to_trend_data() -> dict:
     """PCM To Trend 데이터 생성 (실제 마스킹된 엑셀 데이터 또는 샘플 데이터 사용)"""
+    # 마스킹된 엑셀 데이터 로드 시도
+    load_masking_data(excel_name='masking_df.xlsx')
+    
     global masking_df
+    
     
     # 실제 엑셀 데이터가 있으면 사용
     if masking_df is not None and not masking_df.empty:
@@ -705,6 +813,8 @@ def generate_pcm_to_trend_data() -> dict:
 
 def generate_two_tables_data(test_empty_scenario: str = None) -> dict:
     """Two Tables 데이터 생성 - 서로 다른 컬럼과 데이터를 가진 두 개의 테이블"""
+    # 마스킹된 엑셀 데이터 로드 시도
+    load_masking_data(excel_name='masking_df.xlsx')
     global masking_df
     
     # 첫 번째 테이블: Lot Hold 데이터 (가상의 lot hold 정보)
@@ -776,6 +886,9 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
     
     # choice 파라미터를 우선적으로 고려하여 질의 분석
     detected_type, command_type, error_msg = analyze_query_with_choice(choice, message)
+    
+    print(f"🔍 DEBUG: choice='{choice}', message='{message}'")
+    print(f"🔍 DEBUG: detected_type='{detected_type}', command_type='{command_type}', error_msg='{error_msg}'")
     
     if error_msg:
         # 실패한 메시지는 저장하지 않고 에러만 반환
@@ -1006,38 +1119,81 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
                 'success_message': success_message
             }
     
-    elif detected_type == 'cp':
-        if command_type == 'analysis':
-            # CP 분석 데이터 생성 중 메시지
-            yield f"data: {json.dumps({'progress_message': '🔬 CP ANALYSIS 데이터를 생성하고 있습니다...'})}\n\n"
+    elif detected_type == 'inline':
+        print(f"🎯 DEBUG: Processing inline type with command_type='{command_type}'")
+        if command_type == 'trend_initial':
+            # INLINE Trend Initial 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '📊 INLINE TREND INITIAL 데이터를 생성하고 있습니다...'})}\n\n"
             await asyncio.sleep(0.3)
             
-            data = generate_cp_analysis_data()
+            data = generate_inline_trend_initial_data()
             
             # 성공 메시지 생성
-            success_message = f"✅ CP ANALYSIS 데이터를 성공적으로 받았습니다!\n• Result Type: cp_analysis\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}"
+            success_message = f"✅ INLINE TREND INITIAL 데이터를 성공적으로 받았습니다!\n• Result Type: inline_trend_initial\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}\n• Criteria: DEVICE"
             
             response = {
-                'result': 'cp_analysis',
+                'result': 'inline_trend_initial',
+                'criteria': 'DEVICE',
+                'real_data': json.dumps(data),
+                'success_message': success_message
+            }
+            print(f"🎯 DEBUG: Created inline_trend_initial response: {response.keys()}")
+        elif command_type == 'trend_followup':
+            # INLINE Trend Followup 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '📊 INLINE TREND FOLLOWUP 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
+            # 메시지에서 criteria 추출 (기본값: PARA)
+            criteria = 'PARA'
+            if 'eq_cham' in message.lower():
+                criteria = 'EQ_CHAM'
+            elif 'route' in message.lower():
+                criteria = 'ROUTE'
+            elif 'oper' in message.lower():
+                criteria = 'OPER'
+            
+            data = generate_inline_trend_followup_data(criteria)
+            
+            # 성공 메시지 생성
+            success_message = f"✅ INLINE TREND FOLLOWUP 데이터를 성공적으로 받았습니다!\n• Result Type: inline_trend_followup\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}\n• Criteria: {criteria}"
+            
+            response = {
+                'result': 'inline_trend_followup',
+                'criteria': criteria,
+                'real_data': json.dumps(data),
+                'success_message': success_message
+            }
+        elif command_type == 'analysis':
+            # INLINE 분석 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '🔬 INLINE ANALYSIS 데이터를 생성하고 있습니다...'})}\n\n"
+            await asyncio.sleep(0.3)
+            
+            data = generate_inline_analysis_data()
+            
+            # 성공 메시지 생성
+            success_message = f"✅ INLINE ANALYSIS 데이터를 성공적으로 받았습니다!\n• Result Type: inline_analysis\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}"
+            
+            response = {
+                'result': 'inline_analysis',
                 'real_data': data,
-                'sql': 'SELECT * FROM cp_data WHERE analysis_date >= "2024-01-01"',
+                'sql': 'SELECT * FROM inline_data WHERE analysis_date >= "2024-01-01"',
                 'timestamp': datetime.now().isoformat(),
                 'success_message': success_message
             }
         elif command_type == 'performance':
-            # CP 성능 데이터 생성 중 메시지
-            yield f"data: {json.dumps({'progress_message': '⚡ CP PERFORMANCE 데이터를 생성하고 있습니다...'})}\n\n"
+            # INLINE 성능 데이터 생성 중 메시지
+            yield f"data: {json.dumps({'progress_message': '⚡ INLINE PERFORMANCE 데이터를 생성하고 있습니다...'})}\n\n"
             await asyncio.sleep(0.3)
             
-            data = generate_cp_analysis_data()
+            data = generate_inline_analysis_data()
             
             # 성공 메시지 생성
-            success_message = f"✅ CP PERFORMANCE 데이터를 성공적으로 받았습니다!\n• Result Type: cp_performance\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}"
+            success_message = f"✅ INLINE PERFORMANCE 데이터를 성공적으로 받았습니다!\n• Result Type: inline_performance\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}"
             
             response = {
-                'result': 'cp_performance',
+                'result': 'inline_performance',
                 'real_data': data,
-                'sql': 'SELECT * FROM cp_performance WHERE date >= "2024-01-01"',
+                'sql': 'SELECT * FROM inline_performance WHERE date >= "2024-01-01"',
                 'timestamp': datetime.now().isoformat(),
                 'success_message': success_message
             }
@@ -1302,21 +1458,46 @@ async def edit_message_endpoint(request: EditMessageRequest):
                     'timestamp': datetime.now().isoformat()
                 }
         
-        elif detected_type == 'cp':
-            if command_type == 'analysis':
-                data = generate_cp_analysis_data()
+        elif detected_type == 'inline':
+            if command_type == 'trend_initial':
+                data = generate_inline_trend_initial_data()
                 response = {
-                    'result': 'cp_analysis',
+                    'result': 'inline_trend_initial',
+                    'criteria': 'DEVICE',
+                    'real_data': json.dumps(data),
+                    'success_message': f"✅ INLINE TREND INITIAL 데이터를 성공적으로 받았습니다! (Edit Mode)"
+                }
+            elif command_type == 'trend_followup':
+                # 메시지에서 criteria 추출 (기본값: PARA)
+                criteria = 'PARA'
+                if 'eq_cham' in request.message.lower():
+                    criteria = 'EQ_CHAM'
+                elif 'route' in request.message.lower():
+                    criteria = 'ROUTE'
+                elif 'oper' in request.message.lower():
+                    criteria = 'OPER'
+                
+                data = generate_inline_trend_followup_data(criteria)
+                response = {
+                    'result': 'inline_trend_followup',
+                    'criteria': criteria,
+                    'real_data': json.dumps(data),
+                    'success_message': f"✅ INLINE TREND FOLLOWUP 데이터를 성공적으로 받았습니다! (Edit Mode)"
+                }
+            elif command_type == 'analysis':
+                data = generate_inline_analysis_data()
+                response = {
+                    'result': 'inline_analysis',
                     'real_data': data,
-                    'sql': 'SELECT * FROM cp_data WHERE analysis_date >= "2024-01-01"',
+                    'sql': 'SELECT * FROM inline_data WHERE analysis_date >= "2024-01-01"',
                     'timestamp': datetime.now().isoformat()
                 }
             elif command_type == 'performance':
-                data = generate_cp_analysis_data()
+                data = generate_inline_analysis_data()
                 response = {
-                    'result': 'cp_performance',
+                    'result': 'inline_performance',
                     'real_data': data,
-                    'sql': 'SELECT * FROM cp_performance WHERE date >= "2024-01-01"',
+                    'sql': 'SELECT * FROM inline_performance WHERE date >= "2024-01-01"',
                     'timestamp': datetime.now().isoformat()
                 }
         
@@ -1421,6 +1602,8 @@ async def health_check():
 @app.get("/api/masking-data-info")
 async def get_masking_data_info():
     """마스킹된 데이터 정보 조회"""
+    # 마스킹된 엑셀 데이터 로드 시도
+    load_masking_data(excel_name='masking_df.xlsx')
     global masking_df
     
     if masking_df is None:
@@ -1462,7 +1645,7 @@ async def get_masking_data_info():
 @app.post("/api/reload-masking-data")
 async def reload_masking_data():
     """마스킹된 엑셀 데이터 다시 로드"""
-    success = load_masking_data()
+    success = load_masking_data(excel_name='masking_df.xlsx')
     
     if success:
         return {

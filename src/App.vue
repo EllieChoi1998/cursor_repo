@@ -319,6 +319,15 @@
                     />
                   </div>
 
+                  <!-- INLINE Trend Chart (inline_trend_initial, inline_trend_followup) -->
+                  <div v-else-if="result.type === 'inline_trend_initial' || result.type === 'inline_trend_followup'" class="chart-section inline-vertical">
+                    <INLINETrendChart 
+                      :backendData="result.backendData"
+                      :height="chartHeight"
+                      :title="result.title || 'Inline Trend Analysis'"
+                    />
+                  </div>
+
                   <!-- 그 외 모든 result는 DynamicTable로 표시 (real_data가 있으면) -->
                   <div v-else-if="result.realData && result.realData.length > 0" class="chart-section">
                     <DynamicTable 
@@ -387,6 +396,16 @@
               :title="fullscreenResult.title"
               :maxLabels="50"
               :dataSampling="false"
+            />
+          </div>
+          
+          <!-- INLINE Trend Chart (inline_trend_initial, inline_trend_followup) -->
+          <div v-else-if="fullscreenResult?.type === 'inline_trend_initial' || fullscreenResult?.type === 'inline_trend_followup'" class="fullscreen-chart inline-vertical">
+            <INLINETrendChart 
+              :key="`inline-full-${fullscreenResult?.id}-${showFullscreen}`"
+              :backendData="fullscreenResult.backendData"
+              :height="800"
+              :title="fullscreenResult.title || 'Inline Trend Analysis'"
             />
           </div>
           
@@ -471,6 +490,7 @@ import DynamicTable from './components/DynamicTable.vue'
 import TwoDynamicTables from './components/TwoDynamicTables.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
+import INLINETrendChart from './components/INLINETrendChart.vue'
 import {
   streamChatAPI,
   editMessageAPI,
@@ -494,7 +514,8 @@ export default defineComponent({
     DynamicTable,
     TwoDynamicTables,
     ChatRoomList,
-    RAGAnswerList
+    RAGAnswerList,
+    INLINETrendChart
   },
   setup() {
 
@@ -729,6 +750,48 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             realData: realData,
             resultType: responseData.result,
             userMessage: userMessage
+          }
+        } else if (responseData.result === 'inline_trend_initial') {
+          // INLINE Trend Initial 데이터 처리
+          result = {
+            id: `history_${chatId}_${Date.now()}`,
+            type: 'inline_trend_initial',
+            title: 'INLINE Trend Initial Analysis',
+            data: null,
+            isActive: false,
+            timestamp: new Date(),
+            chatId: chatId,
+            sql: responseData.sql,
+            realData: null, // INLINE Trend는 backendData를 사용하므로 realData는 null
+            resultType: responseData.result,
+            userMessage: userMessage,
+            backendData: {
+              result: responseData.result,
+              criteria: responseData.criteria,
+              real_data: responseData.real_data,
+              success_message: responseData.success_message
+            }
+          }
+        } else if (responseData.result === 'inline_trend_followup') {
+          // INLINE Trend Followup 데이터 처리
+          result = {
+            id: `history_${chatId}_${Date.now()}`,
+            type: 'inline_trend_followup',
+            title: 'INLINE Trend Followup Analysis',
+            data: null,
+            isActive: false,
+            timestamp: new Date(),
+            chatId: chatId,
+            sql: responseData.sql,
+            realData: null, // INLINE Trend는 backendData를 사용하므로 realData는 null
+            resultType: responseData.result,
+            userMessage: userMessage,
+            backendData: {
+              result: responseData.result,
+              criteria: responseData.criteria,
+              real_data: responseData.real_data,
+              success_message: responseData.success_message
+            }
           }
         } else if (responseData.result_type || responseData.result) {
           // real_data가 없어도 메타데이터만으로 결과 생성
@@ -992,6 +1055,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       showFullscreen.value = true
       // body 스크롤 방지
       document.body.style.overflow = 'hidden'
+      // 모달 DOM이 붙은 다음 Plotly가 사이즈를 다시 잡도록 강제
+      nextTick(() => {
+        window.dispatchEvent(new Event('resize'))
+      })
     }
 
     const closeFullscreen = () => {
@@ -1194,7 +1261,16 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               console.log('🔍 Real data sample:', data.response.real_data.slice(0, 2))
             }
             
-            if (data.response.result === 'lot_start') {
+            if (data.response.result === 'inline_trend_initial' || data.response.result === 'inline_trend_followup') {
+              // INLINE Trend 데이터 처리 - createResultFromResponseData 사용
+              const result = createResultFromResponseData(data.response, message, data.chat_id)
+              if (result) {
+                result.isActive = true
+                const currentResults = chatResults.value[activeChatId.value] || []
+                currentResults.push(result)
+                chatResults.value[activeChatId.value] = currentResults
+              }
+            } else if (data.response.result === 'lot_start') {
               // PCM 트렌드 데이터 처리
               const realData = data.response.real_data || []
               if (realData.length === 0) {
@@ -3655,4 +3731,16 @@ body {
   background: #adb5bd;
   cursor: not-allowed;
 }
+
+/* INLINETrendChart를 세로 스택으로 강제 */
+.inline-vertical .charts-grid {
+  display: grid;
+  grid-template-columns: 1fr !important; /* ✅ 한 열로 고정 */
+  gap: 16px;
+}
+
+/* 보기 좋게 보조 스타일(옵션) */
+.inline-vertical .single-chart { width: 100%; }
+.inline-vertical .chart-box { min-height: 360px; }
+
 </style> 
