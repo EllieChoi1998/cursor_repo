@@ -156,19 +156,34 @@ export default defineComponent({
         // 기존 차트 purge
         try { Plotly.purge(containerEl) } catch (_) {}
 
-        // NO_VAL 컬럼에서 null/undefined 값이 있는 행 제거
+        // NO_VAL 컬럼에서 null/undefined 값이 있는 행 제거 (관대한 버전)
         const filteredRows = groupRows.filter(row => {
-          // 모든 NO_VAL 컬럼이 유효한 값을 가지고 있는지 확인
-          return noValColumns.value.every(noCol => {
+          // NO_VAL 컬럼 중 하나라도 유효한 값이 있으면 행을 유지
+          const hasValidValue = noValColumns.value.some(noCol => {
             const v = row[noCol]
             return v !== null && v !== undefined && Number.isFinite(Number(v))
           })
+          
+          // 디버깅: 필터링되지 않은 행의 정보 출력
+          if (!hasValidValue) {
+            console.log(`🚫 필터링된 행 (모든 NO_VAL이 무효):`, {
+              key: row.key,
+              FOR_KEY: row.FOR_KEY,
+              NO_VAL_values: noValColumns.value.map(col => ({ [col]: row[col] }))
+            })
+          }
+          
+          return hasValidValue
         })
 
         console.log(`📊 FOR_KEY ${forKey}: 원본 ${groupRows.length}개 → 필터링 후 ${filteredRows.length}개 행`)
+        
+        // 필터링 후 데이터가 없으면 원본 데이터 사용
+        const finalData = filteredRows.length > 0 ? filteredRows : groupRows
+        console.log(`📊 최종 사용 데이터: ${finalData.length}개 행`)
 
         // key 기준 정렬
-        const sortedData = [...filteredRows].sort((a, b) => sortByKey(String(a.key || ''), String(b.key || '')))
+        const sortedData = [...finalData].sort((a, b) => sortByKey(String(a.key || ''), String(b.key || '')))
 
         // x축 카테고리
         const keys = [...new Set(sortedData.map(r => String(r.key)))].sort(sortByKey)
@@ -190,9 +205,11 @@ export default defineComponent({
           rows.forEach(row => {
             noValColumns.value.forEach(noCol => {
               const v = row[noCol]
-              // 이미 필터링된 데이터이므로 유효성 검사는 생략하고 바로 추가
-              y.push(Number(v))
-              x.push(String(row.key))
+              // 유효한 값만 차트에 추가
+              if (v !== null && v !== undefined && Number.isFinite(Number(v))) {
+                y.push(Number(v))
+                x.push(String(row.key))
+              }
             })
           })
 
