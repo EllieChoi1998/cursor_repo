@@ -156,8 +156,19 @@ export default defineComponent({
         // 기존 차트 purge
         try { Plotly.purge(containerEl) } catch (_) {}
 
+        // NO_VAL 컬럼에서 null/undefined 값이 있는 행 제거
+        const filteredRows = groupRows.filter(row => {
+          // 모든 NO_VAL 컬럼이 유효한 값을 가지고 있는지 확인
+          return noValColumns.value.every(noCol => {
+            const v = row[noCol]
+            return v !== null && v !== undefined && Number.isFinite(Number(v))
+          })
+        })
+
+        console.log(`📊 FOR_KEY ${forKey}: 원본 ${groupRows.length}개 → 필터링 후 ${filteredRows.length}개 행`)
+
         // key 기준 정렬
-        const sortedData = [...groupRows].sort((a, b) => sortByKey(String(a.key || ''), String(b.key || '')))
+        const sortedData = [...filteredRows].sort((a, b) => sortByKey(String(a.key || ''), String(b.key || '')))
 
         // x축 카테고리
         const keys = [...new Set(sortedData.map(r => String(r.key)))].sort(sortByKey)
@@ -179,10 +190,9 @@ export default defineComponent({
           rows.forEach(row => {
             noValColumns.value.forEach(noCol => {
               const v = row[noCol]
-              if (v !== null && v !== undefined && Number.isFinite(Number(v))) {
-                y.push(Number(v))
-                x.push(String(row.key))
-              }
+              // 이미 필터링된 데이터이므로 유효성 검사는 생략하고 바로 추가
+              y.push(Number(v))
+              x.push(String(row.key))
             })
           })
 
