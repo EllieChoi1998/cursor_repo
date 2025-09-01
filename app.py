@@ -434,14 +434,23 @@ def analyze_pcm_query(message_lower: str) -> tuple[str, str, str]:
 
 def analyze_inline_query(message_lower: str) -> tuple[str, str, str]:
     """INLINE choice에 대한 메시지 분석"""
-    if any(k in message_lower for k in ['initial', '초기', '처음']):
-        return 'inline', 'trend_initial', ""
-    elif any(k in message_lower for k in ['followup', 'follow-up', '후속', '팔로우', 'para', 'eq_cham']):
+    # 기준별 그룹화 요청 검사 (criteria-based analysis)
+    criteria_keywords = ['별로', '기준으로', 'by', 'group by', 'main_eq', 'device', 'para', 'eq_cham', 'route', 'oper']
+    if any(keyword in message_lower for keyword in criteria_keywords):
+        # followup trend analysis로 라우팅 (criteria 기반 분석)
         return 'inline', 'trend_followup', ""
+    
+    # 초기 분석 키워드
+    elif any(k in message_lower for k in ['initial', '초기', '처음']):
+        return 'inline', 'trend_initial', ""
+    
+    # 성능 관련 키워드
     elif any(k in message_lower for k in ['performance', '성능', '모니터링']):
         return 'inline', 'performance', ""
+    
+    # 기본값을 trend_initial로 변경 (더 유용함)
     else:
-        return 'inline', 'analysis', ""
+        return 'inline', 'trend_initial', ""
 
 def analyze_rag_query(message_lower: str) -> tuple[str, str, str]:
     """RAG choice에 대한 메시지 분석"""
@@ -596,9 +605,80 @@ def generate_inline_analysis_data() -> list:
 
     # 실제 엑셀 데이터가 있으면 사용
     if masking_df is not None and not masking_df.empty:
-        print("📊 실제 마스킹 데이터 사용")
-        data = masking_df.to_dict(orient='records')
-        return data
+        try:
+            print("📊 실제 마스킹 데이터 사용")
+            import math
+            from datetime import datetime
+            
+            # 데이터프레임 복사 후 정리
+            df_clean = masking_df.copy()
+            
+            # 1. datetime/timestamp 컬럼들을 문자열로 변환
+            for col in df_clean.columns:
+                if df_clean[col].dtype == 'datetime64[ns]' or pd.api.types.is_datetime64_any_dtype(df_clean[col]):
+                    df_clean[col] = df_clean[col].dt.strftime('%Y-%m-%d %H:%M:%S')
+                    print(f"📅 날짜 컬럼 변환: {col}")
+                elif df_clean[col].dtype == 'object':
+                    # object 타입 컬럼에서 숨겨진 Timestamp 찾기
+                    sample_val = df_clean[col].dropna().iloc[0] if len(df_clean[col].dropna()) > 0 else None
+                    if sample_val is not None and isinstance(sample_val, (pd.Timestamp, datetime)):
+                        df_clean[col] = df_clean[col].apply(
+                            lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) and isinstance(x, (pd.Timestamp, datetime)) else x
+                        )
+                        print(f"📅 숨겨진 날짜 컬럼 변환: {col}")
+            
+            # 2. NaN, inf, -inf 값들을 None으로 변환 (중요!)
+            df_clean = df_clean.replace([np.nan, np.inf, -np.inf], None)
+            
+            # 3. numpy 타입들을 Python 기본 타입으로 변환
+            for col in df_clean.columns:
+                if df_clean[col].dtype == 'int64':
+                    df_clean[col] = df_clean[col].astype('Int64')  # nullable integer
+                elif df_clean[col].dtype == 'float64':
+                    pass  # float은 그대로
+
+            # 4. 딕셔너리로 변환
+            data = df_clean.to_dict(orient='records')
+            
+            # 5. 각 레코드에서 모든 Timestamp 객체를 문자열로 변환
+            for record in data:
+                for key, value in list(record.items()):
+                    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+                        record[key] = None
+                    elif isinstance(value, (pd.Timestamp, datetime)):
+                        record[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+                        print(f"🚨 레코드 내 Timestamp 변환: {key}")
+                    elif key.startswith('NO_VAL') and value == 9:
+                        record[key] = None
+                    elif hasattr(value, 'item'):  # numpy scalar types
+                        record[key] = value.item()
+            
+            # 6. JSON 직렬화 테스트
+            try:
+                import json
+                json.dumps(data[0] if data else {}, default=str)
+                print("✅ JSON 직렬화 테스트 통과")
+            except Exception as json_error:
+                print(f"🚨 JSON 직렬화 테스트 실패: {json_error}")
+                # 문제가 있는 값들을 모두 문자열로 변환
+                for record in data:
+                    for key, value in list(record.items()):
+                        try:
+                            json.dumps(value)
+                        except:
+                            print(f"🔧 문제 값 수정: {key} = {type(value)} -> str")
+                            record[key] = str(value) if value is not None else None
+            
+            print(f"✅ 데이터 변환 완료: {len(data)}개 레코드")
+            print(f"📊 실제 데이터 컬럼: {list(df_clean.columns)}")
+            if len(data) > 0:
+                print(f"📊 첫 번째 행 샘플: {data[0]}")
+            
+            return data
+            
+        except Exception as e:
+            print(f"❌ 실제 데이터 처리 오류: {e}")
+            print("📊 샘플 데이터로 대체합니다.")
     
     print("📊 샘플 데이터 생성 (엑셀 파일 없음)")
     data = []
@@ -611,6 +691,7 @@ def generate_inline_analysis_data() -> list:
             'optimization_potential': round(random.uniform(0.1, 0.3), 3)
         })
     return data
+
 def generate_inline_trend_initial_data() -> list:
     """INLINE Trend Initial 데이터 생성 (DEVICE 기준)"""
     load_masking_data(excel_name='iqc_data.xlsx')
@@ -756,7 +837,7 @@ def generate_inline_trend_followup_data(criteria: str) -> list:
             # 4. criteria 보정
             if criteria not in df_clean.columns:
                 print(f"⚠️ criteria '{criteria}' 컬럼이 없습니다. 사용 가능한 컬럼: {list(df_clean.columns)}")
-                available_criteria = ['DEVICE', 'PARA', 'EQ_CHAM', 'LOT_ID', 'OPER', 'ROUTE']
+                available_criteria = ['MAIN_EQ', 'DEVICE', 'PARA', 'EQ_CHAM', 'LOT_ID', 'OPER', 'ROUTE']
                 for alt_criteria in available_criteria:
                     if alt_criteria in df_clean.columns:
                         print(f"📝 대체 criteria 사용: {alt_criteria}")
@@ -863,7 +944,9 @@ def generate_inline_trend_followup_data(criteria: str) -> list:
     # (샘플 데이터 생성부는 기존 그대로 둠)
     print(f"📊 박스플롯용 샘플 데이터 생성 중 (criteria: {criteria})")
     data = []
-    if criteria == "PARA":
+    if criteria == "MAIN_EQ":
+        criteria_values = ['EQ_001', 'EQ_002', 'EQ_003', 'EQ_004']
+    elif criteria == "PARA":
         criteria_values = ['PARA_X', 'PARA_Y', 'PARA_Z']
     elif criteria == "EQ_CHAM":
         criteria_values = ['P0', 'P1', 'P2', 'P3']
@@ -1331,6 +1414,7 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
                 'success_message': success_message
             }
             print(f"🎯 DEBUG: Created inline_trend_initial response: {response.keys()}")
+        # Add this logic to the trend_followup section in process_chat_request function
         elif command_type == 'trend_followup':
             # INLINE Trend Followup 데이터 생성 중 메시지
             yield f"data: {json.dumps({'progress_message': '📊 INLINE TREND FOLLOWUP 데이터를 생성하고 있습니다...'})}\n\n"
@@ -1346,18 +1430,27 @@ async def process_chat_request(choice: str, message: str, chatroom_id: int):
                     'llm_spec': json.dumps(llm_spec),
                     'success_message': success_message
                 }
-
             else:
-                # 메시지에서 criteria 추출 (기본값: PARA)
-                criteria = 'PARA'
-                if 'eq_cham' in message.lower():
-                    criteria = 'EQ_CHAM'
-                elif 'route' in message.lower():
-                    criteria = 'ROUTE'
-                elif 'oper' in message.lower():
-                    criteria = 'OPER'
+                # 메시지에서 criteria 추출 (MAIN_EQ 지원 추가)
+                criteria = 'PARA'  # 기본값
+                message_lower = message.lower()
                 
-                data = generate_inline_trend_followup_data(criteria, message)
+                if 'main_eq' in message_lower:
+                    criteria = 'MAIN_EQ'
+                elif 'eq_cham' in message_lower:
+                    criteria = 'EQ_CHAM'
+                elif 'device' in message_lower:
+                    criteria = 'DEVICE'
+                elif 'route' in message_lower:
+                    criteria = 'ROUTE'
+                elif 'oper' in message_lower:
+                    criteria = 'OPER'
+                elif 'para' in message_lower:
+                    criteria = 'PARA'
+                
+                print(f"🎯 Extracted criteria: {criteria} from message: {message}")
+                
+                data = generate_inline_trend_followup_data(criteria)
                 
                 # 성공 메시지 생성
                 success_message = f"✅ INLINE TREND FOLLOWUP 데이터를 성공적으로 받았습니다!\n• Result Type: inline_trend_followup\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}\n• Criteria: {criteria}"

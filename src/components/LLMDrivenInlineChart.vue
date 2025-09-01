@@ -290,23 +290,43 @@ export default defineComponent({
           '#8C564B', '#E377C2', '#7F7F7F', '#BCBD22', '#17BECF'
         ]
 
-        // criteria별 박스플롯 트레이스 (INLINETrendChart와 동일한 로직)
+        // criteria별 박스플롯 트레이스 - 행 단위로 유효성 검사
         criteriaValues.forEach((cVal, idx) => {
           const color = palette[idx % palette.length]
-          const criteriaRows = sortedData.filter(r => r[criteriaKey] === cVal)
+          
+          // criteriaKey 값이 cVal과 일치하는 행들 찾기 (criteria 컬럼이 없으면 모든 행 사용)
+          const criteriaRows = criteriaKey && sortedData.some(r => r.hasOwnProperty(criteriaKey)) 
+            ? sortedData.filter(r => r[criteriaKey] === cVal)
+            : sortedData // criteria 컬럼이 없으면 모든 데이터 사용
+
+          console.log(`📊 criteria '${cVal}': ${criteriaRows.length}개 행 발견`)
+          
           const x = []
           const y = []
 
           criteriaRows.forEach(row => {
             const yFields = Array.isArray(s.y_fields) && s.y_fields.length ? s.y_fields : noValColumns.value
+            
+            // 해당 행에서 유효한 NO_VAL 값들만 수집
+            const validValues = []
             yFields.forEach(noCol => {
               const v = row[noCol]
               if (v !== null && v !== undefined && Number.isFinite(Number(v))) {
-                y.push(Number(v))
-                x.push(String(row[xField] || ''))
+                validValues.push(Number(v))
               }
             })
+
+            // 해당 행에 유효한 값이 하나라도 있으면 모든 유효한 값들을 포함
+            if (validValues.length > 0) {
+              const xValue = String(row[xField] || '')
+              validValues.forEach(val => {
+                y.push(val)
+                x.push(xValue)
+              })
+            }
           })
+
+          console.log(`📊 criteria '${cVal}': ${y.length}개 데이터 포인트 생성`)
 
           if (y.length > 0) {
             traces.push({
@@ -337,6 +357,8 @@ export default defineComponent({
               hoveron: 'boxes',
               customdata: y.map((val, i) => ({ value: val, [xField]: x[i], criteria: cVal }))
             })
+          } else {
+            console.warn(`⚠️ criteria '${cVal}': 유효한 데이터 포인트가 없음`)
           }
         })
 
