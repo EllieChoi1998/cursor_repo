@@ -29,8 +29,8 @@ class ChatService:
         self.data_generators = DataGenerators()
         self.query_analyzer = QueryAnalyzer()
 
-    async def process_chat_request(self, choice: str, message: str, chatroom_id: int):
-        """채팅 요청 처리"""
+    async def process_chat_request(self, choice: str, message: str, chatroom_id: int, user_id: str):
+        """채팅 요청 처리 (user_id 파라미터 추가)"""
         # 채팅방 확인
         chatroom = self.chat_storage.get_chatroom(chatroom_id)
         if not chatroom:
@@ -51,8 +51,8 @@ class ChatService:
         # 사용자 메시지 시간 기록
         user_message_time = datetime.now()
         
-        # 유효한 메시지만 저장
-        user_message = self.chat_storage.add_message(chatroom_id, message, 'user', detected_type)
+        # 유효한 메시지만 저장 (user_id 파라미터 추가)
+        user_message = self.chat_storage.add_message(chatroom_id, user_id, message, 'user', detected_type)
         
         # 처리 시작 메시지
         yield f"data: {json.dumps({'progress_message': '🔄 메시지를 처리하는 중...'})}\n\n"
@@ -100,8 +100,8 @@ class ChatService:
             yield f"data: {json.dumps({'msg': '처리할 수 없는 요청입니다.'})}\n\n"
             return
         
-        # 성공한 경우에만 저장
-        bot_response = self.chat_storage.add_response(user_message.id, chatroom_id, response)
+        # 성공한 경우에만 저장 (user_id 파라미터 추가)
+        bot_response = self.chat_storage.add_response(user_message.id, chatroom_id, user_id, response)
         
         # real_data를 제외한 response 데이터 생성 (채팅 히스토리용)
         history_response = response.copy()
@@ -114,9 +114,10 @@ class ChatService:
         # 봇 응답 시간 기록
         bot_response_time = datetime.now()
         
-        # 채팅 히스토리에 추가 (real_data 제외) - 실제 시간 사용
+        # 채팅 히스토리에 추가 (real_data 제외) - 실제 시간 사용 (user_id 파라미터 추가)
         chat_history = self.chat_storage.add_chat_history(
             chatroom_id, 
+            user_id,
             message, 
             json.dumps(history_response),
             user_time=user_message_time,
@@ -294,6 +295,7 @@ class ChatService:
         elif command_type == 'trend_followup':
             if "spec" in message.split(" "):
                 llm_spec = generate_plotly_spec(message)
+                print(f"🎯 DEBUG: LLM Spec: {llm_spec}")
                 data = self.data_generators.generate_inline_trend_initial_data()
                 success_message = f"✅ INLINE TREND FOLLOWUP Plotly Spec을 성공적으로 받았습니다!\n• Result Type: inline_trend_followup_spec\n• Chat ID: {chatroom_id}"
                 return {
@@ -371,8 +373,8 @@ class ChatService:
                 'success_message': success_message
             }
 
-    def process_edit_request(self, choice: str, message: str, chatroom_id: int, original_chat_id: int) -> Dict[str, Any]:
-        """메시지 수정 요청 처리"""
+    def process_edit_request(self, choice: str, message: str, chatroom_id: int, original_chat_id: int, user_id: str) -> Dict[str, Any]:
+        """메시지 수정 요청 처리 (user_id 파라미터 추가)"""
         existing_chat_id = original_chat_id
         print(f"🔧 Using existing chat_id: {existing_chat_id}")
         
@@ -388,12 +390,13 @@ class ChatService:
         if response is None:
             raise ValueError("처리할 수 없는 요청입니다.")
         
-        # 응답 저장
+        # 응답 저장 (user_id 파라미터 추가)
         response_id = str(uuid.uuid4())
         bot_response = BotResponse(
             id=response_id,
             message_id=str(existing_chat_id),
             chatroom_id=chatroom_id,
+            user_id=user_id,
             content=response,
             timestamp=datetime.now()
         )
@@ -407,6 +410,7 @@ class ChatService:
         existing_history = self.chat_storage.edit_chat_history(
             chatroom_id, 
             existing_chat_id, 
+            user_id,
             message, 
             json.dumps(history_response)
         )
@@ -414,6 +418,7 @@ class ChatService:
         if not existing_history:
             existing_history = self.chat_storage.add_chat_history(
                 chatroom_id,
+                user_id,
                 message,
                 json.dumps(history_response),
                 user_time=datetime.now(),

@@ -22,14 +22,19 @@ from app.repositories import ChatStorage, SessionStorage
 # Create FastAPI app
 app = FastAPI(title=settings.APP_TITLE, version=settings.APP_VERSION)
 
-# CORS 설정 (기본 + SSO 허용 도메인)
+# CORS 설정 (개발 환경에서는 모든 origin 허용)
 all_allowed_origins = settings.ALLOWED_ORIGINS + settings.SSO_ALLOWED_ORIGINS
+# 개발 환경에서는 모든 origin 허용
+if os.getenv("ENVIRONMENT") != "production":
+    all_allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=all_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Initialize global storage (in production, this would be dependency injected)

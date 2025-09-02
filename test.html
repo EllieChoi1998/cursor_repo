@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSO 테스트 페이지</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .sso-button {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+        }
+        .sso-button:hover {
+            background: linear-gradient(45deg, #0056b3, #004085);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+        }
+        .user-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .input-group {
+            margin: 15px 0;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .loading {
+            display: none;
+            color: #007bff;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // 전역 설정 변수
+        const TARGET_IP = '192.168.0.196';
+        const BACKEND_PORT = '8000';
+        const SERVICE_PORT = '8080';
+    </script>
+
+    <div class="container">
+        <h1>SSO 테스트 페이지</h1>
+        <p>현재 서버: 192.168.0.200:80</p>
+        <p>대상 IP: <strong id="targetIpDisplay"></strong></p>
+        <p>백엔드 포트: <strong id="backendPortDisplay"></strong> | 서비스 포트: <strong id="servicePortDisplay"></strong></p>
+        
+        <div class="user-info">
+            <h3>기본 사용자 정보:</h3>
+            <p><strong>사용자 이름:</strong> <span id="userName">홍길동</span></p>
+            <p><strong>이메일:</strong> <span id="userEmail">hong@example.com</span></p>
+            <p><strong>권한:</strong> <span id="userRole">admin</span></p>
+        </div>
+
+        <div class="input-group">
+            <label for="userIdInput">사용자 ID 입력:</label>
+            <input type="text" id="userIdInput" placeholder="사용자 ID를 입력하세요" value="user123">
+        </div>
+        
+        <button class="sso-button" onclick="loginToService()">
+            🚀 내 서비스에 로그인하기
+        </button>
+        
+        <div class="loading" id="loading">
+            로그인 정보를 전송 중...
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // 페이지 로드 시 설정 정보 표시
+        window.onload = function() {
+            document.getElementById('targetIpDisplay').textContent = TARGET_IP;
+            document.getElementById('backendPortDisplay').textContent = BACKEND_PORT;
+            document.getElementById('servicePortDisplay').textContent = SERVICE_PORT;
+            console.log('설정 정보 로드됨 - IP:', TARGET_IP, 'Backend Port:', BACKEND_PORT, 'Service Port:', SERVICE_PORT);
+        }
+
+        async function loginToService() {
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const userIdInput = document.getElementById('userIdInput');
+            
+            // 사용자가 입력한 ID 가져오기
+            const userId = userIdInput.value.trim();
+            
+            if (!userId) {
+                result.innerHTML = `
+                    <div style="color: orange; margin: 15px 0; padding: 10px; background: #fff3cd; border-radius: 5px;">
+                        <strong>경고:</strong> 사용자 ID를 입력해주세요.
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                loading.style.display = 'block';
+                result.innerHTML = '';
+                
+                console.log('로그인 시도 - 사용자 ID:', userId);
+                
+                // 전역 변수를 사용하여 백엔드 서버에 요청
+                const backendUrl = `http://${TARGET_IP}:${BACKEND_PORT}/api/sso-login`;
+                console.log('백엔드 요청 URL:', backendUrl);
+                
+                const response = await fetch(backendUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    body: JSON.stringify({
+                        userId: userId
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('백엔드 응답:', data);
+                    
+                    // JWT 토큰을 받았다면 메인 서비스로 리다이렉트
+                    const token = data.token;
+                    if (token) {
+                        // 전역 변수를 사용하여 서비스 URL 구성
+                        const serviceUrl = `http://${TARGET_IP}:${SERVICE_PORT}/sso-callback?token=${token}&userId=${encodeURIComponent(userId)}`;
+                        console.log('서비스 리다이렉트 URL:', serviceUrl);
+                        window.location.href = serviceUrl;
+                    } else {
+                        // 토큰이 없다면 기본 리다이렉트
+                        const defaultUrl = `http://${TARGET_IP}:${SERVICE_PORT}`;
+                        console.log('기본 서비스 URL:', defaultUrl);
+                        window.location.href = defaultUrl;
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+            } catch (error) {
+                console.error('SSO 로그인 실패:', error);
+                loading.style.display = 'none';
+                result.innerHTML = `
+                    <div style="color: red; margin: 15px 0; padding: 10px; background: #ffebee; border-radius: 5px;">
+                        <strong>로그인 실패:</strong> ${error.message}<br>
+                        <small>백엔드 서버(${TARGET_IP}:${BACKEND_PORT})가 실행 중인지 확인해주세요.</small>
+                    </div>
+                `;
+                
+                // 실패해도 메인 서비스로 리다이렉트 (옵션)
+                setTimeout(() => {
+                    if (confirm('백엔드 연결에 실패했습니다. 그래도 메인 서비스로 이동하시겠습니까?')) {
+                        window.location.href = `http://${TARGET_IP}:${SERVICE_PORT}`;
+                    }
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -22,12 +22,15 @@ class AuthService:
     
     def process_sso_login(self, request: SSOLoginRequest) -> SSOLoginResponse:
         """SSO 로그인 처리"""
+
         print(f"SSO 로그인 요청 수신: {request}")
         
         # 사용자 정보 유효성 검사
         if not request.userId:
             raise ValueError("사용자 ID가 필요합니다.")
         
+        if request.userId != "developer":
+            raise ValueError("권한이 없습니다.")
         # JWT 토큰 생성을 위한 사용자 데이터 준비
         user_data = {
             "userId": request.userId,

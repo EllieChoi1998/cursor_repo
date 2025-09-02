@@ -2,6 +2,9 @@
 export const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000'
 export const FILE_API_BASE_URL = process.env.VUE_APP_FILE_API_BASE_URL || 'http://localhost:8003'
 
+// 인증 유틸리티 import
+import { getAuthHeaders, isAuthenticated } from '../utils/auth.js'
+
 // 디버깅을 위한 콘솔 출력 (개발 환경에서만)
 if (process.env.NODE_ENV === 'development') {
   console.log('🔗 API Base URL:', API_BASE_URL)
@@ -11,14 +14,20 @@ if (process.env.NODE_ENV === 'development') {
 // 채팅방 관련 API 함수들
 export const createChatRoom = async () => {
   try {
+    // 인증 확인
+    if (!isAuthenticated()) {
+      throw new Error('인증이 필요합니다. 로그인해주세요.')
+    }
+
     const response = await fetch(`${API_BASE_URL}/chatrooms`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      }
+      headers: getAuthHeaders()
     })
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.')
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -33,12 +42,22 @@ export const createChatRoom = async () => {
 // API 명세에 맞는 채팅방 목록 조회
 export const getChatRooms = async () => {
   try {
+    // 인증 확인
+    if (!isAuthenticated()) {
+      throw new Error('인증이 필요합니다. 로그인해주세요.')
+    }
+
     console.log('🔍 Fetching chatrooms from:', `${API_BASE_URL}/chatrooms`)
-    const response = await fetch(`${API_BASE_URL}/chatrooms`)
+    const response = await fetch(`${API_BASE_URL}/chatrooms`, {
+      headers: getAuthHeaders()
+    })
     
     console.log('📡 Response status:', response.status, response.statusText)
     
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.')
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -61,12 +80,22 @@ export const getChatRooms = async () => {
 // API 명세에 맞는 채팅방 히스토리 조회
 export const getChatRoomHistory = async (chatroomId) => {
   try {
+    // 인증 확인
+    if (!isAuthenticated()) {
+      throw new Error('인증이 필요합니다. 로그인해주세요.')
+    }
+
     console.log('🔍 Fetching history for chatroom:', chatroomId)
-    const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}/history`)
+    const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}/history`, {
+      headers: getAuthHeaders()
+    })
     
     console.log('📡 History response status:', response.status, response.statusText)
     
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.')
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -83,11 +112,20 @@ export const getChatRoomHistory = async (chatroomId) => {
 
 export const deleteChatRoom = async (chatroomId) => {
   try {
+    // 인증 확인
+    if (!isAuthenticated()) {
+      throw new Error('인증이 필요합니다. 로그인해주세요.')
+    }
+
     const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getAuthHeaders()
     })
     
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.')
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -102,18 +140,24 @@ export const deleteChatRoom = async (chatroomId) => {
 // 채팅방 이름 수정 API (새로 추가)
 export const updateChatRoomName = async (chatroomId, name) => {
   try {
+    // 인증 확인
+    if (!isAuthenticated()) {
+      throw new Error('인증이 필요합니다. 로그인해주세요.')
+    }
+
     console.log('🔄 Updating chatroom name:', { chatroomId, name })
     const response = await fetch(`${API_BASE_URL}/chatrooms/${chatroomId}/name`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ name })
     })
     
     console.log('📡 Update name response status:', response.status, response.statusText)
     
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.')
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -131,11 +175,14 @@ export const streamChatAPI = async (choice, message, chatroomId, onData) => {
   console.log('🚀 Sending chat request:', { choice, message, chatroomId })
   
   try {
+    // 인증 확인
+    if (!isAuthenticated()) {
+      throw new Error('인증이 필요합니다. 로그인해주세요.')
+    }
+
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         choice: choice,
         message: message,
@@ -146,6 +193,9 @@ export const streamChatAPI = async (choice, message, chatroomId, onData) => {
     console.log('📡 Response status:', response.status, response.statusText)
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.')
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -207,11 +257,14 @@ export const editMessageAPI = async (choice, message, chatroomId, originalChatId
   console.log('🔄 Sending edit message request:', { choice, message, chatroomId, originalChatId })
   
   try {
+    // 인증 확인
+    if (!isAuthenticated()) {
+      throw new Error('인증이 필요합니다. 로그인해주세요.')
+    }
+
     const response = await fetch(`${API_BASE_URL}/edit_message`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         choice: choice,
         message: message,
@@ -223,6 +276,9 @@ export const editMessageAPI = async (choice, message, chatroomId, originalChatId
     console.log('📡 Edit response status:', response.status, response.statusText)
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.')
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 

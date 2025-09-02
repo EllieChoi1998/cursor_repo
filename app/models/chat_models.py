@@ -11,12 +11,14 @@ from typing import Optional, Dict, Any, List
 class ChatRoom(BaseModel):
     id: int  # 정수로 변경
     name: str  # 채팅방 이름 추가
+    user_id: str  # 유저 ID 추가
 
 
 # 채팅 기록 모델 (새로 추가)
 class ChatHistory(BaseModel):
     chat_id: int
     chatroom_id: int
+    user_id: str  # 유저 ID 추가
     user_message: str
     chat_time: datetime
     bot_response: str
@@ -27,6 +29,7 @@ class ChatHistory(BaseModel):
 class Message(BaseModel):
     id: str
     chatroom_id: int  # 정수로 변경
+    user_id: str  # 유저 ID 추가
     content: str
     message_type: str  # 'user', 'bot'
     timestamp: datetime
@@ -38,6 +41,7 @@ class BotResponse(BaseModel):
     id: str
     message_id: str  # 연결된 사용자 메시지 ID
     chatroom_id: int  # 정수로 변경
+    user_id: str  # 유저 ID 추가
     content: Dict[str, Any]
     timestamp: datetime
 

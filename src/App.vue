@@ -3,14 +3,30 @@
 
 
     <header class="app-header">
-      <h1>Chat Assistant</h1>
+      <div class="header-content">
+        <h1>Chat Assistant</h1>
+        <div class="user-info" v-if="currentUser">
+          <span class="user-id">👤 {{ currentUser.userId }}</span>
+          <button @click="logout" class="logout-btn" title="로그아웃">🚪</button>
+        </div>
+        <div class="login-prompt" v-else>
+          <span class="login-message">로그인이 필요합니다</span>
+        </div>
+      </div>
     </header>
     
     <main class="app-main">
       <div class="app-layout">
         <!-- Left Sidebar - Chat Room List -->
         <aside class="sidebar" ref="sidebar">
+          <div v-if="!isUserAuthenticated" class="auth-required">
+            <div class="auth-message">
+              <h3>🔐 로그인이 필요합니다</h3>
+              <p>채팅 서비스를 이용하려면 로그인해주세요.</p>
+            </div>
+          </div>
           <ChatRoomList 
+            v-else
             :activeChatId="activeChatId"
             :chatRooms="chatRooms"
             :isLoading="isLoadingChatRooms"
@@ -26,7 +42,13 @@
         
         <!-- Center - Chat Interface -->
         <div class="chat-section" ref="chatSection">
-          <div class="chat-container">
+          <div v-if="!isUserAuthenticated" class="auth-required">
+            <div class="auth-message">
+              <h3>🔐 로그인이 필요합니다</h3>
+              <p>채팅 기능을 이용하려면 로그인해주세요.</p>
+            </div>
+          </div>
+          <div v-else class="chat-container">
             <div class="chat-messages" ref="messagesContainer">
               <div 
                 v-for="(message, index) in messages" 
@@ -553,6 +575,13 @@ import {
 } from './services/api.js'
 import { API_BASE_URL } from './services/api.js'
 import { isErrorResponse, extractErrorMessage } from './config/dataTypes.js'
+import { 
+  isAuthenticated, 
+  getUserFromToken, 
+  handleSSOLogin, 
+  getTokenFromUrl, 
+  logout as authLogout 
+} from './utils/auth.js'
 
 export default defineComponent({
   name: 'App',
@@ -568,7 +597,9 @@ export default defineComponent({
     LLMDrivenInlineChart
   },
   setup() {
-
+    // 인증 관련 상태
+    const currentUser = ref(null)
+    const isUserAuthenticated = ref(false)
     
     const selectedDataType = ref('pcm') // 기본값은 PCM
     const isLoading = ref(false)
@@ -2310,9 +2341,44 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       // 로컬 상태는 이미 ChatRoomList에서 업데이트되었으므로 추가 작업 불필요
     }
 
+    // 인증 관련 함수들
+    const checkAuthentication = () => {
+      isUserAuthenticated.value = isAuthenticated()
+      if (isUserAuthenticated.value) {
+        currentUser.value = getUserFromToken()
+        console.log('✅ User authenticated:', currentUser.value?.userId)
+      } else {
+        currentUser.value = null
+        console.log('❌ User not authenticated')
+      }
+    }
+
+    const logout = () => {
+      authLogout()
+      checkAuthentication()
+    }
+
+    const handleSSOCallback = () => {
+      const token = getTokenFromUrl()
+      if (token) {
+        handleSSOLogin(token)
+        checkAuthentication()
+        // SSO 로그인 후 채팅방 목록 새로고침
+        loadChatRooms()
+      }
+    }
+
     onMounted(async () => {
-      // 채팅방 데이터 로드
-      await loadChatRooms()
+      // 인증 상태 확인
+      checkAuthentication()
+      
+      // SSO 콜백 처리
+      handleSSOCallback()
+      
+      // 인증된 사용자만 채팅방 데이터 로드
+      if (isUserAuthenticated.value) {
+        await loadChatRooms()
+      }
       scrollToBottom()
       
       // ESC 키 이벤트 리스너 추가
@@ -2389,7 +2455,12 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         resizeBar1,
         resizeBar2,
         startResize,
-        handleUpdateRoomName
+        handleUpdateRoomName,
+        // 인증 관련
+        currentUser,
+        isUserAuthenticated,
+        logout,
+        checkAuthentication
       }
   }
 })
@@ -2420,14 +2491,101 @@ body {
   height: 80px;
   color: white;
   padding: 1rem 0;
-  text-align: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  height: 100%;
 }
 
 .app-header h1 {
   font-size: 2rem;
-  margin-bottom: 0.5rem;
+  margin: 0;
   font-weight: 300;
+  grid-column: 2;
+  justify-self: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  grid-column: 3;
+  justify-self: end;
+}
+
+.user-id {
+  font-size: 1rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.logout-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.login-prompt {
+  display: flex;
+  align-items: center;
+  grid-column: 3;
+  justify-self: end;
+}
+
+.login-message {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+}
+
+/* 인증 관련 스타일 */
+.auth-required {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.auth-message {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+}
+
+.auth-message h3 {
+  margin-bottom: 1rem;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.auth-message p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 .subtitle {

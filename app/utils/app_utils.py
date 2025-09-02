@@ -33,40 +33,9 @@ def initialize_default_chatrooms(chat_storage: ChatStorage):
     """기본 채팅방들을 생성합니다."""
     print(f"🔍 Initializing default chatrooms. Current chatrooms: {len(chat_storage.chatrooms)}")
     
-    if not chat_storage.chatrooms:
-        print("📝 Creating default chatroom...")
-        # 일반 채팅방 (기본) - choice는 pcm로 유지하되 메시지는 일반적인 내용
-        general_room = chat_storage.create_chatroom()
-        print(f"✅ Created default chatroom with ID: {general_room.id}")
-        
-        chat_storage.add_message(
-            general_room.id, 
-            '안녕하세요! 데이터 분석 채팅 어시스턴트입니다. PCM, INLINE, RAG 분석에 대해 질문해주세요.', 
-            'bot', 
-            'pcm'
-        )
-        print(f"📝 Added welcome message to chatroom {general_room.id}")
-        
-        # 샘플 채팅 히스토리 추가 (시간 차이를 두어 실제 상황 시뮬레이션)
-        sample_data = [{'DATE_WAFER_ID': '2025-06-18:36:57:54_A12345678998999', 'MIN': 10, 'MAX': 20, 'Q1': 15, 'Q2': 16, 'Q3': 17, 'DEVICE': 'A'}]
-        user_time = datetime.now()
-        response_time = user_time.replace(second=user_time.second + 2)  # 2초 후 응답
-        
-        chat_storage.add_chat_history(
-            general_room.id, 
-            "PCM 트렌드를 보여줘", 
-            json.dumps({
-                'result': 'lot_start',
-                'real_data': sample_data,
-                'sql': 'SELECT * FROM pcm_data WHERE date >= "2024-01-01" ORDER BY date_wafer_id',
-                'timestamp': datetime.now().isoformat()
-            }),
-            user_time=user_time,
-            response_time=response_time
-        )
-        print(f"📝 Added sample chat history to chatroom {general_room.id}")
-    else:
-        print(f"✅ Default chatrooms already exist: {list(chat_storage.chatrooms.keys())}")
+    # 시스템용 기본 채팅방은 생성하지 않음 (유저별 채팅방으로 변경)
+    # 실제 사용자가 로그인할 때 채팅방이 생성되도록 함
+    print("✅ User-specific chatrooms will be created upon login")
 
 
 def initialize_application(chat_storage: ChatStorage):
