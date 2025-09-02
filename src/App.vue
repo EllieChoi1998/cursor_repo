@@ -1966,20 +1966,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         if (!rooms || rooms.length === 0) {
           console.warn('⚠️ No rooms received from API')
           chatRooms.value = []
-          
-          // 빈 배열일 때 기본 채팅방 생성 시도
-          try {
-            console.log('🔄 Attempting to create default chatroom...')
-            const defaultRoom = await createChatRoom()
-            console.log('✅ Created default room:', defaultRoom)
-            
-            // 새로 생성된 채팅방으로 목록 다시 로드
-            await loadChatRooms()
-            return
-          } catch (createError) {
-            console.error('❌ Failed to create default room:', createError)
-            return
-          }
+          return
         }
         
         chatRooms.value = rooms.map(room => {
