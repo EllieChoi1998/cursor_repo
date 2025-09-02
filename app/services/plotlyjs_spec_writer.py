@@ -1,4 +1,4 @@
-# src/plotlyjs_spec_writer.py
+# app/services/plotlyjs_spec_writer.py
 import requests
 import json
 import sys
@@ -204,24 +204,31 @@ def generate_plotly_spec(user_prompt: str, fields_meta: dict = None):
         "temperature": 0.1,
     }
 
-    res = requests.post(URL, headers={"Content-Type": "application/json"}, json=payload, timeout=60)
-    res.raise_for_status()
-    data = res.json()
+    try:
+        res = requests.post(URL, headers={"Content-Type": "application/json"}, json=payload, timeout=60)
+        res.raise_for_status()
+        data = res.json()
 
-    raw_text = data["choices"][0]["text"]
-    print("Raw LLM Response:", raw_text)
+        raw_text = data["choices"][0]["text"]
+        print("Raw LLM Response:", raw_text)
 
-    json_text = extract_first_json(raw_text)
-    print("\nExtracted JSON:", json_text)
+        json_text = extract_first_json(raw_text)
+        print("\nExtracted JSON:", json_text)
 
-    spec = sanitize_spec(json_text, fields_meta)
-    print("\nSanitized Spec:", json.dumps(spec, ensure_ascii=False, indent=2))
-    return spec
-
-# # -----------------------------------------
-# # CLI 테스트
-# # -----------------------------------------
-# if __name__ == "__main__":
-#     # 예) python3 src/plotlyjs_spec_writer.py "PARA가 1인것만 보여줘, 그룹은 MAIN_EQ로"
-#     intent = " ".join(sys.argv[1:]) or "PARA가 1인것만 보여줘, 그룹은 MAIN_EQ로"
-#     generate_plotly_spec(intent, DEFAULT_FIELDS_META)
+        spec = sanitize_spec(json_text, fields_meta)
+        print("\nSanitized Spec:", json.dumps(spec, ensure_ascii=False, indent=2))
+        return spec
+    except Exception as e:
+        print(f"Error generating plotly spec: {e}")
+        # Return a default spec if LLM call fails
+        return {
+            "chart_type": "box",
+            "x_field": fields_meta["x_field"],
+            "group_by": "DEVICE",
+            "y_fields": fields_meta["no_val_columns"],
+            "box": {"showpoints": False, "opacity": 0.7},
+            "filters": [],
+            "spec_lines": ["USL", "LSL", "TGT", "UCL", "LCL"],
+            "layout_patches": {"xaxis.tickangle": 90, "margin.t": 20},
+            "hover": None
+        }
