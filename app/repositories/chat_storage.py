@@ -1,210 +1,389 @@
 """
-Chat storage repository - Handles all chat data persistence
+Chat storage repository - Handles all chat data persistence with PostgreSQL
 """
 
 import uuid
 import json
 from datetime import datetime
 from typing import Dict, List, Optional, Any
+import logging
 
 from app.models import (
     ChatRoom, ChatHistory, Message, BotResponse,
     ChatRoomListItem, ChatHistoryResponse
 )
+from app.database import db_connection
+
+logger = logging.getLogger(__name__)
 
 
 class ChatStorage:
-    """메모리 기반 저장소 (나중에 SQL로 교체 가능)"""
+    """PostgreSQL 기반 채팅 저장소"""
     
     def __init__(self):
-        self.chatrooms: Dict[int, ChatRoom] = {}
-        self.messages: Dict[str, Message] = {}
-        self.responses: Dict[str, BotResponse] = {}
-        self.chat_histories: Dict[int, List[ChatHistory]] = {}  # 채팅 기록 저장
-        self.next_chatroom_id = 1
-        self.next_chat_id = 1
+        pass
     
     def create_chatroom(self, user_id: str) -> ChatRoom:
-        """새 채팅방 생성 (user_id 파라미터 추가)"""
-        chatroom_id = self.next_chatroom_id
-        self.next_chatroom_id += 1
-        
-        chatroom = ChatRoom(
-            id=chatroom_id,
-            name=f"채팅방 #{chatroom_id}",  # 기본 이름 설정
-            user_id=user_id
-        )
-        self.chatrooms[chatroom_id] = chatroom
-        self.chat_histories[chatroom_id] = []  # 빈 히스토리 초기화
-        return chatroom
+        """새 채팅방 생성"""
+        try:
+            with db_connection.get_cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO chatrooms (name, user_id) 
+                    VALUES (%s, %s) 
+                    RETURNING id, name, user_id, created_at, updated_at
+                """, (f"채팅방 #{datetime.now().strftime('%Y%m%d_%H%M%S')}", user_id))
+                
+                result = cursor.fetchone()
+                chatroom = ChatRoom(
+                    id=result['id'],
+                    name=result['name'],
+                    user_id=result['user_id']
+                )
+                logger.info(f"Created chatroom {chatroom.id} for user {user_id}")
+                return chatroom
+        except Exception as e:
+            logger.error(f"Failed to create chatroom: {e}")
+            raise
     
     def get_chatroom(self, chatroom_id: int) -> Optional[ChatRoom]:
         """채팅방 조회"""
-        return self.chatrooms.get(chatroom_id)
+        try:
+            with db_connection.get_cursor() as cursor:
+                cursor.execute("""
+                    SELECT id, name, user_id, created_at, updated_at 
+                    FROM active_chatrooms 
+                    WHERE id = %s
+                """, (chatroom_id,))
+                
+                result = cursor.fetchone()
+                if result:
+                    return ChatRoom(
+                        id=result['id'],
+                        name=result['name'],
+                        user_id=result['user_id']
+                    )
+                return None
+        except Exception as e:
+            logger.error(f"Failed to get chatroom {chatroom_id}: {e}")
+            return None
     
     def get_all_chatrooms(self, user_id: str) -> List[ChatRoomListItem]:
-        """특정 유저의 모든 채팅방 조회 (API 명세 형식으로)"""
-        print(f"🔍 get_all_chatrooms called for user: {user_id}. Chatrooms: {list(self.chatrooms.keys())}")
-        result = []
-        for chatroom_id, chatroom in self.chatrooms.items():
-            # 유저 ID가 일치하는 채팅방만 조회
-            if chatroom.user_id != user_id:
-                continue
+        """특정 유저의 모든 채팅방 조회"""
+        try:
+            with db_connection.get_cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        c.id,
+                        c.name,
+                        c.created_at,
+                        c.updated_at,
+                        COUNT(ch.chat_id) as message_count,
+                        COALESCE(MAX(ch.response_time), c.updated_at) as last_activity
+                    FROM active_chatrooms c
+                    LEFT JOIN chat_histories ch ON c.id = ch.chatroom_id
+                    WHERE c.user_id = %s
+                    GROUP BY c.id, c.name, c.created_at, c.updated_at
+                    ORDER BY last_activity DESC
+                """, (user_id,))
                 
-            message_count = len(self.chat_histories.get(chatroom_id, []))
-            
-            # 가장 최근 활동 시간 찾기 (기본값은 현재 시간)
-            last_activity = datetime.now()
-            histories = self.chat_histories.get(chatroom_id, [])
-            if histories:
-                last_activity = max(history.response_time for history in histories)
-            
-            item = ChatRoomListItem(
-                id=chatroom_id,
-                name=chatroom.name,  # name 필드 추가
-                message_count=message_count,
-                last_activity=last_activity
-            )
-            result.append(item)
-            print(f"📋 Added chatroom {chatroom_id}: {item}")
-        
-        # 최근 활동 순으로 정렬
-        result.sort(key=lambda x: x.last_activity, reverse=True)
-        print(f"✅ Returning {len(result)} chatrooms for user {user_id}")
-        return result
+                results = cursor.fetchall()
+                chatrooms = []
+                
+                for row in results:
+                    item = ChatRoomListItem(
+                        id=row['id'],
+                        name=row['name'],
+                        message_count=row['message_count'],
+                        last_activity=row['last_activity']
+                    )
+                    chatrooms.append(item)
+                
+                logger.info(f"Retrieved {len(chatrooms)} chatrooms for user {user_id}")
+                return chatrooms
+        except Exception as e:
+            logger.error(f"Failed to get chatrooms for user {user_id}: {e}")
+            return []
     
     def get_chatroom_history(self, chatroom_id: int, user_id: str) -> Optional[ChatHistoryResponse]:
         """채팅방 히스토리 조회 (유저 권한 확인)"""
-        if chatroom_id not in self.chatrooms:
+        try:
+            with db_connection.get_cursor() as cursor:
+                # 유저 권한 확인
+                cursor.execute("""
+                    SELECT user_id FROM active_chatrooms WHERE id = %s
+                """, (chatroom_id,))
+                
+                result = cursor.fetchone()
+                if not result or result['user_id'] != user_id:
+                    return None
+                
+                # 채팅 히스토리 조회
+                cursor.execute("""
+                    SELECT chat_id, chatroom_id, user_id, user_message, 
+                           bot_response, chat_time, response_time
+                    FROM chat_histories 
+                    WHERE chatroom_id = %s 
+                    ORDER BY response_time DESC
+                """, (chatroom_id,))
+                
+                results = cursor.fetchall()
+                histories = []
+                
+                for row in results:
+                    history = ChatHistory(
+                        chat_id=row['chat_id'],
+                        chatroom_id=row['chatroom_id'],
+                        user_id=row['user_id'],
+                        user_message=row['user_message'],
+                        chat_time=row['chat_time'],
+                        bot_response=row['bot_response'],
+                        response_time=row['response_time']
+                    )
+                    histories.append(history)
+                
+                return ChatHistoryResponse(
+                    chatroom_id=chatroom_id,
+                    recent_conversations=histories,
+                    count=len(histories)
+                )
+        except Exception as e:
+            logger.error(f"Failed to get chatroom history {chatroom_id}: {e}")
             return None
-        
-        # 유저 권한 확인
-        chatroom = self.chatrooms[chatroom_id]
-        if chatroom.user_id != user_id:
-            return None
-        
-        histories = self.chat_histories.get(chatroom_id, [])
-        return ChatHistoryResponse(
-            chatroom_id=chatroom_id,
-            recent_conversations=histories,
-            count=len(histories)
-        )
     
     def delete_chatroom(self, chatroom_id: int, user_id: str) -> bool:
-        """채팅방 삭제 (유저 권한 확인)"""
-        if chatroom_id in self.chatrooms:
-            # 유저 권한 확인
-            chatroom = self.chatrooms[chatroom_id]
-            if chatroom.user_id != user_id:
-                return False
+        """채팅방 삭제 (soft delete - 연관 데이터 보존)"""
+        try:
+            with db_connection.get_cursor() as cursor:
+                # 유저 권한 확인
+                cursor.execute("""
+                    SELECT user_id FROM active_chatrooms WHERE id = %s
+                """, (chatroom_id,))
                 
-            del self.chatrooms[chatroom_id]
-            # 관련 메시지와 응답, 히스토리도 삭제
-            self.messages = {k: v for k, v in self.messages.items() if v.chatroom_id != chatroom_id}
-            self.responses = {k: v for k, v in self.responses.items() if v.chatroom_id != chatroom_id}
-            if chatroom_id in self.chat_histories:
-                del self.chat_histories[chatroom_id]
-            return True
-        return False
+                result = cursor.fetchone()
+                if not result or result['user_id'] != user_id:
+                    return False
+                
+                # Soft delete - 채팅방만 삭제 표시, 연관 데이터는 보존
+                cursor.execute("""
+                    UPDATE chatrooms 
+                    SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP 
+                    WHERE id = %s
+                """, (chatroom_id,))
+                
+                logger.info(f"Soft deleted chatroom {chatroom_id} for user {user_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to delete chatroom {chatroom_id}: {e}")
+            return False
     
     def add_message(self, chatroom_id: int, user_id: str, content: str, message_type: str, data_type: str) -> Message:
-        """메시지 추가 (user_id 파라미터 추가)"""
-        message_id = str(uuid.uuid4())
-        message = Message(
-            id=message_id,
-            chatroom_id=chatroom_id,
-            user_id=user_id,
-            content=content,
-            message_type=message_type,
-            timestamp=datetime.now(),
-            data_type=data_type
-        )
-        self.messages[message_id] = message
-        return message
+        """메시지 추가"""
+        try:
+            message_id = str(uuid.uuid4())
+            with db_connection.get_cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO messages (id, chatroom_id, user_id, content, message_type, data_type, timestamp)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id, chatroom_id, user_id, content, message_type, data_type, timestamp
+                """, (message_id, chatroom_id, user_id, content, message_type, data_type, datetime.now()))
+                
+                result = cursor.fetchone()
+                message = Message(
+                    id=result['id'],
+                    chatroom_id=result['chatroom_id'],
+                    user_id=result['user_id'],
+                    content=result['content'],
+                    message_type=result['message_type'],
+                    timestamp=result['timestamp'],
+                    data_type=result['data_type']
+                )
+                logger.info(f"Added message {message_id} to chatroom {chatroom_id}")
+                return message
+        except Exception as e:
+            logger.error(f"Failed to add message: {e}")
+            raise
     
     def add_chat_history(self, chatroom_id: int, user_id: str, user_message: str, bot_response: str, user_time: datetime = None, response_time: datetime = None) -> ChatHistory:
-        """채팅 히스토리 추가 (user_id 파라미터 추가)"""
-        chat_id = self.next_chat_id
-        self.next_chat_id += 1
-        
-        print(f"🔧 Creating chat history with chat_id: {chat_id} for chatroom: {chatroom_id}, user: {user_id}")
-        
-        # 시간 설정: 파라미터로 받은 시간이 있으면 사용, 없으면 현재 시간
-        chat_time = user_time if user_time else datetime.now()
-        bot_response_time = response_time if response_time else datetime.now()
-        
-        history = ChatHistory(
-            chat_id=chat_id,
-            chatroom_id=chatroom_id,
-            user_id=user_id,
-            user_message=user_message,
-            chat_time=chat_time,
-            bot_response=bot_response,
-            response_time=bot_response_time
-        )
-        
-        if chatroom_id not in self.chat_histories:
-            self.chat_histories[chatroom_id] = []
-        
-        self.chat_histories[chatroom_id].append(history)
-        print(f"✅ Added chat history with chat_id: {chat_id}")
-        print(f"📅 Chat time: {chat_time}, Response time: {bot_response_time}")
-        return history
+        """채팅 히스토리 추가"""
+        try:
+            # 시간 설정: 파라미터로 받은 시간이 있으면 사용, 없으면 현재 시간
+            chat_time = user_time if user_time else datetime.now()
+            bot_response_time = response_time if response_time else datetime.now()
+            
+            with db_connection.get_cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO chat_histories (chatroom_id, user_id, user_message, bot_response, chat_time, response_time)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING chat_id, chatroom_id, user_id, user_message, bot_response, chat_time, response_time
+                """, (chatroom_id, user_id, user_message, bot_response, chat_time, bot_response_time))
+                
+                result = cursor.fetchone()
+                history = ChatHistory(
+                    chat_id=result['chat_id'],
+                    chatroom_id=result['chatroom_id'],
+                    user_id=result['user_id'],
+                    user_message=result['user_message'],
+                    chat_time=result['chat_time'],
+                    bot_response=result['bot_response'],
+                    response_time=result['response_time']
+                )
+                
+                logger.info(f"Added chat history {history.chat_id} to chatroom {chatroom_id}")
+                return history
+        except Exception as e:
+            logger.error(f"Failed to add chat history: {e}")
+            raise
     
     def edit_chat_history(self, chatroom_id: int, chat_id: int, user_id: str, user_message: str, bot_response: str) -> Optional[ChatHistory]:
-        """채팅 히스토리 수정 (기존 chat_id 유지, user_id 파라미터 추가)"""
-        if chatroom_id not in self.chat_histories:
-            print(f"❌ Chatroom {chatroom_id} not found in histories")
+        """채팅 히스토리 수정"""
+        try:
+            with db_connection.get_cursor() as cursor:
+                cursor.execute("""
+                    UPDATE chat_histories 
+                    SET user_message = %s, bot_response = %s, 
+                        chat_time = CURRENT_TIMESTAMP, response_time = CURRENT_TIMESTAMP
+                    WHERE chat_id = %s AND chatroom_id = %s AND user_id = %s
+                    RETURNING chat_id, chatroom_id, user_id, user_message, bot_response, chat_time, response_time
+                """, (user_message, bot_response, chat_id, chatroom_id, user_id))
+                
+                result = cursor.fetchone()
+                if result:
+                    history = ChatHistory(
+                        chat_id=result['chat_id'],
+                        chatroom_id=result['chatroom_id'],
+                        user_id=result['user_id'],
+                        user_message=result['user_message'],
+                        chat_time=result['chat_time'],
+                        bot_response=result['bot_response'],
+                        response_time=result['response_time']
+                    )
+                    logger.info(f"Updated chat history {chat_id} in chatroom {chatroom_id}")
+                    return history
+                else:
+                    logger.warning(f"Chat history {chat_id} not found in chatroom {chatroom_id} for user {user_id}")
+                    return None
+        except Exception as e:
+            logger.error(f"Failed to edit chat history: {e}")
             return None
-        
-        # 기존 히스토리에서 해당 chat_id를 찾아 업데이트
-        for history in self.chat_histories[chatroom_id]:
-            if history.chat_id == chat_id and history.user_id == user_id:
-                print(f"🔧 Updating existing chat history with chat_id: {chat_id}, user: {user_id}")
-                
-                # 히스토리 내용 업데이트
-                history.user_message = user_message
-                history.chat_time = datetime.now()
-                history.bot_response = bot_response
-                history.response_time = datetime.now()
-                
-                print(f"✅ Updated chat history with chat_id: {chat_id}")
-                print(f"📅 Updated time: {history.chat_time}")
-                return history
-        
-        print(f"❌ Chat history with chat_id {chat_id} not found in chatroom {chatroom_id} for user {user_id}")
-        return None
     
     def get_messages_by_chatroom(self, chatroom_id: int) -> List[Message]:
         """채팅방의 메시지 조회"""
-        return [msg for msg in self.messages.values() if msg.chatroom_id == chatroom_id]
+        try:
+            with db_connection.get_cursor() as cursor:
+                cursor.execute("""
+                    SELECT id, chatroom_id, user_id, content, message_type, data_type, timestamp
+                    FROM messages 
+                    WHERE chatroom_id = %s 
+                    ORDER BY timestamp ASC
+                """, (chatroom_id,))
+                
+                results = cursor.fetchall()
+                messages = []
+                
+                for row in results:
+                    message = Message(
+                        id=row['id'],
+                        chatroom_id=row['chatroom_id'],
+                        user_id=row['user_id'],
+                        content=row['content'],
+                        message_type=row['message_type'],
+                        timestamp=row['timestamp'],
+                        data_type=row['data_type']
+                    )
+                    messages.append(message)
+                
+                return messages
+        except Exception as e:
+            logger.error(f"Failed to get messages for chatroom {chatroom_id}: {e}")
+            return []
     
     def add_response(self, message_id: str, chatroom_id: int, user_id: str, content: Dict[str, Any]) -> BotResponse:
-        """봇 응답 추가 (user_id 파라미터 추가)"""
-        response_id = str(uuid.uuid4())
-        response = BotResponse(
-            id=response_id,
-            message_id=message_id,
-            chatroom_id=chatroom_id,
-            user_id=user_id,
-            content=content,
-            timestamp=datetime.now()
-        )
-        self.responses[response_id] = response
-        return response
+        """봇 응답 추가"""
+        try:
+            response_id = str(uuid.uuid4())
+            with db_connection.get_cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO bot_responses (id, message_id, chatroom_id, user_id, content, timestamp)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id, message_id, chatroom_id, user_id, content, timestamp
+                """, (response_id, message_id, chatroom_id, user_id, json.dumps(content), datetime.now()))
+                
+                result = cursor.fetchone()
+                response = BotResponse(
+                    id=result['id'],
+                    message_id=result['message_id'],
+                    chatroom_id=result['chatroom_id'],
+                    user_id=result['user_id'],
+                    content=json.loads(result['content']),
+                    timestamp=result['timestamp']
+                )
+                logger.info(f"Added bot response {response_id} to chatroom {chatroom_id}")
+                return response
+        except Exception as e:
+            logger.error(f"Failed to add bot response: {e}")
+            raise
     
     def get_responses_by_chatroom(self, chatroom_id: int) -> List[BotResponse]:
         """채팅방의 응답 조회"""
-        return [resp for resp in self.responses.values() if resp.chatroom_id == chatroom_id]
+        try:
+            with db_connection.get_cursor() as cursor:
+                cursor.execute("""
+                    SELECT id, message_id, chatroom_id, user_id, content, timestamp
+                    FROM bot_responses 
+                    WHERE chatroom_id = %s 
+                    ORDER BY timestamp ASC
+                """, (chatroom_id,))
+                
+                results = cursor.fetchall()
+                responses = []
+                
+                for row in results:
+                    response = BotResponse(
+                        id=row['id'],
+                        message_id=row['message_id'],
+                        chatroom_id=row['chatroom_id'],
+                        user_id=row['user_id'],
+                        content=json.loads(row['content']),
+                        timestamp=row['timestamp']
+                    )
+                    responses.append(response)
+                
+                return responses
+        except Exception as e:
+            logger.error(f"Failed to get responses for chatroom {chatroom_id}: {e}")
+            return []
 
     def update_chatroom_name(self, chatroom_id: int, name: str, user_id: str) -> Optional[ChatRoom]:
         """채팅방 이름 수정 (유저 권한 확인)"""
-        if chatroom_id in self.chatrooms:
-            # 유저 권한 확인
-            chatroom = self.chatrooms[chatroom_id]
-            if chatroom.user_id != user_id:
-                return None
+        try:
+            with db_connection.get_cursor() as cursor:
+                # 유저 권한 확인
+                cursor.execute("""
+                    SELECT user_id FROM active_chatrooms WHERE id = %s
+                """, (chatroom_id,))
                 
-            self.chatrooms[chatroom_id].name = name
-            return self.chatrooms[chatroom_id]
-        return None
+                result = cursor.fetchone()
+                if not result or result['user_id'] != user_id:
+                    return None
+                
+                # 채팅방 이름 업데이트
+                cursor.execute("""
+                    UPDATE chatrooms 
+                    SET name = %s, updated_at = CURRENT_TIMESTAMP 
+                    WHERE id = %s
+                    RETURNING id, name, user_id, created_at, updated_at
+                """, (name, chatroom_id))
+                
+                result = cursor.fetchone()
+                if result:
+                    chatroom = ChatRoom(
+                        id=result['id'],
+                        name=result['name'],
+                        user_id=result['user_id']
+                    )
+                    logger.info(f"Updated chatroom {chatroom_id} name to {name}")
+                    return chatroom
+                return None
+        except Exception as e:
+            logger.error(f"Failed to update chatroom name: {e}")
+            return None

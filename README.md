@@ -9,15 +9,31 @@ Vue.js 프론트엔드와 FastAPI 백엔드로 구성된 데이터 분석 채팅
 - **RAG (Retrieval-Augmented Generation)**: AI 기반 검색 및 요약
 - **실시간 스트리밍**: Server-Sent Events를 통한 실시간 데이터 전송
 - **인터랙티브 차트**: Plotly.js를 활용한 동적 데이터 시각화
+- **PostgreSQL 데이터베이스**: 안정적인 데이터 저장 및 관리
+- **유저 관리**: 사용자별 채팅방 및 세션 관리
+- **데이터 보존**: 채팅방 삭제 시에도 연관 데이터 보존
+- **세션 관리**: 유저별 세션 스토리지 및 만료 관리
 
 ## 📁 프로젝트 구조
 
 ```
 cursor_repo/
-├── app.py                 # FastAPI 백엔드
-├── requirements.txt       # Python 의존성
-├── test_backend.py       # 백엔드 테스트 스크립트
-├── src/
+├── app/                   # FastAPI 백엔드
+│   ├── __init__.py
+│   ├── main.py           # FastAPI 애플리케이션
+│   ├── config.py         # 설정 관리
+│   ├── database.py       # 데이터베이스 연결
+│   ├── database_init.py  # 데이터베이스 초기화
+│   ├── models/           # Pydantic 모델
+│   ├── repositories/     # 데이터 접근 계층
+│   │   ├── chat_storage.py      # 채팅 데이터 저장소
+│   │   ├── user_storage.py      # 유저 세션 저장소
+│   │   ├── user_repository.py   # 유저 데이터 저장소
+│   │   └── data_preservation.py # 데이터 보존 유틸리티
+│   ├── routers/          # API 라우터
+│   ├── services/         # 비즈니스 로직
+│   └── utils/            # 유틸리티 함수
+├── src/                  # Vue.js 프론트엔드
 │   ├── App.vue           # 메인 Vue 컴포넌트
 │   ├── components/
 │   │   ├── PCMTrendChart.vue    # PCM 트렌드 차트
@@ -26,10 +42,61 @@ cursor_repo/
 │   │   └── api.js        # API 서비스
 │   └── config/
 │       └── dataTypes.js  # 데이터 타입 설정
+├── requirements.txt      # Python 의존성
+├── tables.sql           # 데이터베이스 스키마
+├── init_db.py           # 데이터베이스 초기화 스크립트
+├── .env.example         # 환경 변수 예제
 └── README.md
 ```
 
 ## 🛠️ 설치 및 실행
+
+### 데이터베이스 설정
+
+이 프로젝트는 PostgreSQL을 사용합니다.
+
+1. **PostgreSQL 설치 및 설정**
+```bash
+# PostgreSQL 설치 (Ubuntu/Debian)
+sudo apt-get install postgresql postgresql-contrib
+
+# PostgreSQL 설치 (macOS)
+brew install postgresql
+
+# PostgreSQL 설치 (Windows)
+# https://www.postgresql.org/download/windows/ 에서 다운로드
+```
+
+2. **데이터베이스 생성**
+```bash
+# PostgreSQL에 접속
+sudo -u postgres psql
+
+# 데이터베이스 생성
+CREATE DATABASE chat_analysis_db;
+
+# 사용자 생성 (선택사항)
+CREATE USER chat_user WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE chat_analysis_db TO chat_user;
+```
+
+3. **환경 변수 설정**
+```bash
+# .env 파일 생성
+cp .env.example .env
+
+# .env 파일 편집하여 데이터베이스 정보 설정
+DB_HOST=localhost
+DB_DATABASE=chat_analysis_db
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_PORT=5432
+```
+
+4. **데이터베이스 초기화**
+```bash
+python init_db.py
+```
 
 ### 백엔드 실행
 

@@ -44,6 +44,13 @@ class Settings:
     ]
     SSO_REDIRECT_BASE_URL: str = "http://192.168.0.196:80"
     
+    # Database Settings
+    DB_HOST: str = os.getenv("DB_HOST", "localhost")
+    DB_DATABASE: str = os.getenv("DB_DATABASE", "chat_analysis_db")
+    DB_USER: str = os.getenv("DB_USER", "postgres")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "password")
+    DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
+    
     # Static file examples
     STATIC_EXAMPLES = {
         "example1.pdf": "PCM 데이터 분석 가이드\n\n이 문서는 PCM 데이터 분석 방법에 대한 상세한 가이드입니다.",
