@@ -24,7 +24,7 @@ class DataPreservation:
                 # 채팅방 기본 정보
                 cursor.execute("""
                     SELECT id, name, user_id, created_at, updated_at, is_deleted, deleted_at
-                    FROM chatrooms 
+                    FROM service_chatrooms 
                     WHERE id = %s
                 """, (chatroom_id,))
                 
@@ -35,7 +35,7 @@ class DataPreservation:
                 # 메시지 수
                 cursor.execute("""
                     SELECT COUNT(*) as message_count
-                    FROM messages 
+                    FROM service_messages 
                     WHERE chatroom_id = %s
                 """, (chatroom_id,))
                 
@@ -44,7 +44,7 @@ class DataPreservation:
                 # 봇 응답 수
                 cursor.execute("""
                     SELECT COUNT(*) as response_count
-                    FROM bot_responses 
+                    FROM service_bot_responses 
                     WHERE chatroom_id = %s
                 """, (chatroom_id,))
                 
@@ -53,7 +53,7 @@ class DataPreservation:
                 # 채팅 히스토리 수
                 cursor.execute("""
                     SELECT COUNT(*) as history_count
-                    FROM chat_histories 
+                    FROM service_chat_histories 
                     WHERE chatroom_id = %s
                 """, (chatroom_id,))
                 
@@ -62,7 +62,7 @@ class DataPreservation:
                 # 최근 활동 시간
                 cursor.execute("""
                     SELECT MAX(response_time) as last_activity
-                    FROM chat_histories 
+                    FROM service_chat_histories 
                     WHERE chatroom_id = %s
                 """, (chatroom_id,))
                 
@@ -94,10 +94,10 @@ class DataPreservation:
                         COUNT(DISTINCT m.id) as message_count,
                         COUNT(DISTINCT br.id) as response_count,
                         COUNT(DISTINCT ch.id) as history_count
-                    FROM chatrooms c
-                    LEFT JOIN messages m ON c.id = m.chatroom_id
-                    LEFT JOIN bot_responses br ON c.id = br.chatroom_id
-                    LEFT JOIN chat_histories ch ON c.id = ch.chatroom_id
+                    FROM service_chatrooms c
+                    LEFT JOIN service_messages m ON c.id = m.chatroom_id
+                    LEFT JOIN service_bot_responses br ON c.id = br.chatroom_id
+                    LEFT JOIN service_chat_histories ch ON c.id = ch.chatroom_id
                     WHERE c.user_id = %s AND c.is_deleted = TRUE
                     GROUP BY c.id, c.name, c.user_id, c.created_at, c.deleted_at
                     ORDER BY c.deleted_at DESC
@@ -132,7 +132,7 @@ class DataPreservation:
             with db_connection.get_cursor() as cursor:
                 # 유저 권한 확인
                 cursor.execute("""
-                    SELECT user_id FROM chatrooms WHERE id = %s
+                    SELECT user_id FROM service_chatrooms WHERE id = %s
                 """, (chatroom_id,))
                 
                 result = cursor.fetchone()
@@ -161,7 +161,7 @@ class DataPreservation:
             with db_connection.get_cursor() as cursor:
                 # 유저 권한 확인
                 cursor.execute("""
-                    SELECT user_id FROM chatrooms WHERE id = %s
+                    SELECT user_id FROM service_chatrooms WHERE id = %s
                 """, (chatroom_id,))
                 
                 result = cursor.fetchone()
@@ -170,10 +170,10 @@ class DataPreservation:
                     return False
                 
                 # 관련 데이터 삭제 (외래키 제약조건에 의해 순서 중요)
-                cursor.execute("DELETE FROM bot_responses WHERE chatroom_id = %s", (chatroom_id,))
-                cursor.execute("DELETE FROM messages WHERE chatroom_id = %s", (chatroom_id,))
-                cursor.execute("DELETE FROM chat_histories WHERE chatroom_id = %s", (chatroom_id,))
-                cursor.execute("DELETE FROM chatrooms WHERE id = %s", (chatroom_id,))
+                cursor.execute("DELETE FROM service_bot_responses WHERE chatroom_id = %s", (chatroom_id,))
+                cursor.execute("DELETE FROM service_messages WHERE chatroom_id = %s", (chatroom_id,))
+                cursor.execute("DELETE FROM service_chat_histories WHERE chatroom_id = %s", (chatroom_id,))
+                cursor.execute("DELETE FROM service_chatrooms WHERE id = %s", (chatroom_id,))
                 
                 logger.warning(f"Permanently deleted all data for chatroom {chatroom_id} by user {user_id}")
                 return True
@@ -188,7 +188,7 @@ class DataPreservation:
                 # 활성 채팅방 수
                 cursor.execute("""
                     SELECT COUNT(*) as active_chatrooms
-                    FROM chatrooms 
+                    FROM service_chatrooms 
                     WHERE user_id = %s AND is_deleted = FALSE
                 """, (user_id,))
                 
@@ -197,7 +197,7 @@ class DataPreservation:
                 # 삭제된 채팅방 수
                 cursor.execute("""
                     SELECT COUNT(*) as deleted_chatrooms
-                    FROM chatrooms 
+                    FROM service_chatrooms 
                     WHERE user_id = %s AND is_deleted = TRUE
                 """, (user_id,))
                 
@@ -206,8 +206,8 @@ class DataPreservation:
                 # 총 메시지 수
                 cursor.execute("""
                     SELECT COUNT(*) as total_messages
-                    FROM messages m
-                    JOIN chatrooms c ON m.chatroom_id = c.id
+                    FROM service_messages m
+                    JOIN service_chatrooms c ON m.chatroom_id = c.id
                     WHERE c.user_id = %s
                 """, (user_id,))
                 
@@ -216,8 +216,8 @@ class DataPreservation:
                 # 총 채팅 히스토리 수
                 cursor.execute("""
                     SELECT COUNT(*) as total_histories
-                    FROM chat_histories ch
-                    JOIN chatrooms c ON ch.chatroom_id = c.id
+                    FROM service_chat_histories ch
+                    JOIN service_chatrooms c ON ch.chatroom_id = c.id
                     WHERE c.user_id = %s
                 """, (user_id,))
                 
@@ -226,8 +226,8 @@ class DataPreservation:
                 # 최근 활동 시간
                 cursor.execute("""
                     SELECT MAX(ch.response_time) as last_activity
-                    FROM chat_histories ch
-                    JOIN chatrooms c ON ch.chatroom_id = c.id
+                    FROM service_chat_histories ch
+                    JOIN service_chatrooms c ON ch.chatroom_id = c.id
                     WHERE c.user_id = %s
                 """, (user_id,))
                 
@@ -252,34 +252,34 @@ class DataPreservation:
             with db_connection.get_cursor() as cursor:
                 # 삭제된 지 오래된 채팅방의 데이터 영구 삭제
                 cursor.execute("""
-                    DELETE FROM bot_responses 
+                    DELETE FROM service_bot_responses 
                     WHERE chatroom_id IN (
-                        SELECT id FROM chatrooms 
+                        SELECT id FROM service_chatrooms 
                         WHERE is_deleted = TRUE 
                         AND deleted_at < CURRENT_TIMESTAMP - INTERVAL '%s days'
                     )
                 """, (days_old,))
                 
                 cursor.execute("""
-                    DELETE FROM messages 
+                    DELETE FROM service_messages 
                     WHERE chatroom_id IN (
-                        SELECT id FROM chatrooms 
+                        SELECT id FROM service_chatrooms 
                         WHERE is_deleted = TRUE 
                         AND deleted_at < CURRENT_TIMESTAMP - INTERVAL '%s days'
                     )
                 """, (days_old,))
                 
                 cursor.execute("""
-                    DELETE FROM chat_histories 
+                    DELETE FROM service_chat_histories 
                     WHERE chatroom_id IN (
-                        SELECT id FROM chatrooms 
+                        SELECT id FROM service_chatrooms 
                         WHERE is_deleted = TRUE 
                         AND deleted_at < CURRENT_TIMESTAMP - INTERVAL '%s days'
                     )
                 """, (days_old,))
                 
                 cursor.execute("""
-                    DELETE FROM chatrooms 
+                    DELETE FROM service_chatrooms 
                     WHERE is_deleted = TRUE 
                     AND deleted_at < CURRENT_TIMESTAMP - INTERVAL '%s days'
                 """, (days_old,))

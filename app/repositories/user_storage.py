@@ -31,7 +31,7 @@ class UserStorage:
             
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO user_storage (user_id, session_id, user_data, source, expires_at, updated_at)
+                    INSERT INTO service_user_storage (user_id, session_id, user_data, source, expires_at, updated_at)
                     VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                     RETURNING id, user_id, session_id, user_data, source, created_at, expires_at
                 """, (user_id, session_id, json.dumps(user_data), source, expires_at))
@@ -56,7 +56,7 @@ class UserStorage:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
                     SELECT user_id, session_id, user_data, source, created_at, expires_at
-                    FROM user_storage 
+                    FROM service_user_storage 
                     WHERE session_id = %s AND is_active = TRUE AND expires_at > CURRENT_TIMESTAMP
                 """, (session_id,))
                 
@@ -82,7 +82,7 @@ class UserStorage:
             
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    UPDATE user_storage 
+                    UPDATE service_user_storage 
                     SET user_data = %s, updated_at = CURRENT_TIMESTAMP, expires_at = %s
                     WHERE session_id = %s AND is_active = TRUE
                     RETURNING user_id, session_id, user_data, source, created_at, expires_at
@@ -108,7 +108,7 @@ class UserStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    UPDATE user_storage 
+                    UPDATE service_user_storage 
                     SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
                     WHERE session_id = %s
                 """, (session_id,))
@@ -127,7 +127,7 @@ class UserStorage:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
                     SELECT user_id, session_id, user_data, source, created_at, expires_at
-                    FROM user_storage 
+                    FROM service_user_storage 
                     WHERE user_id = %s AND is_active = TRUE AND expires_at > CURRENT_TIMESTAMP
                     ORDER BY created_at DESC
                 """, (user_id,))
@@ -155,7 +155,7 @@ class UserStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    UPDATE user_storage 
+                    UPDATE service_user_storage 
                     SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
                     WHERE expires_at <= CURRENT_TIMESTAMP AND is_active = TRUE
                 """)
@@ -175,7 +175,7 @@ class UserStorage:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
                     SELECT COUNT(*) as count
-                    FROM user_storage 
+                    FROM service_user_storage 
                     WHERE is_active = TRUE AND expires_at > CURRENT_TIMESTAMP
                 """)
                 
@@ -190,7 +190,7 @@ class UserStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    UPDATE user_storage 
+                    UPDATE service_user_storage 
                     SET expires_at = %s, updated_at = CURRENT_TIMESTAMP
                     WHERE session_id = %s AND is_active = TRUE
                 """, (datetime.now() + timedelta(hours=hours), session_id))

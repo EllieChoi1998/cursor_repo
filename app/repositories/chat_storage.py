@@ -27,7 +27,7 @@ class ChatStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO chatrooms (name, user_id, updated_at) 
+                    INSERT INTO service_chatrooms (name, user_id, updated_at) 
                     VALUES (%s, %s, CURRENT_TIMESTAMP) 
                     RETURNING id, name, user_id, created_at, updated_at
                 """, (f"채팅방 #{datetime.now().strftime('%Y%m%d_%H%M%S')}", user_id))
@@ -50,7 +50,7 @@ class ChatStorage:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
                     SELECT id, name, user_id, created_at, updated_at 
-                    FROM chatrooms 
+                    FROM service_chatrooms 
                     WHERE id = %s AND is_deleted = FALSE
                 """, (chatroom_id,))
                 
@@ -78,8 +78,8 @@ class ChatStorage:
                         c.updated_at,
                         COUNT(ch.id) as message_count,
                         COALESCE(MAX(ch.response_time), c.updated_at) as last_activity
-                    FROM chatrooms c
-                    LEFT JOIN chat_histories ch ON c.id = ch.chatroom_id
+                    FROM service_chatrooms c
+                    LEFT JOIN service_chat_histories ch ON c.id = ch.chatroom_id
                     WHERE c.user_id = %s AND c.is_deleted = FALSE
                     GROUP BY c.id, c.name, c.created_at, c.updated_at
                     ORDER BY last_activity DESC
@@ -109,7 +109,7 @@ class ChatStorage:
             with db_connection.get_cursor() as cursor:
                 # 유저 권한 확인
                 cursor.execute("""
-                    SELECT user_id FROM chatrooms WHERE id = %s AND is_deleted = FALSE
+                    SELECT user_id FROM service_chatrooms WHERE id = %s AND is_deleted = FALSE
                 """, (chatroom_id,))
                 
                 result = cursor.fetchone()
@@ -120,7 +120,7 @@ class ChatStorage:
                 cursor.execute("""
                     SELECT id, chatroom_id, user_id, user_message, 
                            bot_response, chat_time, response_time
-                    FROM chat_histories 
+                    FROM service_chat_histories 
                     WHERE chatroom_id = %s 
                     ORDER BY response_time DESC
                 """, (chatroom_id,))
@@ -155,7 +155,7 @@ class ChatStorage:
             with db_connection.get_cursor() as cursor:
                 # 유저 권한 확인
                 cursor.execute("""
-                    SELECT user_id FROM chatrooms WHERE id = %s AND is_deleted = FALSE
+                    SELECT user_id FROM service_chatrooms WHERE id = %s AND is_deleted = FALSE
                 """, (chatroom_id,))
                 
                 result = cursor.fetchone()
@@ -164,7 +164,7 @@ class ChatStorage:
                 
                 # Soft delete - 채팅방만 삭제 표시, 연관 데이터는 보존
                 cursor.execute("""
-                    UPDATE chatrooms 
+                    UPDATE service_chatrooms 
                     SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """, (chatroom_id,))
@@ -180,7 +180,7 @@ class ChatStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO messages (chatroom_id, user_id, content, message_type, data_type, timestamp)
+                    INSERT INTO service_messages (chatroom_id, user_id, content, message_type, data_type, timestamp)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING id, chatroom_id, user_id, content, message_type, data_type, timestamp
                 """, (chatroom_id, user_id, content, message_type, data_type, datetime.now()))
@@ -210,7 +210,7 @@ class ChatStorage:
             
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO chat_histories (chatroom_id, user_id, user_message, bot_response, chat_time, response_time)
+                    INSERT INTO service_chat_histories (chatroom_id, user_id, user_message, bot_response, chat_time, response_time)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING id, chatroom_id, user_id, user_message, bot_response, chat_time, response_time
                 """, (chatroom_id, user_id, user_message, bot_response, chat_time, bot_response_time))
@@ -237,7 +237,7 @@ class ChatStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    UPDATE chat_histories 
+                    UPDATE service_chat_histories 
                     SET user_message = %s, bot_response = %s, 
                         chat_time = CURRENT_TIMESTAMP, response_time = CURRENT_TIMESTAMP
                     WHERE id = %s AND chatroom_id = %s AND user_id = %s
@@ -270,7 +270,7 @@ class ChatStorage:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
                     SELECT id, chatroom_id, user_id, content, message_type, data_type, timestamp
-                    FROM messages 
+                    FROM service_messages 
                     WHERE chatroom_id = %s 
                     ORDER BY timestamp ASC
                 """, (chatroom_id,))
@@ -300,7 +300,7 @@ class ChatStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO bot_responses (message_id, chatroom_id, user_id, content, timestamp)
+                    INSERT INTO service_bot_responses (message_id, chatroom_id, user_id, content, timestamp)
                     VALUES (%s, %s, %s, %s, %s)
                     RETURNING id, message_id, chatroom_id, user_id, content, timestamp
                 """, (int(message_id), chatroom_id, user_id, json.dumps(content), datetime.now()))
@@ -326,7 +326,7 @@ class ChatStorage:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
                     SELECT id, message_id, chatroom_id, user_id, content, timestamp
-                    FROM bot_responses 
+                    FROM service_bot_responses 
                     WHERE chatroom_id = %s 
                     ORDER BY timestamp ASC
                 """, (chatroom_id,))
@@ -356,7 +356,7 @@ class ChatStorage:
             with db_connection.get_cursor() as cursor:
                 # 유저 권한 확인
                 cursor.execute("""
-                    SELECT user_id FROM chatrooms WHERE id = %s AND is_deleted = FALSE
+                    SELECT user_id FROM service_chatrooms WHERE id = %s AND is_deleted = FALSE
                 """, (chatroom_id,))
                 
                 result = cursor.fetchone()
@@ -365,7 +365,7 @@ class ChatStorage:
                 
                 # 채팅방 이름 업데이트
                 cursor.execute("""
-                    UPDATE chatrooms 
+                    UPDATE service_chatrooms 
                     SET name = %s, updated_at = CURRENT_TIMESTAMP 
                     WHERE id = %s
                     RETURNING id, name, user_id, created_at, updated_at

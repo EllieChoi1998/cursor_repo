@@ -2,7 +2,7 @@
 -- PostgreSQL Database Tables
 
 -- 유저 테이블
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS service_users (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(255) NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- 채팅방 테이블 (채팅방 삭제 시에도 데이터 보존을 위해 soft delete 사용)
-CREATE TABLE IF NOT EXISTS chatrooms (
+CREATE TABLE IF NOT EXISTS service_chatrooms (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     user_id VARCHAR(255) NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS chatrooms (
 );
 
 -- 메시지 테이블
-CREATE TABLE IF NOT EXISTS messages (
+CREATE TABLE IF NOT EXISTS service_messages (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     chatroom_id INTEGER NOT NULL,
     user_id VARCHAR(255) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 -- 봇 응답 테이블
-CREATE TABLE IF NOT EXISTS bot_responses (
+CREATE TABLE IF NOT EXISTS service_bot_responses (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     message_id INTEGER NOT NULL,
     chatroom_id INTEGER NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS bot_responses (
 );
 
 -- 채팅 히스토리 테이블 (채팅방 삭제되어도 보존)
-CREATE TABLE IF NOT EXISTS chat_histories (
+CREATE TABLE IF NOT EXISTS service_chat_histories (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     chatroom_id INTEGER NOT NULL,
     user_id VARCHAR(255) NOT NULL,
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS chat_histories (
 );
 
 -- 유저 스토리지 테이블 (세션 스토리지 대체)
-CREATE TABLE IF NOT EXISTS user_storage (
+CREATE TABLE IF NOT EXISTS service_user_storage (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
     session_id VARCHAR(255) NOT NULL,
@@ -73,6 +73,6 @@ CREATE TABLE IF NOT EXISTS user_storage (
 );
 
 -- 샘플 데이터 삽입 (개발용)
-INSERT INTO users (user_id, username, email, full_name) VALUES 
+INSERT INTO service_users (user_id, username, email, full_name) VALUES 
 ('developer', 'developer', 'developer@example.com', 'Developer User')
 ON CONFLICT (user_id) DO NOTHING;
