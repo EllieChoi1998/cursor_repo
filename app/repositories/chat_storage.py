@@ -2,7 +2,6 @@
 Chat storage repository - Handles all chat data persistence with PostgreSQL
 """
 
-import uuid
 import json
 from datetime import datetime
 from typing import Dict, List, Optional, Any
@@ -179,17 +178,16 @@ class ChatStorage:
     def add_message(self, chatroom_id: int, user_id: str, content: str, message_type: str, data_type: str) -> Message:
         """메시지 추가"""
         try:
-            message_uuid = str(uuid.uuid4())
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO messages (message_uuid, chatroom_id, user_id, content, message_type, data_type, timestamp)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id, message_uuid, chatroom_id, user_id, content, message_type, data_type, timestamp
-                """, (message_uuid, chatroom_id, user_id, content, message_type, data_type, datetime.now()))
+                    INSERT INTO messages (chatroom_id, user_id, content, message_type, data_type, timestamp)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id, chatroom_id, user_id, content, message_type, data_type, timestamp
+                """, (chatroom_id, user_id, content, message_type, data_type, datetime.now()))
                 
                 result = cursor.fetchone()
                 message = Message(
-                    id=result['message_uuid'],  # UUID를 id로 사용
+                    id=str(result['id']),  # 정수 ID를 문자열로 변환
                     chatroom_id=result['chatroom_id'],
                     user_id=result['user_id'],
                     content=result['content'],
@@ -197,7 +195,7 @@ class ChatStorage:
                     timestamp=result['timestamp'],
                     data_type=result['data_type']
                 )
-                logger.info(f"Added message {message_uuid} to chatroom {chatroom_id}")
+                logger.info(f"Added message {result['id']} to chatroom {chatroom_id}")
                 return message
         except Exception as e:
             logger.error(f"Failed to add message: {e}")
@@ -271,7 +269,7 @@ class ChatStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    SELECT id, message_uuid, chatroom_id, user_id, content, message_type, data_type, timestamp
+                    SELECT id, chatroom_id, user_id, content, message_type, data_type, timestamp
                     FROM messages 
                     WHERE chatroom_id = %s 
                     ORDER BY timestamp ASC
@@ -282,7 +280,7 @@ class ChatStorage:
                 
                 for row in results:
                     message = Message(
-                        id=row['message_uuid'],  # UUID를 id로 사용
+                        id=str(row['id']),  # 정수 ID를 문자열로 변환
                         chatroom_id=row['chatroom_id'],
                         user_id=row['user_id'],
                         content=row['content'],
@@ -300,24 +298,23 @@ class ChatStorage:
     def add_response(self, message_id: str, chatroom_id: int, user_id: str, content: Dict[str, Any]) -> BotResponse:
         """봇 응답 추가"""
         try:
-            response_uuid = str(uuid.uuid4())
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO bot_responses (response_uuid, message_uuid, chatroom_id, user_id, content, timestamp)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    RETURNING id, response_uuid, message_uuid, chatroom_id, user_id, content, timestamp
-                """, (response_uuid, message_id, chatroom_id, user_id, json.dumps(content), datetime.now()))
+                    INSERT INTO bot_responses (message_id, chatroom_id, user_id, content, timestamp)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id, message_id, chatroom_id, user_id, content, timestamp
+                """, (int(message_id), chatroom_id, user_id, json.dumps(content), datetime.now()))
                 
                 result = cursor.fetchone()
                 response = BotResponse(
-                    id=result['response_uuid'],  # UUID를 id로 사용
-                    message_id=result['message_uuid'],
+                    id=str(result['id']),  # 정수 ID를 문자열로 변환
+                    message_id=str(result['message_id']),
                     chatroom_id=result['chatroom_id'],
                     user_id=result['user_id'],
                     content=json.loads(result['content']),
                     timestamp=result['timestamp']
                 )
-                logger.info(f"Added bot response {response_uuid} to chatroom {chatroom_id}")
+                logger.info(f"Added bot response {result['id']} to chatroom {chatroom_id}")
                 return response
         except Exception as e:
             logger.error(f"Failed to add bot response: {e}")
@@ -328,7 +325,7 @@ class ChatStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    SELECT id, response_uuid, message_uuid, chatroom_id, user_id, content, timestamp
+                    SELECT id, message_id, chatroom_id, user_id, content, timestamp
                     FROM bot_responses 
                     WHERE chatroom_id = %s 
                     ORDER BY timestamp ASC
@@ -339,8 +336,8 @@ class ChatStorage:
                 
                 for row in results:
                     response = BotResponse(
-                        id=row['response_uuid'],  # UUID를 id로 사용
-                        message_id=row['message_uuid'],
+                        id=str(row['id']),  # 정수 ID를 문자열로 변환
+                        message_id=str(row['message_id']),
                         chatroom_id=row['chatroom_id'],
                         user_id=row['user_id'],
                         content=json.loads(row['content']),

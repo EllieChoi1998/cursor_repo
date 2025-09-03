@@ -27,7 +27,6 @@ CREATE TABLE IF NOT EXISTS chatrooms (
 -- 메시지 테이블
 CREATE TABLE IF NOT EXISTS messages (
     id SERIAL PRIMARY KEY,
-    message_uuid VARCHAR(255) UNIQUE NOT NULL,
     chatroom_id INTEGER NOT NULL,
     user_id VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
@@ -40,8 +39,7 @@ CREATE TABLE IF NOT EXISTS messages (
 -- 봇 응답 테이블
 CREATE TABLE IF NOT EXISTS bot_responses (
     id SERIAL PRIMARY KEY,
-    response_uuid VARCHAR(255) UNIQUE NOT NULL,
-    message_uuid VARCHAR(255) NOT NULL,
+    message_id INTEGER NOT NULL,
     chatroom_id INTEGER NOT NULL,
     user_id VARCHAR(255) NOT NULL,
     content JSONB NOT NULL,
