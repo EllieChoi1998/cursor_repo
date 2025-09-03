@@ -3,7 +3,7 @@
 
 -- 유저 테이블
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255),
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- 채팅방 테이블 (채팅방 삭제 시에도 데이터 보존을 위해 soft delete 사용)
 CREATE TABLE IF NOT EXISTS chatrooms (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     user_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS chatrooms (
 
 -- 메시지 테이블
 CREATE TABLE IF NOT EXISTS messages (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     chatroom_id INTEGER NOT NULL,
     user_id VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS messages (
 
 -- 봇 응답 테이블
 CREATE TABLE IF NOT EXISTS bot_responses (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     message_id INTEGER NOT NULL,
     chatroom_id INTEGER NOT NULL,
     user_id VARCHAR(255) NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS bot_responses (
 
 -- 채팅 히스토리 테이블 (채팅방 삭제되어도 보존)
 CREATE TABLE IF NOT EXISTS chat_histories (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     chatroom_id INTEGER NOT NULL,
     user_id VARCHAR(255) NOT NULL,
     user_message TEXT NOT NULL,
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS chat_histories (
 
 -- 유저 스토리지 테이블 (세션 스토리지 대체)
 CREATE TABLE IF NOT EXISTS user_storage (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
     session_id VARCHAR(255) NOT NULL,
     user_data JSONB NOT NULL,
