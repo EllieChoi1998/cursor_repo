@@ -17,7 +17,7 @@ if project_root not in sys.path:
 from app.config import settings
 from app.utils import initialize_application
 from app.routers import chat_router, health_router, auth_router
-from app.repositories import ChatStorage, SessionStorage
+from app.repositories import ChatStorage, UserStorage
 
 # Create FastAPI app
 app = FastAPI(title=settings.APP_TITLE, version=settings.APP_VERSION)
@@ -39,13 +39,13 @@ app.add_middleware(
 
 # Initialize global storage (in production, this would be dependency injected)
 chat_storage = ChatStorage()
-session_storage = SessionStorage()
+user_storage = UserStorage()
 
 # Set dependencies for routers
 from app.routers.chat_router import set_dependencies
 from app.routers.auth_router import set_auth_dependencies
 set_dependencies(chat_storage)
-set_auth_dependencies(session_storage)
+set_auth_dependencies(user_storage)
 
 # Include routers
 app.include_router(chat_router, tags=["chat"])

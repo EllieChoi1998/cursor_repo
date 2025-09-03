@@ -8,7 +8,7 @@ import datetime
 
 from app.models import SSOLoginRequest
 from app.services import AuthService
-from app.repositories import SessionStorage
+from app.repositories import UserStorage
 
 router = APIRouter()
 
@@ -16,14 +16,14 @@ router = APIRouter()
 security = HTTPBearer()
 
 # Global storage instances - will be set by main app
-session_storage = None
+user_storage = None
 auth_service = None
 
 
-def set_auth_dependencies(storage: SessionStorage):
+def set_auth_dependencies(storage: UserStorage):
     """Set dependencies for the auth router"""
-    global session_storage, auth_service
-    session_storage = storage
+    global user_storage, auth_service
+    user_storage = storage
     auth_service = AuthService(storage)
 
 

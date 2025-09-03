@@ -9,7 +9,7 @@ from app.models import (
     SSOLoginRequest, SSOLoginResponse, TokenVerificationResponse, 
     TokenRefreshResponse, UserInfo
 )
-from app.repositories import SessionStorage
+from app.repositories import UserStorage
 from app.utils.jwt_utils import create_jwt_token, verify_jwt_token, refresh_token
 from app.config import settings
 
@@ -17,8 +17,8 @@ from app.config import settings
 class AuthService:
     """인증 서비스"""
     
-    def __init__(self, session_storage: SessionStorage):
-        self.session_storage = session_storage
+    def __init__(self, user_storage: UserStorage):
+        self.user_storage = user_storage
     
     def process_sso_login(self, request: SSOLoginRequest) -> SSOLoginResponse:
         """SSO 로그인 처리"""
@@ -42,7 +42,7 @@ class AuthService:
         session_id = f"sso_{int(datetime.datetime.now().timestamp())}_{request.userId}"
         
         # 세션 저장
-        self.session_storage.create_session(session_id, user_data, None)
+        self.user_storage.create_session(session_id, user_data, None)
         
         print(f"JWT 토큰 생성 완료: sessionId={session_id}, userId={request.userId}")
         
@@ -91,15 +91,15 @@ class AuthService:
     
     def logout_user(self, session_id: str) -> bool:
         """사용자 로그아웃 (세션 삭제)"""
-        return self.session_storage.delete_session(session_id)
+        return self.user_storage.delete_session(session_id)
     
     def get_user_sessions(self, user_id: str) -> list:
         """사용자의 모든 세션 조회"""
-        return self.session_storage.get_user_sessions(user_id)
+        return self.user_storage.get_user_sessions(user_id)
     
     def cleanup_expired_sessions(self) -> int:
         """만료된 세션 정리"""
-        return self.session_storage.cleanup_expired_sessions(settings.JWT_EXPIRATION_HOURS)
+        return self.user_storage.cleanup_expired_sessions(settings.JWT_EXPIRATION_HOURS)
     
     def validate_user_permissions(self, token: str, required_role: str = None) -> Dict[str, Any]:
         """사용자 권한 검증"""
