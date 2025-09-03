@@ -22,8 +22,8 @@ class UserRepository:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO users (user_id, username, email, full_name)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO users (user_id, username, email, full_name, updated_at)
+                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
                     ON CONFLICT (user_id) DO NOTHING
                 """, (user_id, username, email, full_name))
                 
@@ -42,7 +42,7 @@ class UserRepository:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    SELECT user_id, username, email, full_name, created_at, updated_at, is_active
+                    SELECT id, user_id, username, email, full_name, created_at, updated_at, is_active
                     FROM users 
                     WHERE user_id = %s AND is_active = TRUE
                 """, (user_id,))
@@ -118,7 +118,7 @@ class UserRepository:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    SELECT user_id, username, email, full_name, created_at, updated_at, is_active
+                    SELECT id, user_id, username, email, full_name, created_at, updated_at, is_active
                     FROM users 
                     WHERE is_active = TRUE
                     ORDER BY created_at DESC
@@ -144,7 +144,7 @@ class UserRepository:
                         u.username,
                         COUNT(DISTINCT c.id) as total_chatrooms,
                         COUNT(DISTINCT CASE WHEN c.is_deleted = FALSE THEN c.id END) as active_chatrooms,
-                        COUNT(DISTINCT ch.chat_id) as total_messages,
+                        COUNT(DISTINCT ch.id) as total_messages,
                         MAX(ch.response_time) as last_activity
                     FROM users u
                     LEFT JOIN chatrooms c ON u.user_id = c.user_id
@@ -166,7 +166,7 @@ class UserRepository:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    SELECT user_id, username, email, full_name, created_at, updated_at, is_active
+                    SELECT id, user_id, username, email, full_name, created_at, updated_at, is_active
                     FROM users 
                     WHERE is_active = TRUE 
                     AND (username ILIKE %s OR email ILIKE %s OR full_name ILIKE %s)

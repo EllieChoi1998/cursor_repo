@@ -28,8 +28,8 @@ class ChatStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO chatrooms (name, user_id) 
-                    VALUES (%s, %s) 
+                    INSERT INTO chatrooms (name, user_id, updated_at) 
+                    VALUES (%s, %s, CURRENT_TIMESTAMP) 
                     RETURNING id, name, user_id, created_at, updated_at
                 """, (f"채팅방 #{datetime.now().strftime('%Y%m%d_%H%M%S')}", user_id))
                 
@@ -51,8 +51,8 @@ class ChatStorage:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
                     SELECT id, name, user_id, created_at, updated_at 
-                    FROM active_chatrooms 
-                    WHERE id = %s
+                    FROM chatrooms 
+                    WHERE id = %s AND is_deleted = FALSE
                 """, (chatroom_id,))
                 
                 result = cursor.fetchone()
@@ -77,11 +77,11 @@ class ChatStorage:
                         c.name,
                         c.created_at,
                         c.updated_at,
-                        COUNT(ch.chat_id) as message_count,
+                        COUNT(ch.id) as message_count,
                         COALESCE(MAX(ch.response_time), c.updated_at) as last_activity
-                    FROM active_chatrooms c
+                    FROM chatrooms c
                     LEFT JOIN chat_histories ch ON c.id = ch.chatroom_id
-                    WHERE c.user_id = %s
+                    WHERE c.user_id = %s AND c.is_deleted = FALSE
                     GROUP BY c.id, c.name, c.created_at, c.updated_at
                     ORDER BY last_activity DESC
                 """, (user_id,))
@@ -110,7 +110,7 @@ class ChatStorage:
             with db_connection.get_cursor() as cursor:
                 # 유저 권한 확인
                 cursor.execute("""
-                    SELECT user_id FROM active_chatrooms WHERE id = %s
+                    SELECT user_id FROM chatrooms WHERE id = %s AND is_deleted = FALSE
                 """, (chatroom_id,))
                 
                 result = cursor.fetchone()
@@ -119,7 +119,7 @@ class ChatStorage:
                 
                 # 채팅 히스토리 조회
                 cursor.execute("""
-                    SELECT chat_id, chatroom_id, user_id, user_message, 
+                    SELECT id, chatroom_id, user_id, user_message, 
                            bot_response, chat_time, response_time
                     FROM chat_histories 
                     WHERE chatroom_id = %s 
@@ -131,7 +131,7 @@ class ChatStorage:
                 
                 for row in results:
                     history = ChatHistory(
-                        chat_id=row['chat_id'],
+                        chat_id=row['id'],  # id를 chat_id로 매핑
                         chatroom_id=row['chatroom_id'],
                         user_id=row['user_id'],
                         user_message=row['user_message'],
@@ -156,7 +156,7 @@ class ChatStorage:
             with db_connection.get_cursor() as cursor:
                 # 유저 권한 확인
                 cursor.execute("""
-                    SELECT user_id FROM active_chatrooms WHERE id = %s
+                    SELECT user_id FROM chatrooms WHERE id = %s AND is_deleted = FALSE
                 """, (chatroom_id,))
                 
                 result = cursor.fetchone()
@@ -166,7 +166,7 @@ class ChatStorage:
                 # Soft delete - 채팅방만 삭제 표시, 연관 데이터는 보존
                 cursor.execute("""
                     UPDATE chatrooms 
-                    SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP 
+                    SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """, (chatroom_id,))
                 
@@ -179,17 +179,17 @@ class ChatStorage:
     def add_message(self, chatroom_id: int, user_id: str, content: str, message_type: str, data_type: str) -> Message:
         """메시지 추가"""
         try:
-            message_id = str(uuid.uuid4())
+            message_uuid = str(uuid.uuid4())
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO messages (id, chatroom_id, user_id, content, message_type, data_type, timestamp)
+                    INSERT INTO messages (message_uuid, chatroom_id, user_id, content, message_type, data_type, timestamp)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id, chatroom_id, user_id, content, message_type, data_type, timestamp
-                """, (message_id, chatroom_id, user_id, content, message_type, data_type, datetime.now()))
+                    RETURNING id, message_uuid, chatroom_id, user_id, content, message_type, data_type, timestamp
+                """, (message_uuid, chatroom_id, user_id, content, message_type, data_type, datetime.now()))
                 
                 result = cursor.fetchone()
                 message = Message(
-                    id=result['id'],
+                    id=result['message_uuid'],  # UUID를 id로 사용
                     chatroom_id=result['chatroom_id'],
                     user_id=result['user_id'],
                     content=result['content'],
@@ -197,7 +197,7 @@ class ChatStorage:
                     timestamp=result['timestamp'],
                     data_type=result['data_type']
                 )
-                logger.info(f"Added message {message_id} to chatroom {chatroom_id}")
+                logger.info(f"Added message {message_uuid} to chatroom {chatroom_id}")
                 return message
         except Exception as e:
             logger.error(f"Failed to add message: {e}")
@@ -214,12 +214,12 @@ class ChatStorage:
                 cursor.execute("""
                     INSERT INTO chat_histories (chatroom_id, user_id, user_message, bot_response, chat_time, response_time)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                    RETURNING chat_id, chatroom_id, user_id, user_message, bot_response, chat_time, response_time
+                    RETURNING id, chatroom_id, user_id, user_message, bot_response, chat_time, response_time
                 """, (chatroom_id, user_id, user_message, bot_response, chat_time, bot_response_time))
                 
                 result = cursor.fetchone()
                 history = ChatHistory(
-                    chat_id=result['chat_id'],
+                    chat_id=result['id'],  # id를 chat_id로 매핑
                     chatroom_id=result['chatroom_id'],
                     user_id=result['user_id'],
                     user_message=result['user_message'],
@@ -242,14 +242,14 @@ class ChatStorage:
                     UPDATE chat_histories 
                     SET user_message = %s, bot_response = %s, 
                         chat_time = CURRENT_TIMESTAMP, response_time = CURRENT_TIMESTAMP
-                    WHERE chat_id = %s AND chatroom_id = %s AND user_id = %s
-                    RETURNING chat_id, chatroom_id, user_id, user_message, bot_response, chat_time, response_time
+                    WHERE id = %s AND chatroom_id = %s AND user_id = %s
+                    RETURNING id, chatroom_id, user_id, user_message, bot_response, chat_time, response_time
                 """, (user_message, bot_response, chat_id, chatroom_id, user_id))
                 
                 result = cursor.fetchone()
                 if result:
                     history = ChatHistory(
-                        chat_id=result['chat_id'],
+                        chat_id=result['id'],  # id를 chat_id로 매핑
                         chatroom_id=result['chatroom_id'],
                         user_id=result['user_id'],
                         user_message=result['user_message'],
@@ -271,7 +271,7 @@ class ChatStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    SELECT id, chatroom_id, user_id, content, message_type, data_type, timestamp
+                    SELECT id, message_uuid, chatroom_id, user_id, content, message_type, data_type, timestamp
                     FROM messages 
                     WHERE chatroom_id = %s 
                     ORDER BY timestamp ASC
@@ -282,7 +282,7 @@ class ChatStorage:
                 
                 for row in results:
                     message = Message(
-                        id=row['id'],
+                        id=row['message_uuid'],  # UUID를 id로 사용
                         chatroom_id=row['chatroom_id'],
                         user_id=row['user_id'],
                         content=row['content'],
@@ -300,24 +300,24 @@ class ChatStorage:
     def add_response(self, message_id: str, chatroom_id: int, user_id: str, content: Dict[str, Any]) -> BotResponse:
         """봇 응답 추가"""
         try:
-            response_id = str(uuid.uuid4())
+            response_uuid = str(uuid.uuid4())
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO bot_responses (id, message_id, chatroom_id, user_id, content, timestamp)
+                    INSERT INTO bot_responses (response_uuid, message_uuid, chatroom_id, user_id, content, timestamp)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                    RETURNING id, message_id, chatroom_id, user_id, content, timestamp
-                """, (response_id, message_id, chatroom_id, user_id, json.dumps(content), datetime.now()))
+                    RETURNING id, response_uuid, message_uuid, chatroom_id, user_id, content, timestamp
+                """, (response_uuid, message_id, chatroom_id, user_id, json.dumps(content), datetime.now()))
                 
                 result = cursor.fetchone()
                 response = BotResponse(
-                    id=result['id'],
-                    message_id=result['message_id'],
+                    id=result['response_uuid'],  # UUID를 id로 사용
+                    message_id=result['message_uuid'],
                     chatroom_id=result['chatroom_id'],
                     user_id=result['user_id'],
                     content=json.loads(result['content']),
                     timestamp=result['timestamp']
                 )
-                logger.info(f"Added bot response {response_id} to chatroom {chatroom_id}")
+                logger.info(f"Added bot response {response_uuid} to chatroom {chatroom_id}")
                 return response
         except Exception as e:
             logger.error(f"Failed to add bot response: {e}")
@@ -328,7 +328,7 @@ class ChatStorage:
         try:
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    SELECT id, message_id, chatroom_id, user_id, content, timestamp
+                    SELECT id, response_uuid, message_uuid, chatroom_id, user_id, content, timestamp
                     FROM bot_responses 
                     WHERE chatroom_id = %s 
                     ORDER BY timestamp ASC
@@ -339,8 +339,8 @@ class ChatStorage:
                 
                 for row in results:
                     response = BotResponse(
-                        id=row['id'],
-                        message_id=row['message_id'],
+                        id=row['response_uuid'],  # UUID를 id로 사용
+                        message_id=row['message_uuid'],
                         chatroom_id=row['chatroom_id'],
                         user_id=row['user_id'],
                         content=json.loads(row['content']),
@@ -359,7 +359,7 @@ class ChatStorage:
             with db_connection.get_cursor() as cursor:
                 # 유저 권한 확인
                 cursor.execute("""
-                    SELECT user_id FROM active_chatrooms WHERE id = %s
+                    SELECT user_id FROM chatrooms WHERE id = %s AND is_deleted = FALSE
                 """, (chatroom_id,))
                 
                 result = cursor.fetchone()

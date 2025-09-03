@@ -93,7 +93,7 @@ class DataPreservation:
                         c.deleted_at,
                         COUNT(DISTINCT m.id) as message_count,
                         COUNT(DISTINCT br.id) as response_count,
-                        COUNT(DISTINCT ch.chat_id) as history_count
+                        COUNT(DISTINCT ch.id) as history_count
                     FROM chatrooms c
                     LEFT JOIN messages m ON c.id = m.chatroom_id
                     LEFT JOIN bot_responses br ON c.id = br.chatroom_id

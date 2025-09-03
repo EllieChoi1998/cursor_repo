@@ -31,8 +31,8 @@ class UserStorage:
             
             with db_connection.get_cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO user_storage (user_id, session_id, user_data, source, expires_at)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO user_storage (user_id, session_id, user_data, source, expires_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                     RETURNING id, user_id, session_id, user_data, source, created_at, expires_at
                 """, (user_id, session_id, json.dumps(user_data), source, expires_at))
                 
