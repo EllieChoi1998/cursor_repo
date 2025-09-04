@@ -8,6 +8,7 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
 import json
+from app.repositories.conversation_session import ConversationSessionRepo
 
 class ConversationState(Enum):
     INITIAL = "initial"  # 최초 질의 상태
@@ -25,7 +26,7 @@ class SessionContext:
     modification_attempts: int = 0  # 수정 시도 횟수 (무한루프 방지)
 
 class AIBackendLogic:
-    def __init__(self):
+    def __init__(self, repo: Optional[ConversationSessionRepo] = None):
         # 연속 실행 가능 모듈 매핑
         self.continuation_modules = {
             "lot_start": ["lot_point"],
@@ -34,32 +35,41 @@ class AIBackendLogic:
             "lot_hold_pe_confirm_module": ["lot_hold", "pe_confirm"]  # 분리 가능
         }
         
-        # 세션별 컨텍스트 저장 (실제로는 Redis나 DB에 저장)
-        self.sessions = {}
+        # 대화 세션 저장소 (PostgreSQL)
+        self.repo = repo or ConversationSessionRepo()
 
-    def process_user_message(self, user_id: str, message: str) -> Dict[str, Any]:
+    def process_user_message(self, chatroom_id: int, user_id: str, message: str) -> Dict[str, Any]:
         """메인 메시지 처리 로직"""
         
-        # 세션 컨텍스트 가져오기 또는 생성
-        if user_id not in self.sessions:
-            self.sessions[user_id] = SessionContext(ConversationState.INITIAL)
+        # 세션 컨텍스트 가져오기 또는 생성 (SQL)
+        context, version = self.repo.get_or_create(chatroom_id, user_id)
         
-        context = self.sessions[user_id]
-        
-        # 상태별 처리 분기
+        # 상태별 처리 분기 및 응답 생성
         if context.state == ConversationState.INITIAL:
-            return self._handle_initial_query(user_id, message, context)
+            response = self._handle_initial_query(user_id, message, context)
         
         elif context.state == ConversationState.PARAMETER_CONFIRMATION:
-            return self._handle_parameter_confirmation(user_id, message, context)
+            response = self._handle_parameter_confirmation(user_id, message, context)
         
         elif context.state == ConversationState.PARAMETER_MODIFICATION:
-            return self._handle_parameter_modification(user_id, message, context)
+            response = self._handle_parameter_modification(user_id, message, context)
         
         else:
             # 예외 상황 - 초기 상태로 리셋
             context.state = ConversationState.INITIAL
-            return self._handle_initial_query(user_id, message, context)
+            response = self._handle_initial_query(user_id, message, context)
+
+        # 상태 저장 (낙관적 락)
+        try:
+            self.repo.save(chatroom_id, user_id, context, expected_version=version)
+        except Exception as e:
+            # 동시성 충돌 등: 응답은 내려주되 경고 포함
+            if isinstance(response, dict):
+                response.setdefault("warnings", []).append("상태 저장 충돌이 발생했습니다. 다시 시도해 주세요.")
+            else:
+                response = {"response": str(response), "warnings": ["상태 저장 충돌이 발생했습니다. 다시 시도해 주세요."]}
+        
+        return response
 
     def _handle_initial_query(self, user_id: str, message: str, context: SessionContext) -> Dict[str, Any]:
         """최초 질의 처리 (기존 로직)"""
@@ -259,71 +269,52 @@ class AIBackendLogic:
 # 사용 예시와 시나리오
 if __name__ == "__main__":
     backend = AIBackendLogic()
-    
     print("=== 시나리오 1: 신규 모듈 실행 ===")
     user_id = "test_user"
+    chatroom_id = 1
     
     # 1. 최초 질의
-    result1 = backend.process_user_message(user_id, "lot_start 모듈로 A라인 데이터 분석해줘")
+    result1 = backend.process_user_message(chatroom_id, user_id, "lot_start 모듈로 A라인 데이터 분석해줘")
     print("1단계:", result1)
     
     # 2. 파라미터 수정 요청
-    result2 = backend.process_user_message(user_id, "아니야, A라인이 아니라 B라인으로 해줘")
+    result2 = backend.process_user_message(chatroom_id, user_id, "아니야, A라인이 아니라 B라인으로 해줘")
     print("2단계:", result2)
     
     # 3. 최종 승인
-    result3 = backend.process_user_message(user_id, "네, 맞습니다. 실행해주세요")
+    result3 = backend.process_user_message(chatroom_id, user_id, "네, 맞습니다. 실행해주세요")
     print("3단계:", result3)
     
     print("\n=== 시나리오 2: 연속성 모듈 실행 ===")
-    
     # lot_start 실행 완료 후 연속 모듈 요청
-    result4 = backend.process_user_message(user_id, "여기서 포인트 분석도 해줘")  # lot_point 모듈
+    result4 = backend.process_user_message(chatroom_id, user_id, "여기서 포인트 분석도 해줘")  # lot_point 모듈
     print("4단계:", result4)
-    
     # 연속성 모듈도 파라미터 확인
-    result5 = backend.process_user_message(user_id, "응, 실행해줘")
+    result5 = backend.process_user_message(chatroom_id, user_id, "응, 실행해줘")
     print("5단계:", result5)
     
     print("\n=== 시나리오 3: 부분 실행 ===")
-    
-    # lot_hold_pe_confirm_module 실행 완료 후
-    backend.sessions[user_id].last_executed_module = "lot_hold_pe_confirm_module"
-    
-    result6 = backend.process_user_message(user_id, "여기서 PE CONFIRM MODULE은 제외해줘")
+    # lot_hold_pe_confirm_module 실행 완료 후 상태 주입
+    ctx, ver = backend.repo.get_or_create(chatroom_id, user_id)
+    ctx.last_executed_module = "lot_hold_pe_confirm_module"
+    backend.repo.save(chatroom_id, user_id, ctx, expected_version=ver)
+    result6 = backend.process_user_message(chatroom_id, user_id, "여기서 PE CONFIRM MODULE은 제외해줘")
     print("6단계:", result6)
     
     print("\n=== 시나리오 4: 파라미터 확인 중 새로운 질의 인터럽트 ===")
-    
-    # lot_start 파라미터 확인 대기 중
-    backend.sessions[user_id].state = ConversationState.PARAMETER_CONFIRMATION
-    backend.sessions[user_id].current_module = "lot_start"
-    backend.sessions[user_id].extracted_params = {"line": "A라인", "period": "1주일"}
-    
-    # 파라미터 확인 중 완전히 다른 새로운 질의
-    result8 = backend.process_user_message(user_id, "sameness 모듈로 D라인 분석해줘")
+    ctx, ver = backend.repo.get_or_create(chatroom_id, user_id)
+    ctx.state = ConversationState.PARAMETER_CONFIRMATION
+    ctx.current_module = "lot_start"
+    ctx.extracted_params = {"line": "A라인", "period": "1주일"}
+    backend.repo.save(chatroom_id, user_id, ctx, expected_version=ver)
+    result8 = backend.process_user_message(chatroom_id, user_id, "sameness 모듈로 D라인 분석해줘")
     print("8단계 (새로운 질의):", result8)
     
     print("\n=== 시나리오 5: 파라미터 확인 중 연속성 질의 인터럽트 ===")
-    
-    # 다시 lot_start 파라미터 확인 대기 상태로 설정
-    backend.sessions[user_id].state = ConversationState.PARAMETER_CONFIRMATION
-    backend.sessions[user_id].current_module = "lot_start"
-    backend.sessions[user_id].last_executed_module = "lot_start"  # 이전 실행 기록
-    
-    # 파라미터 확인 중 연속성 질의
-    result9 = backend.process_user_message(user_id, "여기서 포인트 분석해줘")
+    ctx, ver = backend.repo.get_or_create(chatroom_id, user_id)
+    ctx.state = ConversationState.PARAMETER_CONFIRMATION
+    ctx.current_module = "lot_start"
+    ctx.last_executed_module = "lot_start"
+    backend.repo.save(chatroom_id, user_id, ctx, expected_version=ver)
+    result9 = backend.process_user_message(chatroom_id, user_id, "여기서 포인트 분석해줘")
     print("9단계 (연속성 질의):", result9)
-
-
-    def _call_llm_for_interruption_analysis(self, message, context):
-    prompt = f"""
-    현재 상황: '{context.current_module}' 모듈 파라미터 확인 대기 중
-    현재 파라미터: {context.extracted_params}
-    사용자 메시지: "{message}"
-    
-    이 메시지의 의도를 분류하세요:
-    1. NEW_QUERY: 새로운 모듈 실행 요청
-    2. CONTINUATION_QUERY: 연속 작업 요청
-    3. RESPONSE_TO_CONFIRMATION: 현재 파라미터에 대한 응답
-    """

@@ -76,3 +76,17 @@ CREATE TABLE IF NOT EXISTS service_user_storage (
 INSERT INTO service_users (user_id, username, email, full_name) VALUES 
 ('developer', 'developer', 'developer@example.com', 'Developer User')
 ON CONFLICT (user_id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS service_conversation_sessions (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    chatroom_id INTEGER NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
+    state VARCHAR(64) NOT NULL,
+    current_module VARCHAR(128),
+    extracted_params JSONB,
+    last_executed_module VARCHAR(128),
+    modification_attempts INT NOT NULL DEFAULT 0,
+    version INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
