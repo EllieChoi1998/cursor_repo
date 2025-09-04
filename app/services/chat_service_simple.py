@@ -12,6 +12,7 @@ from app.models import BotResponse
 from app.repositories import ChatStorage
 from app.services.data_generators import DataGenerators
 from app.services.query_analyzer import QueryAnalyzer
+from app.services.conversation_manager import ConversationManager
 
 # Import plotly spec generator
 try:
@@ -28,6 +29,7 @@ class ChatService:
         self.chat_storage = chat_storage
         self.data_generators = DataGenerators()
         self.query_analyzer = QueryAnalyzer()
+        self.conversation_manager = ConversationManager()
 
     async def process_chat_request(self, choice: str, message: str, chatroom_id: int, user_id: str):
         """채팅 요청 처리 (user_id 파라미터 추가)"""
@@ -37,6 +39,13 @@ class ChatService:
             yield f"data: {json.dumps({'msg': '존재하지 않는 채팅방입니다.'})}\n\n"
             return
         
+        # 먼저 대화 상태 전이/확인 응답을 처리
+        convo_response = self.conversation_manager.handle(chatroom_id, user_id, message)
+        if convo_response.get('requires_confirmation') or convo_response.get('modification_mode'):
+            yield f"data: {json.dumps({'msg': convo_response['response'], 'conversation': convo_response})}\n\n"
+            return
+        # 실행 준비 신호면 이후 데이터 처리로 진입
+
         # choice 파라미터를 우선적으로 고려하여 질의 분석
         detected_type, command_type, error_msg = self.query_analyzer.analyze_query_with_choice(choice, message)
         
