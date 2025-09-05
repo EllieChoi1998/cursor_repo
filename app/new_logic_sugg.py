@@ -1,77 +1,11 @@
 """
-AI 서비스 백엔드 - 파라미터 수정 로직 확장 방안
-
-기존 구조를 최대한 유지하면서 파라미터 수정 대화를 추가하는 방법
+이 파일은 과거 제안 로직을 담고 있었습니다. 현재는
+상태 모델은 app/models/conversation_models.py,
+영속화는 app/repositories/conversation_session.py,
+상태 전이는 app/services/conversation_manager.py 에 통합되었습니다.
 """
 
-from enum import Enum
-from dataclasses import dataclass
-from typing import Dict, Any, Optional
-import json
-from app.repositories.conversation_session import ConversationSessionRepo
-
-class ConversationState(Enum):
-    INITIAL = "initial"  # 최초 질의 상태
-    PARAMETER_CONFIRMATION = "parameter_confirmation"  # 파라미터 확인 상태
-    PARAMETER_MODIFICATION = "parameter_modification"  # 파라미터 수정 상태
-    EXECUTION_READY = "execution_ready"  # 실행 준비 완료
-
-@dataclass
-class SessionContext:
-    """세션별 대화 상태 관리"""
-    state: ConversationState
-    current_module: Optional[str] = None
-    extracted_params: Optional[Dict[str, Any]] = None
-    last_executed_module: Optional[str] = None
-    modification_attempts: int = 0  # 수정 시도 횟수 (무한루프 방지)
-
-class AIBackendLogic:
-    def __init__(self, repo: Optional[ConversationSessionRepo] = None):
-        # 연속 실행 가능 모듈 매핑
-        self.continuation_modules = {
-            "lot_start": ["lot_point"],
-            "sameness": ["sameness_to_trend"],
-            "commonality": ["commonality_to_trend"],
-            "lot_hold_pe_confirm_module": ["lot_hold", "pe_confirm"]  # 분리 가능
-        }
-        
-        # 대화 세션 저장소 (PostgreSQL)
-        self.repo = repo or ConversationSessionRepo()
-
-    def process_user_message(self, chatroom_id: int, user_id: str, message: str) -> Dict[str, Any]:
-        """메인 메시지 처리 로직"""
-        
-        # 세션 컨텍스트 가져오기 또는 생성 (SQL)
-        context, version = self.repo.get_or_create(chatroom_id, user_id)
-        
-        # 상태별 처리 분기 및 응답 생성
-        if context.state == ConversationState.INITIAL:
-            response = self._handle_initial_query(user_id, message, context)
-        
-        elif context.state == ConversationState.PARAMETER_CONFIRMATION:
-            response = self._handle_parameter_confirmation(user_id, message, context)
-        
-        elif context.state == ConversationState.PARAMETER_MODIFICATION:
-            response = self._handle_parameter_modification(user_id, message, context)
-        
-        else:
-            # 예외 상황 - 초기 상태로 리셋
-            context.state = ConversationState.INITIAL
-            response = self._handle_initial_query(user_id, message, context)
-
-        # 상태 저장 (낙관적 락)
-        try:
-            self.repo.save(chatroom_id, user_id, context, expected_version=version)
-        except Exception as e:
-            # 동시성 충돌 등: 응답은 내려주되 경고 포함
-            if isinstance(response, dict):
-                response.setdefault("warnings", []).append("상태 저장 충돌이 발생했습니다. 다시 시도해 주세요.")
-            else:
-                response = {"response": str(response), "warnings": ["상태 저장 충돌이 발생했습니다. 다시 시도해 주세요."]}
-        
-        return response
-
-    def _handle_initial_query(self, user_id: str, message: str, context: SessionContext) -> Dict[str, Any]:
+    def _handle_initial_query(self, user_id: str, message: str, context):
         """최초 질의 처리 (기존 로직)"""
         
         # 1단계: 지시사 체크 (기존 로직)
@@ -107,7 +41,7 @@ class AIBackendLogic:
             # 지시사가 있는 경우 기존 로직
             return self._handle_continuation_or_modification(user_id, message, context)
 
-    def _handle_parameter_confirmation(self, user_id: str, message: str, context: SessionContext) -> Dict[str, Any]:
+    def _handle_parameter_confirmation(self, user_id: str, message: str, context):
         """파라미터 확인 단계 처리 - 여기가 핵심!"""
         
         # 사용자 응답 분석
@@ -152,7 +86,7 @@ class AIBackendLogic:
                 "requires_confirmation": True
             }
 
-    def _handle_parameter_modification(self, user_id: str, message: str, context: SessionContext) -> Dict[str, Any]:
+    def _handle_parameter_modification(self, user_id: str, message: str, context):
         """파라미터 수정 단계 처리"""
         
         try:

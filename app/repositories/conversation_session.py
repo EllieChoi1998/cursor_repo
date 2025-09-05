@@ -7,7 +7,7 @@ import json
 import logging
 
 from app.database import db_connection
-from app.new_logic_sugg import SessionContext, ConversationState
+from app.models.conversation_models import SessionContext, ConversationState
 
 
 logger = logging.getLogger(__name__)
