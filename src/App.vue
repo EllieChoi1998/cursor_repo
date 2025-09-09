@@ -197,7 +197,7 @@
                 <div class="message-input-group">
                   <textarea 
                     v-model="currentMessage" 
-                    @keydown.enter.prevent="handleEnterKey"
+                    @keydown="handleKeyDown"
                     placeholder="Type your message here... (Enter for new line, Shift+Enter to send)"
                     class="chat-input"
                     :disabled="isLoading"
@@ -1734,14 +1734,17 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
-    // 엔터키 처리 함수
-    const handleEnterKey = (event) => {
-      if (event.shiftKey) {
-        // Shift + Enter: 메시지 전송
-        sendMessage()
-      } else {
-        // Enter: 줄바꿈 (기본 동작)
-        // preventDefault()가 이미 적용되어 있어서 자동으로 줄바꿈됨
+    // 키보드 입력 처리 함수
+    const handleKeyDown = (event) => {
+      if (event.key === 'Enter') {
+        if (event.shiftKey) {
+          // Shift + Enter: 메시지 전송
+          event.preventDefault()
+          sendMessage()
+        } else {
+          // Enter: 줄바꿈 (기본 동작 허용)
+          // preventDefault()를 호출하지 않아서 자동으로 줄바꿈됨
+        }
       }
     }
 
