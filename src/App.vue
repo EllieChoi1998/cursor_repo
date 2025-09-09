@@ -95,7 +95,7 @@
                     </div>
                     <!-- 일반 표시 모드 -->
                     <div v-else class="message-display">
-                      <div class="message-text" v-html="message.text"></div>
+                      <div class="message-text" v-text="message.text"></div>
                       <div class="message-actions">
                         <button 
                           @click="startEdit(index)"
@@ -146,7 +146,7 @@
                       </div>
                     </div>
                     <!-- 일반 텍스트 메시지 -->
-                    <div v-else class="message-text" v-html="message.text"></div>
+                    <div v-else class="message-text" v-text="message.text"></div>
                   </div>
                   
                   <div class="message-time">
