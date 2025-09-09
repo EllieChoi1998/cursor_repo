@@ -198,8 +198,7 @@
                   <textarea 
                     v-model="currentMessage" 
                     @keydown="handleKeyDown"
-                    @keydown.alt.enter="handleAltEnter"
-                    placeholder="Type your message here... (Enter for new line, Alt+Enter to send)"
+                    placeholder="Type your message here... (Enter for new line, Tab to send)"
                     class="chat-input"
                     :disabled="isLoading"
                     rows="1"
@@ -1735,27 +1734,20 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
-    // Alt+Enter 전용 처리 함수
-    const handleAltEnter = (event) => {
-      console.log('🔍 Alt+Enter detected via @keydown.alt.enter')
-      event.preventDefault()
-      event.stopPropagation()
-      sendMessage()
-    }
-
-    // 일반 키보드 입력 처리 함수
+    // 키보드 입력 처리 함수
     const handleKeyDown = (event) => {
-      console.log('🔍 Key pressed:', event.key, 'Alt:', event.altKey, 'KeyCode:', event.keyCode, 'Code:', event.code)
+      console.log('🔍 Key pressed:', event.key, 'KeyCode:', event.keyCode, 'Code:', event.code)
       
-      if (event.key === 'Enter' || event.keyCode === 13) {
-        if (event.altKey) {
-          // Alt + Enter: 메시지 전송 (이미 handleAltEnter에서 처리됨)
-          console.log('🔍 Alt+Enter detected in handleKeyDown (should be handled by handleAltEnter)')
-        } else {
-          // Enter: 줄바꿈 (기본 동작 허용)
-          console.log('🔍 Enter detected, allowing new line')
-          // preventDefault()를 호출하지 않아서 자동으로 줄바꿈됨
-        }
+      if (event.key === 'Tab' || event.keyCode === 9) {
+        // Tab: 메시지 전송
+        console.log('🔍 Tab detected, sending message')
+        event.preventDefault()
+        event.stopPropagation()
+        sendMessage()
+      } else if (event.key === 'Enter' || event.keyCode === 13) {
+        // Enter: 줄바꿈 (기본 동작 허용)
+        console.log('🔍 Enter detected, allowing new line')
+        // preventDefault()를 호출하지 않아서 자동으로 줄바꿈됨
       }
     }
 
