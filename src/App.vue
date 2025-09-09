@@ -1736,13 +1736,18 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // 키보드 입력 처리 함수
     const handleKeyDown = (event) => {
+      console.log('🔍 Key pressed:', event.key, 'Shift:', event.shiftKey)
+      
       if (event.key === 'Enter') {
         if (event.shiftKey) {
           // Shift + Enter: 메시지 전송
+          console.log('🔍 Shift+Enter detected, sending message')
           event.preventDefault()
+          event.stopPropagation()
           sendMessage()
         } else {
           // Enter: 줄바꿈 (기본 동작 허용)
+          console.log('🔍 Enter detected, allowing new line')
           // preventDefault()를 호출하지 않아서 자동으로 줄바꿈됨
         }
       }
