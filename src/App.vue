@@ -198,6 +198,7 @@
                   <textarea 
                     v-model="currentMessage" 
                     @keydown="handleKeyDown"
+                    @keydown.ctrl.enter="handleCtrlEnter"
                     placeholder="Type your message here... (Enter for new line, Ctrl+Enter to send)"
                     class="chat-input"
                     :disabled="isLoading"
@@ -1734,18 +1735,22 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
-    // 키보드 입력 처리 함수
+    // Ctrl+Enter 전용 처리 함수
+    const handleCtrlEnter = (event) => {
+      console.log('🔍 Ctrl+Enter detected via @keydown.ctrl.enter')
+      event.preventDefault()
+      event.stopPropagation()
+      sendMessage()
+    }
+
+    // 일반 키보드 입력 처리 함수
     const handleKeyDown = (event) => {
       console.log('🔍 Key pressed:', event.key, 'Ctrl:', event.ctrlKey, 'KeyCode:', event.keyCode, 'Code:', event.code)
       
       if (event.key === 'Enter' || event.keyCode === 13) {
         if (event.ctrlKey) {
-          // Ctrl + Enter: 메시지 전송
-          console.log('🔍 Ctrl+Enter detected, sending message')
-          event.preventDefault()
-          event.stopPropagation()
-          sendMessage()
-          return false
+          // Ctrl + Enter: 메시지 전송 (이미 handleCtrlEnter에서 처리됨)
+          console.log('🔍 Ctrl+Enter detected in handleKeyDown (should be handled by handleCtrlEnter)')
         } else {
           // Enter: 줄바꿈 (기본 동작 허용)
           console.log('🔍 Enter detected, allowing new line')
