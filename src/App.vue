@@ -198,8 +198,7 @@
                   <textarea 
                     v-model="currentMessage" 
                     @keydown="handleKeyDown"
-                    @keyup="handleKeyUp"
-                    placeholder="Type your message here... (Enter for new line, Shift+Enter to send)"
+                    placeholder="Type your message here... (Enter for new line, Ctrl+Enter to send)"
                     class="chat-input"
                     :disabled="isLoading"
                     rows="1"
@@ -1737,33 +1736,20 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // 키보드 입력 처리 함수
     const handleKeyDown = (event) => {
-      console.log('🔍 Key pressed:', event.key, 'Shift:', event.shiftKey, 'KeyCode:', event.keyCode, 'Code:', event.code)
+      console.log('🔍 Key pressed:', event.key, 'Ctrl:', event.ctrlKey, 'KeyCode:', event.keyCode, 'Code:', event.code)
       
       if (event.key === 'Enter' || event.keyCode === 13) {
-        if (event.shiftKey) {
-          // Shift + Enter: 메시지 전송
-          console.log('🔍 Shift+Enter detected, sending message')
+        if (event.ctrlKey) {
+          // Ctrl + Enter: 메시지 전송
+          console.log('🔍 Ctrl+Enter detected, sending message')
           event.preventDefault()
           event.stopPropagation()
+          sendMessage()
           return false
         } else {
           // Enter: 줄바꿈 (기본 동작 허용)
           console.log('🔍 Enter detected, allowing new line')
           // preventDefault()를 호출하지 않아서 자동으로 줄바꿈됨
-        }
-      }
-    }
-
-    // 키보드 입력 처리 함수 (keyup 이벤트 추가)
-    const handleKeyUp = (event) => {
-      if (event.key === 'Enter' || event.keyCode === 13) {
-        if (event.shiftKey) {
-          // Shift + Enter: 메시지 전송
-          console.log('🔍 Shift+Enter keyup detected, sending message')
-          event.preventDefault()
-          event.stopPropagation()
-          sendMessage()
-          return false
         }
       }
     }
