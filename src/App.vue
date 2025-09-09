@@ -195,14 +195,15 @@
                   </div>
                 </div>
                 <div class="message-input-group">
-                  <input 
+                  <textarea 
                     v-model="currentMessage" 
-                    @keyup.enter="sendMessage"
-                    type="text" 
-                    placeholder="Type your message here..."
+                    @keydown.enter.prevent="handleEnterKey"
+                    placeholder="Type your message here... (Enter for new line, Shift+Enter to send)"
                     class="chat-input"
                     :disabled="isLoading"
-                  >
+                    rows="1"
+                    ref="messageInput"
+                  ></textarea>
                   <button 
                     @click="sendMessage" 
                     class="send-button"
@@ -550,7 +551,7 @@
 </template>
 
 <script>
-import { defineComponent, ref, computed, nextTick, onMounted } from 'vue'
+import { defineComponent, ref, computed, nextTick, onMounted, watch } from 'vue'
 import PCMTrendChart from './components/PCMTrendChart.vue'
 import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
 import PCMToTrend from './components/PCMToTrend.vue'
@@ -604,6 +605,7 @@ export default defineComponent({
     const selectedDataType = ref('pcm') // 기본값은 PCM
     const isLoading = ref(false)
     const messagesContainer = ref(null)
+    const messageInput = ref(null)
     const isDataLoading = ref(false)
     
     const chartHeight = ref(600)
@@ -1732,6 +1734,26 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
+    // 엔터키 처리 함수
+    const handleEnterKey = (event) => {
+      if (event.shiftKey) {
+        // Shift + Enter: 메시지 전송
+        sendMessage()
+      } else {
+        // Enter: 줄바꿈 (기본 동작)
+        // preventDefault()가 이미 적용되어 있어서 자동으로 줄바꿈됨
+      }
+    }
+
+    // textarea 높이 자동 조정 함수
+    const adjustTextareaHeight = () => {
+      const textarea = messageInput.value
+      if (textarea) {
+        textarea.style.height = 'auto'
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
+      }
+    }
+
     const sendMessage = async () => {
       const message = currentMessage.value.trim()
       if (!message || isLoading.value) return
@@ -1759,6 +1781,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       addMessage('user', message, true)
       chatInputs.value[activeChatId.value] = ''
       isLoading.value = true
+      
+      // textarea 높이 초기화
+      nextTick(() => {
+        adjustTextareaHeight()
+      })
       
       // 채팅방 정보 업데이트
       updateChatRoomInfo(message)
@@ -2365,6 +2392,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
+    // currentMessage 변경 시 textarea 높이 조정
+    watch(currentMessage, () => {
+      nextTick(() => {
+        adjustTextareaHeight()
+      })
+    })
+
     onMounted(async () => {
       // 인증 상태 확인
       checkAuthentication()
@@ -2867,6 +2901,11 @@ body {
   font-size: 0.9rem;
   outline: none;
   transition: border-color 0.2s ease;
+  resize: none;
+  min-height: 45px;
+  max-height: 120px;
+  font-family: inherit;
+  line-height: 1.4;
 }
 
 .chat-input:focus {
