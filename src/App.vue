@@ -1291,14 +1291,12 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           if (data.progress_message) {
             // 진행 상황 메시지 처리 - 같은 메시지 업데이트
             if (currentBotMessageIndex.value === -1) {
-              // 첫 번째 진행 메시지 - 새 메시지 추가
-              addMessage('bot', '')  // 빈 메시지로 시작
+              // 첫 번째 진행 메시지 - progress_message로 직접 추가
+              addMessage('bot', data.progress_message)
               const messages = chatMessages.value[activeChatId.value]
               currentBotMessageIndex.value = messages.length - 1
-              // 타이핑 애니메이션으로 텍스트 표시
-              typeText(currentBotMessageIndex.value, data.progress_message)
             } else {
-              // 기존 메시지 업데이트 (타이핑 애니메이션 포함)
+              // 기존 메시지 업데이트
               updateBotMessage(currentBotMessageIndex.value, data.progress_message)
             }
           } else if (data.error) {
@@ -1316,14 +1314,12 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             // 백엔드에서 전송한 성공 메시지가 있으면 표시
             if (data.response.success_message) {
               if (currentBotMessageIndex.value === -1) {
-                // 첫 번째 메시지인 경우 새로 추가
-                addMessage('bot', '')  // 빈 메시지로 시작
+                // 첫 번째 메시지인 경우 success_message로 직접 추가
+                addMessage('bot', data.response.success_message)
                 const messages = chatMessages.value[activeChatId.value]
                 currentBotMessageIndex.value = messages.length - 1
-                // 타이핑 애니메이션으로 텍스트 표시
-                typeText(currentBotMessageIndex.value, data.response.success_message)
               } else {
-                // 기존 메시지 업데이트 (타이핑 애니메이션 포함)
+                // 기존 메시지 업데이트
                 updateBotMessage(currentBotMessageIndex.value, data.response.success_message)
               }
             }
