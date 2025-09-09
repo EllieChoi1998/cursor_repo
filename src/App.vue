@@ -2015,9 +2015,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                   const parsed = JSON.parse(conv.bot_response)
                   console.log('✅ Parsed response data:', parsed)
                   
-                  if (parsed.result) {
-                    console.log('🔍 Processing result:', parsed.result)
-                    // 실제 응답 데이터를 기반으로 구체적인 메시지 생성
+                  // success_message가 있으면 우선 사용
+                  if (parsed.success_message) {
+                    botResponseText = parsed.success_message
+                    console.log('✅ Using success_message from backend:', parsed.success_message)
+                  } else if (parsed.result) {
+                    console.log('🔍 Processing result (fallback):', parsed.result)
+                    // success_message가 없는 경우에만 기존 로직 사용
                     if (parsed.result === 'lot_start') {
                       botResponseText = `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
                     } else if (parsed.result === 'lot_point') {
@@ -2035,17 +2039,18 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                     } else {
                       botResponseText = `✅ ${parsed.result.toUpperCase()} 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
                     }
-                    responseData = parsed
-                    
-                    // 응답 데이터가 있으면 결과 생성 (real_data가 없어도 메타데이터는 저장)
-                    if (responseData) {
-                      const result = createResultFromResponseData(responseData, conv.user_message, conv.chat_id)
-                      if (result) {
-                        results.push(result)
-                      }
-                    }
                   } else {
-                    console.warn('⚠️ No result field in parsed response')
+                    console.warn('⚠️ No success_message or result field in parsed response')
+                  }
+                  
+                  responseData = parsed
+                  
+                  // 응답 데이터가 있으면 결과 생성 (real_data가 없어도 메타데이터는 저장)
+                  if (responseData) {
+                    const result = createResultFromResponseData(responseData, conv.user_message, conv.chat_id)
+                    if (result) {
+                      results.push(result)
+                    }
                   }
                 } catch (e) {
                   // JSON 파싱 실패시 원본 텍스트 사용
@@ -2138,9 +2143,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             const parsed = JSON.parse(conv.bot_response)
             console.log('✅ Parsed response data (refresh):', parsed)
             
-            if (parsed.result) {
-              console.log('🔍 Processing result (refresh):', parsed.result)
-              // 실제 응답 데이터를 기반으로 구체적인 메시지 생성
+            // success_message가 있으면 우선 사용
+            if (parsed.success_message) {
+              botResponseText = parsed.success_message
+              console.log('✅ Using success_message from backend (refresh):', parsed.success_message)
+            } else if (parsed.result) {
+              console.log('🔍 Processing result (refresh fallback):', parsed.result)
+              // success_message가 없는 경우에만 기존 로직 사용
               if (parsed.result === 'lot_start') {
                 botResponseText = `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${parsed.sql || 'N/A'}\n• Chat ID: ${conv.chat_id}`
               } else if (parsed.result === 'lot_point') {
@@ -2158,17 +2167,18 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               } else {
                 botResponseText = `✅ ${parsed.result.toUpperCase()} 분석이 완료되었습니다!\n• Chat ID: ${conv.chat_id}`
               }
-              responseData = parsed
-              
-              // 응답 데이터가 있으면 결과 생성 (real_data가 없어도 메타데이터는 저장)
-              if (responseData) {
-                const result = createResultFromResponseData(responseData, conv.user_message, conv.chat_id)
-                if (result) {
-                  results.push(result)
-                }
-              }
             } else {
-              console.warn('⚠️ No result field in parsed response (refresh)')
+              console.warn('⚠️ No success_message or result field in parsed response (refresh)')
+            }
+            
+            responseData = parsed
+            
+            // 응답 데이터가 있으면 결과 생성 (real_data가 없어도 메타데이터는 저장)
+            if (responseData) {
+              const result = createResultFromResponseData(responseData, conv.user_message, conv.chat_id)
+              if (result) {
+                results.push(result)
+              }
             }
           } catch (e) {
             // JSON 파싱 실패시 원본 텍스트 사용
