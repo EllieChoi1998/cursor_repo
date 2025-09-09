@@ -1748,6 +1748,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // Enter: 줄바꿈 (기본 동작 허용)
         console.log('🔍 Enter detected, allowing new line')
         // preventDefault()를 호출하지 않아서 자동으로 줄바꿈됨
+        
+        // 줄바꿈 후 높이 조정
+        nextTick(() => {
+          adjustTextareaHeight()
+        })
       }
     }
 
@@ -1755,8 +1760,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     const adjustTextareaHeight = () => {
       const textarea = messageInput.value
       if (textarea) {
+        // 높이를 auto로 설정하여 내용에 맞게 조정
         textarea.style.height = 'auto'
-        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
+        
+        // 스크롤 높이를 계산하여 최대 5줄 정도(약 120px)로 제한
+        const newHeight = Math.min(textarea.scrollHeight, 120)
+        textarea.style.height = newHeight + 'px'
+        
+        console.log('🔍 Textarea height adjusted:', newHeight + 'px')
       }
     }
 
@@ -2906,12 +2917,14 @@ body {
   border-radius: 25px;
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, height 0.1s ease;
   resize: none;
   min-height: 45px;
   max-height: 120px;
   font-family: inherit;
   line-height: 1.4;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .chat-input:focus {
