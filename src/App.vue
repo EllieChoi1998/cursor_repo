@@ -694,10 +694,27 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       
       // 새 채팅방 표시가 활성화되어 있으면 디자인적인 메시지 추가
       if (newChatroomDisplay.value[activeChatId.value]) {
+        const initialMessage = `현재 제공 가능한 기능들은 아래와 같습니다.\n
+          PCM (Process Control Monitor)
+          ① PCM Trend, Commonality, Sameness 분석
+          ② PCM Trend는 Tech/Device/Para 기준 Box Plot, Site Trend 가능
+          ③ Good, Bad Lot의 Commonality, Bad Lot의 Sameness 결과 및 특정 공정의 Trend
+          ④ PE Confirm Sheet이력 및 PCM Hold 이력 찾기
+          
+          Inline (Inline Analysis)
+          ① Inline Route/Oper Para Trend는 EQ, Device, Recipe 등 기준으로 Trend Display
+          ② PE Confirm Sheet이력 찾기
+          
+          불량 이력 검색
+          ① DB 서버에 Eng'r가 저장한 과거 불량 이력(메일, PPT 파일)을 검색
+          ② 검색된 내용에 대한 요약
+          ③ 검색된 내용에 파일 다운로드
+          → Eng'r가 저장하지 않은 불량 이력은 검색되지 않음`
+
         return [
           {
             type: 'system',
-            text: '새로운 채팅방',
+            text: initialMessage,
             timestamp: new Date(),
             isNewChatroom: true
           },
