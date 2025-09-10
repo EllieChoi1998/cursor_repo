@@ -1,7 +1,16 @@
 <template>
   <div class="pcm-trend-point-chart">
+    <!-- 데이터가 없는 경우 메시지 표시 -->
+    <div v-if="!hasRealData" class="no-data-message">
+      <div class="no-data-content">
+        <i class="no-data-icon">📊</i>
+        <h3>데이터가 없습니다</h3>
+        <p>백엔드에서 real_data를 받지 못했습니다.</p>
+      </div>
+    </div>
+    
     <!-- PARA별로 그룹화된 차트들 -->
-    <div v-if="paraTypes.length > 1" class="multi-para-charts">
+    <div v-else-if="paraTypes.length > 1" class="multi-para-charts">
       <div 
         v-for="(paraType, index) in paraTypes" 
         :key="paraType"
@@ -183,6 +192,14 @@ export default defineComponent({
       return []
     }
 
+    // real_data 존재 여부 확인
+    const hasRealData = computed(() => {
+      const data = getRealData()
+      const hasData = data && data.length > 0
+      console.log('PCMTrendPointChart - hasRealData:', hasData, '데이터 개수:', data ? data.length : 0)
+      return hasData
+    })
+
     // PARA 타입별로 데이터 그룹화
     const paraTypes = computed(() => {
       const data = getRealData()
@@ -326,6 +343,12 @@ export default defineComponent({
     const createCharts = async () => {
       console.log('PCMTrendPointChart - createCharts 시작')
       
+      // real_data가 없으면 차트 생성하지 않음
+      if (!hasRealData.value) {
+        console.log('PCMTrendPointChart: real_data가 없어서 차트 생성 중단')
+        return
+      }
+      
       const data = getRealData()
       if (!data || data.length === 0) {
         console.log('PCMTrendPointChart: 데이터가 없어서 차트 생성 중단')
@@ -385,6 +408,7 @@ export default defineComponent({
       chartContainer,
       chartRefs,
       paraTypes,
+      hasRealData,
       getRealData,
       getParaData,
       setChartRef
@@ -398,6 +422,40 @@ export default defineComponent({
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.no-data-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #dee2e6;
+}
+
+.no-data-content {
+  text-align: center;
+  color: #6c757d;
+}
+
+.no-data-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.no-data-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.no-data-content p {
+  margin: 0;
+  font-size: 16px;
+  color: #6c757d;
 }
 
 .multi-para-charts {
