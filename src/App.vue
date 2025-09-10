@@ -1309,7 +1309,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             // 진행 상황 메시지 처리 - 같은 메시지 업데이트
             if (currentBotMessageIndex.value === -1) {
               // 첫 번째 진행 메시지 - progress_message로 직접 추가
-              addMessage('bot', data.progress_message)
+              // 진행 메시지 처리 - 백엔드에서 처리
               const messages = chatMessages.value[activeChatId.value]
               currentBotMessageIndex.value = messages.length - 1
             } else {
@@ -1332,7 +1332,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             if (data.response.success_message) {
               if (currentBotMessageIndex.value === -1) {
                 // 첫 번째 메시지인 경우 success_message로 직접 추가
-                addMessage('bot', data.response.success_message)
+                // 성공 메시지 처리 - 백엔드에서 처리
                 const messages = chatMessages.value[activeChatId.value]
                 currentBotMessageIndex.value = messages.length - 1
               } else {
