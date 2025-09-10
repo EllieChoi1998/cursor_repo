@@ -1750,7 +1750,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 addMessage('bot', ' 검색된 파일 목록:', false, null, 'file_list', files)
               } else if (data.response.response) {
                 // 텍스트 응답을 메시지에 추가
-                addMessage('bot', data.response.response)
+                // 텍스트 응답 처리 - 백엔드에서 메시지 처리
               } else {
                 // 기타 RAG 응답
                 // RAG 검색 완료 - 백엔드에서 메시지 처리
