@@ -1082,7 +1082,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       } catch (error) {
         console.error('❌ Error downloading file:', error)
         // 에러 메시지를 채팅에 표시
-        addMessage('bot', `❌ 파일 다운로드 실패: ${fileName}\n오류: ${error.message}`)
+        // 파일 다운로드 실패 - 백엔드에서 에러 메시지 처리
       }
     }
 
@@ -1190,10 +1190,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         currentResults.push(newResult)
         chatResults.value[activeChatId.value] = currentResults
         
-        addMessage('bot', '✅ PCM 데이터를 성공적으로 로드했습니다!')
+        // 데이터 로드 성공 - 백엔드에서 메시지 처리
       } catch (error) {
         console.error('Failed to load PCM data:', error)
-        addMessage('bot', '⚠️ 데이터 로드 중 오류가 발생했습니다. 기본 데이터를 사용합니다.')
+        // 데이터 로드 실패 - 백엔드에서 에러 메시지 처리
       } finally {
         isDataLoading.value = false
       }
@@ -1219,10 +1219,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         currentResults.push(newResult)
         chatResults.value[activeChatId.value] = currentResults
         
-        addMessage('bot', '🔄 데이터가 새로고침되었습니다!')
+        // 데이터 새로고침 성공 - 백엔드에서 메시지 처리
       } catch (error) {
         console.error('Failed to refresh data:', error)
-        addMessage('bot', '⚠️ 데이터 새로고침 중 오류가 발생했습니다.')
+        // 데이터 새로고침 실패 - 백엔드에서 에러 메시지 처리
       } finally {
         isDataLoading.value = false
       }
@@ -1372,8 +1372,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // PCM 트렌드 데이터 처리
               const realData = data.response.real_data || []
               if (realData.length === 0) {
-                // real_data가 없으면 메타데이터만 표시
-                addMessage('bot', `✅ PCM 트렌드 분석이 완료되었습니다!\n• SQL: ${data.response.sql}\n• Chat ID: ${data.chat_id}\n• Note: 실제 데이터는 별도로 처리됩니다.`)
+                // real_data가 없으면 analysis report 탭을 생성하지 않음
                 return
               }
               const chartData = generatePCMDataWithRealData(realData)
@@ -1410,6 +1409,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // PCM 트렌드 포인트 데이터 처리
               const realData = data.response.real_data
               
+              // real_data가 없으면 analysis report 탭을 생성하지 않음
+              if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                return
+              }
+              
               // 현재 유저 메시지 찾기
               const currentMessages = chatMessages.value[activeChatId.value] || []
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
@@ -1437,6 +1441,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             } else if (data.response.result === 'commonality_module') {
               // PCM Commonality 데이터 처리
               let realData = data.response.real_data
+              
+              // real_data가 없으면 analysis report 탭을 생성하지 않음
+              if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                return
+              }
               
               console.log('🔍 Commonality real_data type:', typeof realData)
               console.log('🔍 Commonality real_data keys:', realData ? Object.keys(realData) : 'no data')
@@ -1489,17 +1498,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               chatResults.value[activeChatId.value] = currentResults
               
               // 성공 메시지는 백엔드에서 success_message로 전송됨
-              
-              // Commonality 정보 요약
-              const determined = data.response.determined
-              addMessage('bot', `Commonality Summary:
-• Good Lots: ${determined.good_lot_name_list?.length || 0}개
-• Bad Lots: ${determined.bad_lot_name_list?.length || 0}개
-• Good Wafers: ${determined.good_wafer_name_list?.length || 0}개
-• Bad Wafers: ${determined.bad_wafer_name_list?.length || 0}개`)
             } else if (data.response.result === 'sameness_to_trend') {
               // PCM Sameness to Trend 데이터 처리
               const realData = data.response.real_data
+              
+              // real_data가 없으면 analysis report 탭을 생성하지 않음
+              if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                return
+              }
               
               // 현재 유저 메시지 찾기
               const currentMessages = chatMessages.value[activeChatId.value] || []
@@ -1542,6 +1548,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // PCM Commonality to Trend 데이터 처리
               const realData = data.response.real_data
               
+              // real_data가 없으면 analysis report 탭을 생성하지 않음
+              if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                return
+              }
+              
               // 현재 유저 메시지 찾기
               const currentMessages = chatMessages.value[activeChatId.value] || []
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
@@ -1583,6 +1594,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // PCM Sameness 데이터 처리 (DynamicTable.vue 사용)
               const realData = data.response.real_data
               
+              // real_data가 없으면 analysis report 탭을 생성하지 않음
+              if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                return
+              }
+              
               // 현재 유저 메시지 찾기
               const currentMessages = chatMessages.value[activeChatId.value] || []
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
@@ -1615,6 +1631,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // PCM Commonality 데이터 처리 (DynamicTable.vue 사용)
               const realData = data.response.real_data
               
+              // real_data가 없으면 analysis report 탭을 생성하지 않음
+              if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                return
+              }
+              
               // 현재 유저 메시지 찾기
               const currentMessages = chatMessages.value[activeChatId.value] || []
               const userMessage = currentMessages.find(msg => msg.type === 'user' && msg.isEditable)
@@ -1646,6 +1667,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             } else if (data.response.result === 'lot_hold_pe_confirm_module') {
               // Two Dynamic Tables 데이터 처리
               const realData = data.response.real_data
+              
+              // real_data가 없으면 analysis report 탭을 생성하지 않음
+              if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                return
+              }
               
               console.log('✅ TWO TABLES DETECTED! Processing:', data.response.result)
               console.log('🔍 Full response:', JSON.stringify(data.response, null, 2))
@@ -1682,7 +1708,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // 성공 메시지는 백엔드에서 success_message로 전송됨
               
             }
-            // 그래프나 RAG가 아닌 모든 응답은 테이블로 처리
+            // 그래프나 RAG가 아닌 모든 응답은 테이블로 처리 (real_data가 있을 때만)
             else if (data.response.real_data && data.response.real_data.length > 0) {
               const realData = data.response.real_data
               
@@ -1727,7 +1753,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 addMessage('bot', data.response.response)
               } else {
                 // 기타 RAG 응답
-                addMessage('bot', '✅ RAG 검색이 완료되었습니다.')
+                // RAG 검색 완료 - 백엔드에서 메시지 처리
               }
             }
             
@@ -1795,7 +1821,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       
       // 채팅방이 여전히 없으면 에러
       if (!activeChatId.value) {
-        addMessage('bot', '⚠️ 채팅방을 선택해주세요.')
+        // 채팅방 선택 필요 - 백엔드에서 에러 메시지 처리
         return
       }
       
@@ -1922,7 +1948,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         
         // 메시지 수정 API 호출
         isLoading.value = true
-        addMessage('bot', '🔄 메시지를 수정하는 중...')
+        // 메시지 수정 중 - 백엔드에서 진행 메시지 처리
         
         const editResponse = await editMessageAPI(
           selectedDataType.value, 
@@ -1943,7 +1969,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         }
         
         // 성공 메시지 추가
-        addMessage('bot', `✅ 메시지가 성공적으로 수정되었습니다!\n• Chat ID: ${editResponse.chat_id} (기존 ID 유지)`)
+        // 메시지 수정 성공 - 백엔드에서 성공 메시지 처리
         
         // 결과 업데이트 (기존 결과를 새로운 응답으로 교체)
         if (editResponse.response && editResponse.response.real_data) {
@@ -1976,7 +2002,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         
       } catch (error) {
         console.error('❌ Error editing message:', error)
-        addMessage('bot', `❌ 메시지 수정 중 오류가 발생했습니다: ${error.message}`)
+        // 메시지 수정 실패 - 백엔드에서 에러 메시지 처리
         isLoading.value = false
       }
     }
@@ -2004,7 +2030,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     const clearAllResults = () => {
       chatResults.value[activeChatId.value] = []
-      addMessage('bot', 'All results cleared.')
+      // 모든 결과 클리어 - 백엔드에서 메시지 처리
     }
 
     // Analysis Results 섹션 토글 함수
@@ -2166,7 +2192,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         console.log('Final chatMessages state after loading:', chatMessages.value)
       } catch (error) {
         console.error('Failed to load chatrooms:', error)
-        addMessage('bot', '⚠️ 채팅방 목록을 불러오는데 실패했습니다.')
+        // 채팅방 목록 로드 실패 - 백엔드에서 에러 메시지 처리
       } finally {
         isLoadingChatRooms.value = false
       }
@@ -2262,7 +2288,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         
       } catch (error) {
         console.error(`Failed to refresh history for room ${roomId}:`, error)
-        addMessage('bot', '⚠️ 채팅방 히스토리를 새로고침하는데 실패했습니다.')
+        // 채팅방 히스토리 새로고침 실패 - 백엔드에서 에러 메시지 처리
       }
     }
     
@@ -2328,7 +2354,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         
       } catch (error) {
         console.error('Failed to create chatroom:', error)
-        addMessage('bot', '⚠️ 새 채팅방 생성에 실패했습니다.')
+        // 새 채팅방 생성 실패 - 백엔드에서 에러 메시지 처리
       }
     }
 
@@ -2365,7 +2391,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         
       } catch (error) {
         console.error('Failed to delete chatroom:', error)
-        addMessage('bot', '⚠️ 채팅방 삭제에 실패했습니다.')
+        // 채팅방 삭제 실패 - 백엔드에서 에러 메시지 처리
       }
     }
 
