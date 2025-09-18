@@ -2,9 +2,10 @@
 Authentication router - Handles SSO and JWT authentication endpoints
 """
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import datetime
+from typing import Optional
 
 from app.models import SSOLoginRequest
 from app.services import AuthService
@@ -28,15 +29,34 @@ def set_auth_dependencies(storage: UserStorage):
 
 
 @router.get("/api/sso-login")
-async def sso_login(user_id: str):
+async def sso_login(
+    user_id: str = Query(..., description="사용자 ID"),
+    user_name: Optional[str] = Query(None, description="사용자 이름"),
+    email: Optional[str] = Query(None, description="이메일 주소"),
+    role: Optional[str] = Query(None, description="사용자 권한"),
+    source_ip: Optional[str] = Query(None, description="소스 IP 주소")
+):
     """
     SSO 로그인 API
     192.168.0.200에서 사용자 정보와 함께 호출되는 엔드포인트
+    
+    Parameters:
+    - user_id: 필수 사용자 ID
+    - user_name: 선택적 사용자 이름
+    - email: 선택적 이메일 주소
+    - role: 선택적 사용자 권한
+    - source_ip: 선택적 소스 IP 주소
     """
-    print(f"SSO 로그인 API 호출: user_id={user_id}")
+    print(f"SSO 로그인 API 호출: user_id={user_id}, user_name={user_name}, email={email}, role={role}, source_ip={source_ip}")
     try:
-        # SSOLoginRequest 객체 생성
-        request = SSOLoginRequest(userId=user_id)
+        # SSOLoginRequest 객체 생성 (Optional 필드들 포함)
+        request = SSOLoginRequest(
+            userId=user_id,
+            userName=user_name,
+            email=email,
+            role=role,
+            sourceIp=source_ip
+        )
         result = auth_service.process_sso_login(request)
         return result
         
