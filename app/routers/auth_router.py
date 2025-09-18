@@ -34,7 +34,9 @@ async def sso_login(
     user_name: Optional[str] = Query(None, description="사용자 이름"),
     email: Optional[str] = Query(None, description="이메일 주소"),
     role: Optional[str] = Query(None, description="사용자 권한"),
-    source_ip: Optional[str] = Query(None, description="소스 IP 주소")
+    source_ip: Optional[str] = Query(None, description="소스 IP 주소"),
+    redirect_url: Optional[str] = Query(None, description="리다이렉트 URL (선택사항)"),
+    no_redirect: bool = Query(False, description="리다이렉트 URL을 응답에 포함하지 않음")
 ):
     """
     SSO 로그인 API
@@ -46,8 +48,10 @@ async def sso_login(
     - email: 선택적 이메일 주소
     - role: 선택적 사용자 권한
     - source_ip: 선택적 소스 IP 주소
+    - redirect_url: 선택적 리다이렉트 URL (없으면 기본값 사용)
+    - no_redirect: 리다이렉트 URL을 응답에 포함하지 않음 (true/false)
     """
-    print(f"SSO 로그인 API 호출: user_id={user_id}, user_name={user_name}, email={email}, role={role}, source_ip={source_ip}")
+    print(f"SSO 로그인 API 호출: user_id={user_id}, user_name={user_name}, email={email}, role={role}, source_ip={source_ip}, redirect_url={redirect_url}, no_redirect={no_redirect}")
     try:
         # SSOLoginRequest 객체 생성 (Optional 필드들 포함)
         request = SSOLoginRequest(
@@ -57,7 +61,7 @@ async def sso_login(
             role=role,
             sourceIp=source_ip
         )
-        result = auth_service.process_sso_login(request)
+        result = auth_service.process_sso_login(request, redirect_url, no_redirect)
         return result
         
     except ValueError as e:

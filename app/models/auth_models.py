@@ -32,7 +32,7 @@ class SSOLoginResponse(BaseModel):
     token: str
     sessionId: str
     message: str
-    redirectUrl: str
+    redirectUrl: Optional[str] = None
     userId: str
 
 

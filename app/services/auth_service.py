@@ -20,7 +20,7 @@ class AuthService:
     def __init__(self, user_storage: UserStorage):
         self.user_storage = user_storage
     
-    def process_sso_login(self, request: SSOLoginRequest) -> SSOLoginResponse:
+    def process_sso_login(self, request: SSOLoginRequest, redirect_url: str = None, no_redirect: bool = False) -> SSOLoginResponse:
         """SSO 로그인 처리"""
 
         print(f"SSO 로그인 요청 수신: {request}")
@@ -47,14 +47,22 @@ class AuthService:
         print(f"JWT 토큰 생성 완료: sessionId={session_id}, userId={request.userId}")
         
         # 성공 응답 생성
-        redirect_url = f"http://192.168.0.196:8080/sso-callback?token={jwt_token}"
+        # no_redirect가 True이면 redirectUrl을 None으로 설정
+        if no_redirect:
+            response_redirect_url = None
+        else:
+            # redirect_url이 제공되지 않으면 기본값 사용
+            if redirect_url is None:
+                response_redirect_url = f"http://192.168.0.196:8080/sso-callback?token={jwt_token}"
+            else:
+                response_redirect_url = redirect_url
         
         return SSOLoginResponse(
             success=True,
             token=jwt_token,
             sessionId=session_id,
             message="SSO 로그인 성공",
-            redirectUrl=redirect_url,
+            redirectUrl=response_redirect_url,
             userId=request.userId
         )
     
