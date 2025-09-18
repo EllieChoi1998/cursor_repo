@@ -91,28 +91,8 @@
         </div>
 
         <div class="input-group">
-            <label for="userIdInput">사용자 ID 입력 (필수):</label>
+            <label for="userIdInput">사용자 ID 입력:</label>
             <input type="text" id="userIdInput" placeholder="사용자 ID를 입력하세요" value="user123">
-        </div>
-        
-        <div class="input-group">
-            <label for="userNameInput">사용자 이름 (선택):</label>
-            <input type="text" id="userNameInput" placeholder="사용자 이름을 입력하세요" value="홍길동">
-        </div>
-        
-        <div class="input-group">
-            <label for="emailInput">이메일 (선택):</label>
-            <input type="email" id="emailInput" placeholder="이메일을 입력하세요" value="hong@example.com">
-        </div>
-        
-        <div class="input-group">
-            <label for="roleInput">권한 (선택):</label>
-            <input type="text" id="roleInput" placeholder="권한을 입력하세요" value="admin">
-        </div>
-        
-        <div class="input-group">
-            <label for="sourceIpInput">소스 IP (선택):</label>
-            <input type="text" id="sourceIpInput" placeholder="소스 IP를 입력하세요" value="192.168.0.200">
         </div>
         
         <button class="sso-button" onclick="loginToService()">
@@ -139,17 +119,9 @@
             const loading = document.getElementById('loading');
             const result = document.getElementById('result');
             const userIdInput = document.getElementById('userIdInput');
-            const userNameInput = document.getElementById('userNameInput');
-            const emailInput = document.getElementById('emailInput');
-            const roleInput = document.getElementById('roleInput');
-            const sourceIpInput = document.getElementById('sourceIpInput');
             
-            // 사용자가 입력한 값들 가져오기
+            // 사용자가 입력한 ID 가져오기
             const userId = userIdInput.value.trim();
-            const userName = userNameInput.value.trim();
-            const email = emailInput.value.trim();
-            const role = roleInput.value.trim();
-            const sourceIp = sourceIpInput.value.trim();
             
             if (!userId) {
                 result.innerHTML = `
@@ -164,25 +136,21 @@
                 loading.style.display = 'block';
                 result.innerHTML = '';
                 
-                console.log('로그인 시도 - 사용자 ID:', userId, '이름:', userName, '이메일:', email, '권한:', role, 'IP:', sourceIp);
-                
-                // URL 파라미터 구성
-                const params = new URLSearchParams();
-                params.append('user_id', userId);
-                if (userName) params.append('user_name', userName);
-                if (email) params.append('email', email);
-                if (role) params.append('role', role);
-                if (sourceIp) params.append('source_ip', sourceIp);
+                console.log('로그인 시도 - 사용자 ID:', userId);
                 
                 // 전역 변수를 사용하여 백엔드 서버에 요청
-                const backendUrl = `http://${TARGET_IP}:${BACKEND_PORT}/api/sso-login?${params.toString()}`;
+                const backendUrl = `http://${TARGET_IP}:${BACKEND_PORT}/api/sso-login`;
                 console.log('백엔드 요청 URL:', backendUrl);
                 
                 const response = await fetch(backendUrl, {
-                    method: 'GET',
+                    method: 'POST',
                     headers: {
+                        'Content-Type': 'application/json',
                         'Access-Control-Allow-Origin': '*'
-                    }
+                    },
+                    body: JSON.stringify({
+                        userId: userId
+                    })
                 });
                 
                 if (response.ok) {

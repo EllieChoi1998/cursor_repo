@@ -20,10 +20,6 @@ class UserInfo(BaseModel):
 class SSOLoginRequest(BaseModel):
     """SSO 로그인 요청 모델"""
     userId: str
-    userName: Optional[str] = None
-    email: Optional[str] = None
-    role: Optional[str] = None
-    sourceIp: Optional[str] = None
 
 
 class SSOLoginResponse(BaseModel):
@@ -32,7 +28,7 @@ class SSOLoginResponse(BaseModel):
     token: str
     sessionId: str
     message: str
-    redirectUrl: Optional[str] = None
+    redirectUrl: str
     userId: str
 
 
