@@ -118,128 +118,15 @@ async def sso_redirect(user_id: str = "user123"):
         
         if sso_result.success:
             print(f"SSO 로그인 성공: {sso_result.userId}")
-            # 토큰을 사용하지 않고 바로 대시보드로 리다이렉트
-            return RedirectResponse(url="/dashboard")
+            # 토큰을 사용하지 않고 바로 루트페이지로 리다이렉트
+            return RedirectResponse(url="/")
         else:
             print("SSO 로그인 실패")
-            return RedirectResponse(url="/login-failed")
+            return RedirectResponse(url="/")
             
     except Exception as e:
         print(f"SSO 리다이렉트 오류: {e}")
-        return RedirectResponse(url="/login-failed")
-
-
-@router.get("/dashboard")
-async def dashboard():
-    """대시보드 페이지"""
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="ko">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>대시보드</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                max-width: 800px;
-                margin: 50px auto;
-                padding: 20px;
-                background-color: #f0f8ff;
-            }
-            .container {
-                background: white;
-                padding: 30px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                text-align: center;
-            }
-            .success {
-                color: #28a745;
-                font-size: 24px;
-                margin: 20px 0;
-            }
-            .back-button {
-                background: #6c757d;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                cursor: pointer;
-                text-decoration: none;
-                display: inline-block;
-                margin-top: 20px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="success">✅ 로그인 성공!</div>
-            <h2>대시보드에 오신 것을 환영합니다</h2>
-            <p>서버에서 직접 리다이렉트 처리되었습니다.</p>
-            <p>토큰 검증 없이 바로 페이지 이동이 완료되었습니다.</p>
-            <a href="/" class="back-button">← 홈으로 돌아가기</a>
-        </div>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
-
-
-@router.get("/login-failed")
-async def login_failed():
-    """로그인 실패 페이지"""
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="ko">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>로그인 실패</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                max-width: 600px;
-                margin: 100px auto;
-                padding: 20px;
-                background-color: #fff5f5;
-            }
-            .container {
-                background: white;
-                padding: 30px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                text-align: center;
-            }
-            .error {
-                color: #dc3545;
-                font-size: 24px;
-                margin: 20px 0;
-            }
-            .back-button {
-                background: #007bff;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                cursor: pointer;
-                text-decoration: none;
-                display: inline-block;
-                margin-top: 20px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="error">❌ 로그인 실패</div>
-            <h2>로그인에 실패했습니다</h2>
-            <p>다시 시도해주세요.</p>
-            <a href="/" class="back-button">← 다시 로그인하기</a>
-        </div>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+        return RedirectResponse(url="/")
 
 
 @router.post("/api/sso-login")
