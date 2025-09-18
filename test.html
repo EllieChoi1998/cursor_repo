@@ -139,18 +139,14 @@
                 console.log('로그인 시도 - 사용자 ID:', userId);
                 
                 // 전역 변수를 사용하여 백엔드 서버에 요청
-                const backendUrl = `http://${TARGET_IP}:${BACKEND_PORT}/api/sso-login`;
+                const backendUrl = `http://${TARGET_IP}:${BACKEND_PORT}/api/sso-login?user_id=${encodeURIComponent(userId)}`;
                 console.log('백엔드 요청 URL:', backendUrl);
                 
                 const response = await fetch(backendUrl, {
-                    method: 'POST',
+                    method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json',
                         'Access-Control-Allow-Origin': '*'
-                    },
-                    body: JSON.stringify({
-                        userId: userId
-                    })
+                    }
                 });
                 
                 if (response.ok) {

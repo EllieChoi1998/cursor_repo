@@ -27,14 +27,16 @@ def set_auth_dependencies(storage: UserStorage):
     auth_service = AuthService(storage)
 
 
-@router.post("/api/sso-login")
-async def sso_login(request: SSOLoginRequest):
+@router.get("/api/sso-login")
+async def sso_login(user_id: str):
     """
     SSO 로그인 API
     192.168.0.200에서 사용자 정보와 함께 호출되는 엔드포인트
     """
-    print(f"SSO 로그인 API 호출: {request}")
+    print(f"SSO 로그인 API 호출: user_id={user_id}")
     try:
+        # SSOLoginRequest 객체 생성
+        request = SSOLoginRequest(userId=user_id)
         result = auth_service.process_sso_login(request)
         return result
         
