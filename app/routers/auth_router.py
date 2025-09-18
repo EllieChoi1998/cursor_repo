@@ -118,15 +118,15 @@ async def sso_redirect(user_id: str = "user123"):
         
         if sso_result.success:
             print(f"SSO 로그인 성공: {sso_result.userId}")
-            # 토큰을 사용하지 않고 바로 루트페이지로 리다이렉트
-            return RedirectResponse(url="/")
+            # 토큰을 사용하지 않고 바로 서비스 루트페이지로 리다이렉트
+            return RedirectResponse(url="http://192.168.0.196:8080/")
         else:
             print("SSO 로그인 실패")
-            return RedirectResponse(url="/")
+            return RedirectResponse(url="http://192.168.0.196:8080/")
             
     except Exception as e:
         print(f"SSO 리다이렉트 오류: {e}")
-        return RedirectResponse(url="/")
+        return RedirectResponse(url="http://192.168.0.196:8080/")
 
 
 @router.post("/api/sso-login")
