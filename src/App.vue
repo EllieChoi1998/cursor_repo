@@ -853,6 +853,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           }
         } else if (responseData.result === 'inline_trend_initial') {
           // INLINE Trend Initial 데이터 처리
+          const realData = responseData.real_data
+          
+          // real_data가 없으면 analysis report 탭을 생성하지 않음
+          if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+            return null
+          }
+          
           result = {
             id: `history_${chatId}_${Date.now()}`,
             type: 'inline_trend_initial',
@@ -875,6 +882,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           }
         } else if (responseData.result === 'inline_trend_followup') {
           // INLINE Trend Followup 데이터 처리
+          const realData = responseData.real_data
+          
+          // real_data가 없으면 analysis report 탭을 생성하지 않음
+          if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+            return null
+          }
+          
           result = {
             id: `history_${chatId}_${Date.now()}`,
             type: 'inline_trend_followup',
@@ -1361,6 +1375,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             
             if (data.response.result === 'inline_trend_initial' || data.response.result === 'inline_trend_followup') {
               // INLINE Trend 데이터 처리 - createResultFromResponseData 사용
+              const realData = data.response.real_data
+              
+              // real_data가 없으면 analysis report 탭을 생성하지 않음
+              if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                return
+              }
+              
               const result = createResultFromResponseData(data.response, message, data.chat_id)
               if (result) {
                 result.isActive = true
