@@ -875,8 +875,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           // CPK 달성률 분석 데이터 처리
           const realData = responseData.real_data
           
-          // real_data가 없으면 analysis report 탭을 생성하지 않음
-          if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+          // real_data가 없거나 table_data, graph_data가 없으면 analysis report 탭을 생성하지 않음
+          if (!realData || 
+              (typeof realData === 'object' && (!realData.table_data || !realData.graph_data)) ||
+              (Array.isArray(realData) && realData.length === 0)) {
             return null
           }
           
@@ -1422,8 +1424,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               // CPK 달성률 분석 데이터 처리 - createResultFromResponseData 사용
               const realData = data.response.real_data
               
-              // real_data가 없으면 analysis report 탭을 생성하지 않음
-              if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+              // real_data가 없거나 table_data, graph_data가 없으면 analysis report 탭을 생성하지 않음
+              if (!realData || 
+                  (typeof realData === 'object' && (!realData.table_data || !realData.graph_data)) ||
+                  (Array.isArray(realData) && realData.length === 0)) {
                 return
               }
               

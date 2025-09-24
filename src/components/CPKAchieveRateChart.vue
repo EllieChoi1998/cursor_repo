@@ -107,27 +107,37 @@ export default defineComponent({
     // 데이터 파싱
     const parsedData = computed(() => {
       try {
-        const data = JSON.parse(props.backendData.real_data) || []
+        const data = JSON.parse(props.backendData.real_data) || {}
         return data
       } catch (e) {
         console.error('데이터 파싱 오류:', e)
-        return []
+        return {}
       }
+    })
+
+    // 테이블 데이터 추출
+    const tableData = computed(() => {
+      return parsedData.value.table_data || []
+    })
+
+    // 그래프 데이터 추출
+    const graphData = computed(() => {
+      return parsedData.value.graph_data || []
     })
 
     // 데이터가 있는지 확인
     const hasData = computed(() => {
-      return parsedData.value.length > 0
+      return tableData.value.length > 0 || graphData.value.length > 0
     })
 
     // 성공 메시지
     const successMessage = computed(() => props.backendData.success_message || '')
 
-    // AREA 목록 추출
+    // AREA 목록 추출 (table_data에서)
     const areas = computed(() => {
       if (!hasData.value) return []
       const areaSet = new Set()
-      parsedData.value.forEach(row => {
+      tableData.value.forEach(row => {
         if (row.AREA) {
           areaSet.add(row.AREA)
         }
@@ -138,7 +148,7 @@ export default defineComponent({
     // 기간 컬럼 목록 추출 (AREA를 제외한 모든 컬럼)
     const periodColumns = computed(() => {
       if (!hasData.value) return []
-      const firstRow = parsedData.value[0]
+      const firstRow = tableData.value[0]
       if (!firstRow) return []
       
       return Object.keys(firstRow)
@@ -146,9 +156,9 @@ export default defineComponent({
         .sort()
     })
 
-    // 특정 AREA와 기간의 값 가져오기
+    // 특정 AREA와 기간의 값 가져오기 (table_data에서)
     const getValue = (area, period) => {
-      const row = parsedData.value.find(r => r.AREA === area)
+      const row = tableData.value.find(r => r.AREA === area)
       if (!row || row[period] === undefined || row[period] === null) return '-'
       
       const value = Number(row[period])
@@ -171,9 +181,9 @@ export default defineComponent({
         // 기존 차트 제거
         try { Plotly.purge(containerEl) } catch (_) {}
 
-        // 해당 AREA의 데이터 찾기
-        const areaData = parsedData.value.find(r => r.AREA === area)
-        if (!areaData) return
+        // 해당 AREA의 그래프 데이터 찾기
+        const areaGraphData = graphData.value.filter(r => r.AREA === area)
+        if (areaGraphData.length === 0) return
 
         // 기간별 데이터 준비
         const xValues = []
@@ -181,9 +191,12 @@ export default defineComponent({
         const colors = []
         const palette = getColorPalette()
 
-        periodColumns.value.forEach((period, index) => {
-          const value = areaData[period]
-          if (value !== undefined && value !== null) {
+        // graph_data에서 해당 AREA의 모든 기간 데이터 수집
+        areaGraphData.forEach((dataPoint, index) => {
+          const period = dataPoint.period || dataPoint.기간 || dataPoint.PERIOD
+          const value = dataPoint.value || dataPoint.값 || dataPoint.VALUE
+          
+          if (period && value !== undefined && value !== null) {
             const numValue = Number(value)
             if (Number.isFinite(numValue)) {
               xValues.push(period)
@@ -272,6 +285,8 @@ export default defineComponent({
     // 데이터 변경 시 차트 재생성
     watch(() => props.backendData, createAllCharts, { deep: true })
     watch(parsedData, createAllCharts)
+    watch(tableData, createAllCharts)
+    watch(graphData, createAllCharts)
     watch(areas, createAllCharts)
     watch(() => props.height, createAllCharts)
 

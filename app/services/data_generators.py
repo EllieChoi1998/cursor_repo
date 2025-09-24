@@ -664,14 +664,14 @@ class DataGenerators:
         }
 
     @staticmethod
-    def generate_cpk_achieve_rate_data() -> List[Dict[str, Any]]:
-        """CPK 달성률 분석 데이터 생성"""
+    def generate_cpk_achieve_rate_data() -> Dict[str, Any]:
+        """CPK 달성률 분석 데이터 생성 (table_data와 graph_data로 분리)"""
         # 다양한 AREA와 기간별 달성률 데이터 생성
         areas = ['AREA_A', 'AREA_B', 'AREA_C', 'AREA_D', 'AREA_E']
         periods = ['기간1', '기간2', '기간3', '기간4', '기간5', '기간6']
         
-        data = []
-        
+        # 테이블 데이터 생성 (AREA별 기간별 달성률)
+        table_data = []
         for area in areas:
             row = {'AREA': area}
             
@@ -698,7 +698,24 @@ class DataGenerators:
                 rate = max(70, min(95, base_rate))
                 row[period] = round(rate, 1)
             
-            data.append(row)
+            table_data.append(row)
         
-        print(f"📊 Generated CPK achieve rate data: {len(data)} areas, {len(periods)} periods")
-        return data
+        # 그래프 데이터 생성 (AREA별로 각 기간의 개별 데이터 포인트)
+        graph_data = []
+        for area in areas:
+            for period in periods:
+                # 테이블 데이터에서 해당 값 찾기
+                area_row = next((row for row in table_data if row['AREA'] == area), None)
+                if area_row and period in area_row:
+                    graph_data.append({
+                        'AREA': area,
+                        'period': period,
+                        'value': area_row[period]
+                    })
+        
+        print(f"📊 Generated CPK achieve rate data: {len(table_data)} table rows, {len(graph_data)} graph points")
+        
+        return {
+            'table_data': table_data,
+            'graph_data': graph_data
+        }

@@ -304,7 +304,9 @@ class ChatService:
         elif command_type == 'cpk_achieve_rate_initial':
             # CPK 달성률 초기 분석 데이터 생성
             data = self.data_generators.generate_cpk_achieve_rate_data()
-            success_message = f"✅ CPK 달성률 분석 데이터를 성공적으로 받았습니다!\n• Result Type: cpk_achieve_rate_initial\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}"
+            table_count = len(data.get('table_data', []))
+            graph_count = len(data.get('graph_data', []))
+            success_message = f"✅ CPK 달성률 분석 데이터를 성공적으로 받았습니다!\n• Result Type: cpk_achieve_rate_initial\n• Table Records: {table_count}\n• Graph Points: {graph_count}\n• Chat ID: {chatroom_id}"
             
             response = {
                 'result': 'cpk_achieve_rate_initial',
@@ -523,10 +525,12 @@ class ChatService:
             }
         elif command_type == 'cpk_achieve_rate_initial':
             data = self.data_generators.generate_cpk_achieve_rate_data()
+            table_count = len(data.get('table_data', []))
+            graph_count = len(data.get('graph_data', []))
             return {
                 'result': 'cpk_achieve_rate_initial',
                 'real_data': json.dumps(data),
-                'success_message': f"✅ CPK 달성률 분석 데이터를 성공적으로 받았습니다! (Edit Mode)"
+                'success_message': f"✅ CPK 달성률 분석 데이터를 성공적으로 받았습니다! (Edit Mode)\n• Table Records: {table_count}\n• Graph Points: {graph_count}"
             }
         elif command_type == 'trend_followup':
             criteria = 'PARA'
