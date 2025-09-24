@@ -373,6 +373,15 @@
                     />
                   </div>
 
+                  <!-- CPK 달성률 분석 (cpk_achieve_rate_initial) -->
+                  <div v-else-if="result.type === 'cpk_achieve_rate_initial'" class="chart-section">
+                    <CPKAchieveRateChart
+                      :backendData="result.backendData"
+                      :height="chartHeight"
+                      :title="result.title || 'CPK 달성률 분석'"
+                    />
+                  </div>
+
                   <!-- 그 외 모든 result는 DynamicTable로 표시 (real_data가 있으면) -->
                   <div v-else-if="result.realData && result.realData.length > 0" class="chart-section">
                     <DynamicTable 
@@ -478,6 +487,16 @@
             />
           </div>
           
+          <!-- CPK 달성률 분석 (cpk_achieve_rate_initial) -->
+          <div v-else-if="fullscreenResult?.type === 'cpk_achieve_rate_initial'" class="fullscreen-chart">
+            <CPKAchieveRateChart
+              :key="`cpk-achieve-full-${fullscreenResult?.id}-${showFullscreen}`"
+              :backendData="fullscreenResult.backendData"
+              :height="800"
+              :title="fullscreenResult.title || 'CPK 달성률 분석'"
+            />
+          </div>
+          
           <!-- PCM To Trend Chart (sameness_to_trend, commonality_to_trend) -->
           <div v-else-if="fullscreenResult?.type === 'sameness_to_trend' || fullscreenResult?.type === 'commonality_to_trend'" class="fullscreen-chart">
             <PCMToTrend 
@@ -560,7 +579,7 @@ import TwoDynamicTables from './components/TwoDynamicTables.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
 import INLINETrendChart from './components/INLINETrendChart.vue'
-
+import CPKAchieveRateChart from './components/CPKAchieveRateChart.vue'
 import LLMDrivenInlineChart from './components/LLMDrivenInlineChart.vue'
 
 import {
@@ -595,6 +614,7 @@ export default defineComponent({
     ChatRoomList,
     RAGAnswerList,
     INLINETrendChart,
+    CPKAchieveRateChart,
     LLMDrivenInlineChart
   },
   setup() {
@@ -849,6 +869,31 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             sql: responseData.sql,
             realData: realData,
             resultType: responseData.result,
+            userMessage: userMessage
+          }
+        } else if (responseData.result === 'cpk_achieve_rate_initial') {
+          // CPK 달성률 분석 데이터 처리
+          const realData = responseData.real_data
+          
+          // real_data가 없으면 analysis report 탭을 생성하지 않음
+          if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+            return null
+          }
+          
+          result = {
+            id: `history_${chatId}_${Date.now()}`,
+            type: 'cpk_achieve_rate_initial',
+            title: 'CPK 달성률 분석',
+            data: null,
+            isActive: false,
+            timestamp: new Date(),
+            chatId: chatId,
+            backendData: {
+              result: responseData.result,
+              real_data: realData,
+              success_message: responseData.success_message || 'CPK 달성률 분석이 성공적으로 생성되었습니다.'
+            },
+            realData: null, // CPK 달성률은 backendData를 사용하므로 realData는 null
             userMessage: userMessage
           }
         } else if (responseData.result === 'inline_trend_initial') {
@@ -1373,7 +1418,24 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               console.log('🔍 Real data sample:', data.response.real_data.slice(0, 2))
             }
             
-            if (data.response.result === 'inline_trend_initial' || data.response.result === 'inline_trend_followup') {
+            if (data.response.result === 'cpk_achieve_rate_initial') {
+              // CPK 달성률 분석 데이터 처리 - createResultFromResponseData 사용
+              const realData = data.response.real_data
+              
+              // real_data가 없으면 analysis report 탭을 생성하지 않음
+              if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                return
+              }
+              
+              const result = createResultFromResponseData(data.response, message, data.chat_id)
+              if (result) {
+                result.isActive = true
+                const currentResults = chatResults.value[activeChatId.value] || []
+                currentResults.push(result)
+                chatResults.value[activeChatId.value] = currentResults
+                console.log('✅ CPK 달성률 분석 결과 추가됨:', result)
+              }
+            } else if (data.response.result === 'inline_trend_initial' || data.response.result === 'inline_trend_followup') {
               // INLINE Trend 데이터 처리 - createResultFromResponseData 사용
               const realData = data.response.real_data
               

@@ -1,0 +1,423 @@
+<template>
+  <div class="cpk-achieve-rate-chart">
+    <div v-if="successMessage" class="success-message">
+      {{ successMessage }}
+    </div>
+
+    <!-- 데이터가 없을 때 안내 메시지 -->
+    <div v-if="!hasData" class="no-data-message">
+      <p>분석할 데이터가 없습니다. real_data가 제공되지 않았습니다.</p>
+    </div>
+
+    <!-- 데이터가 있을 때 테이블과 차트 표시 -->
+    <div v-else class="analysis-container">
+      <!-- 데이터 테이블 -->
+      <div class="table-container">
+        <h3>CPK 달성률 데이터</h3>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>AREA</th>
+                <th v-for="period in periodColumns" :key="period">{{ period }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="area in areas" :key="area">
+                <td class="area-cell">{{ area }}</td>
+                <td v-for="period in periodColumns" :key="period" class="value-cell">
+                  {{ getValue(area, period) }}%
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 각 AREA별 바그래프 -->
+      <div class="charts-container">
+        <h3>AREA별 달성률 차트</h3>
+        <div class="charts-grid">
+          <div
+            v-for="area in areas"
+            :key="area"
+            class="chart-item"
+          >
+            <div class="chart-title">{{ area }} 달성률</div>
+            <div class="chart-box" :ref="el => setChartRef(area, el)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { defineComponent, ref, computed, onMounted, watch, nextTick } from 'vue'
+import Plotly from 'plotly.js-dist'
+
+const PlotlyConfig = {
+  responsive: true,
+  displayModeBar: true,
+  modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+  displaylogo: false,
+  scrollZoom: true,
+  staticPlot: false,
+  toImageButtonOptions: {
+    format: 'png',
+    filename: 'cpk_achieve_rate_chart',
+    height: 400,
+    width: 600,
+    scale: 1
+  }
+}
+
+export default defineComponent({
+  name: 'CPKAchieveRateChart',
+  props: {
+    backendData: {
+      type: Object,
+      default: () => ({
+        result: 'cpk_achieve_rate_initial',
+        real_data: JSON.stringify([]),
+        success_message: 'CPK 달성률 분석이 성공적으로 생성되었습니다.'
+      })
+    },
+    height: {
+      type: Number,
+      default: 400
+    },
+    title: {
+      type: String,
+      default: 'CPK 달성률 분석'
+    }
+  },
+  setup(props) {
+    // 차트 DOM 참조를 AREA별로 저장
+    const chartRefs = ref({}) // { [area: string]: HTMLElement }
+
+    const setChartRef = (area, el) => {
+      if (!el) {
+        delete chartRefs.value[area]
+      } else {
+        chartRefs.value[area] = el
+      }
+    }
+
+    // 데이터 파싱
+    const parsedData = computed(() => {
+      try {
+        const data = JSON.parse(props.backendData.real_data) || []
+        return data
+      } catch (e) {
+        console.error('데이터 파싱 오류:', e)
+        return []
+      }
+    })
+
+    // 데이터가 있는지 확인
+    const hasData = computed(() => {
+      return parsedData.value.length > 0
+    })
+
+    // 성공 메시지
+    const successMessage = computed(() => props.backendData.success_message || '')
+
+    // AREA 목록 추출
+    const areas = computed(() => {
+      if (!hasData.value) return []
+      const areaSet = new Set()
+      parsedData.value.forEach(row => {
+        if (row.AREA) {
+          areaSet.add(row.AREA)
+        }
+      })
+      return Array.from(areaSet).sort()
+    })
+
+    // 기간 컬럼 목록 추출 (AREA를 제외한 모든 컬럼)
+    const periodColumns = computed(() => {
+      if (!hasData.value) return []
+      const firstRow = parsedData.value[0]
+      if (!firstRow) return []
+      
+      return Object.keys(firstRow)
+        .filter(key => key !== 'AREA')
+        .sort()
+    })
+
+    // 특정 AREA와 기간의 값 가져오기
+    const getValue = (area, period) => {
+      const row = parsedData.value.find(r => r.AREA === area)
+      if (!row || row[period] === undefined || row[period] === null) return '-'
+      
+      const value = Number(row[period])
+      return Number.isFinite(value) ? value.toFixed(1) : '-'
+    }
+
+    // 색상 팔레트
+    const getColorPalette = () => ([
+      '#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A',
+      '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52',
+      '#1F77B4', '#FF7F0E', '#2CA02C', '#D62728', '#9467BD',
+      '#8C564B', '#E377C2', '#7F7F7F', '#BCBD22', '#17BECF'
+    ])
+
+    // 특정 AREA의 바그래프 생성
+    const createBarChart = async (area, containerEl) => {
+      try {
+        if (!containerEl) return
+
+        // 기존 차트 제거
+        try { Plotly.purge(containerEl) } catch (_) {}
+
+        // 해당 AREA의 데이터 찾기
+        const areaData = parsedData.value.find(r => r.AREA === area)
+        if (!areaData) return
+
+        // 기간별 데이터 준비
+        const xValues = []
+        const yValues = []
+        const colors = []
+        const palette = getColorPalette()
+
+        periodColumns.value.forEach((period, index) => {
+          const value = areaData[period]
+          if (value !== undefined && value !== null) {
+            const numValue = Number(value)
+            if (Number.isFinite(numValue)) {
+              xValues.push(period)
+              yValues.push(numValue)
+              colors.push(palette[index % palette.length])
+            }
+          }
+        })
+
+        if (yValues.length === 0) return
+
+        // 바그래프 트레이스 생성
+        const trace = {
+          type: 'bar',
+          x: xValues,
+          y: yValues,
+          marker: {
+            color: colors,
+            line: {
+              color: colors,
+              width: 1
+            }
+          },
+          text: yValues.map(v => `${v.toFixed(1)}%`),
+          textposition: 'outside',
+          hovertemplate: `<b>${area}</b><br>` +
+                        `기간: %{x}<br>` +
+                        `달성률: %{y}%<br>` +
+                        `<extra></extra>`,
+          showlegend: false
+        }
+
+        // 레이아웃 설정
+        const layout = {
+          title: {
+            text: `${area} 달성률`,
+            font: { size: 16, color: '#333' }
+          },
+          xaxis: {
+            title: { text: '기간', font: { size: 12 } },
+            showgrid: true,
+            gridcolor: '#f0f0f0',
+            tickangle: 45
+          },
+          yaxis: {
+            title: { text: '달성률 (%)', font: { size: 12 } },
+            showgrid: true,
+            gridcolor: '#f0f0f0',
+            range: [0, 100] // 0-100% 범위로 고정
+          },
+          height: props.height,
+          margin: { l: 60, r: 30, t: 60, b: 80 },
+          plot_bgcolor: 'white',
+          paper_bgcolor: 'white',
+          hovermode: 'closest'
+        }
+
+        await Plotly.newPlot(containerEl, [trace], layout, PlotlyConfig)
+      } catch (err) {
+        console.error(`[${area}] 차트 생성 오류:`, err)
+        if (containerEl) {
+          containerEl.innerHTML = `
+            <div style="padding:12px;text-align:center;color:#666;">
+              <h4>차트 생성 실패 (AREA: ${area})</h4>
+              <p>${err?.message ?? err}</p>
+            </div>
+          `
+        }
+      }
+    }
+
+    // 모든 차트 생성
+    const createAllCharts = async () => {
+      if (!hasData.value) return
+
+      await nextTick()
+      
+      for (const area of areas.value) {
+        const el = chartRefs.value[area]
+        await createBarChart(area, el)
+      }
+    }
+
+    onMounted(createAllCharts)
+
+    // 데이터 변경 시 차트 재생성
+    watch(() => props.backendData, createAllCharts, { deep: true })
+    watch(parsedData, createAllCharts)
+    watch(areas, createAllCharts)
+    watch(() => props.height, createAllCharts)
+
+    return {
+      successMessage,
+      hasData,
+      areas,
+      periodColumns,
+      getValue,
+      setChartRef
+    }
+  }
+})
+</script>
+
+<style scoped>
+.cpk-achieve-rate-chart {
+  width: 100%;
+  position: relative;
+}
+
+.success-message {
+  padding: 10px;
+  margin-bottom: 15px;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  color: #155724;
+  font-size: 14px;
+}
+
+.no-data-message {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+.analysis-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.table-container h3,
+.charts-container h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table th {
+  background-color: #f8f9fa;
+  color: #333;
+  font-weight: 600;
+  padding: 12px 8px;
+  text-align: center;
+  border-bottom: 2px solid #dee2e6;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.area-cell {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+  text-align: left !important;
+  padding-left: 12px !important;
+}
+
+.value-cell {
+  font-weight: 500;
+  color: #555;
+}
+
+.charts-container {
+  width: 100%;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 20px;
+}
+
+.chart-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fff;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.chart-box {
+  width: 100%;
+  min-height: 400px;
+  border: 1px solid #f1f1f1;
+  border-radius: 4px;
+  background: white;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .analysis-container {
+    gap: 20px;
+  }
+  
+  .chart-item {
+    padding: 10px;
+  }
+  
+  .chart-box {
+    min-height: 300px;
+  }
+}
+</style>

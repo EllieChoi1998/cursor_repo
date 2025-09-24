@@ -158,10 +158,12 @@ class QueryAnalyzer:
                     return 'pcm', 'trend', ""  # 기본값
         
         # INLINE 관련 키워드 검사
-        inline_keywords = ['inline', 'trend', 'edit']
+        inline_keywords = ['inline', 'trend', 'edit', 'cpk', 'achieve', '달성률']
         for keyword in inline_keywords:
             if keyword in message_lower:
-                if any(k in message_lower for k in ['trend']):
+                if any(k in message_lower for k in ['cpk', 'achieve', '달성률']):
+                    return 'inline', 'cpk_achieve_rate_initial', ""
+                elif any(k in message_lower for k in ['trend']):
                     return 'inline', 'trend', ""
                 else:
                     return 'inline', 'edit', ""

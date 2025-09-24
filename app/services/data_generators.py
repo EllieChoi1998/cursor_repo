@@ -662,3 +662,43 @@ class DataGenerators:
                 {"pe_confirm_module": pe_confirm_data}
             ]
         }
+
+    @staticmethod
+    def generate_cpk_achieve_rate_data() -> List[Dict[str, Any]]:
+        """CPK 달성률 분석 데이터 생성"""
+        # 다양한 AREA와 기간별 달성률 데이터 생성
+        areas = ['AREA_A', 'AREA_B', 'AREA_C', 'AREA_D', 'AREA_E']
+        periods = ['기간1', '기간2', '기간3', '기간4', '기간5', '기간6']
+        
+        data = []
+        
+        for area in areas:
+            row = {'AREA': area}
+            
+            # 각 기간별로 달성률 생성 (70-95% 범위)
+            for period in periods:
+                # 각 AREA별로 다른 패턴의 달성률 생성
+                if area == 'AREA_A':
+                    # AREA_A는 점진적 개선 패턴
+                    base_rate = 75 + (periods.index(period) * 3)
+                elif area == 'AREA_B':
+                    # AREA_B는 안정적인 고성능 패턴
+                    base_rate = 88 + random.uniform(-2, 2)
+                elif area == 'AREA_C':
+                    # AREA_C는 변동이 큰 패턴
+                    base_rate = 80 + random.uniform(-5, 5)
+                elif area == 'AREA_D':
+                    # AREA_D는 초기 저성능에서 개선 패턴
+                    base_rate = 70 + (periods.index(period) * 4)
+                else:  # AREA_E
+                    # AREA_E는 중간 수준 안정 패턴
+                    base_rate = 82 + random.uniform(-3, 3)
+                
+                # 70-95% 범위로 제한
+                rate = max(70, min(95, base_rate))
+                row[period] = round(rate, 1)
+            
+            data.append(row)
+        
+        print(f"📊 Generated CPK achieve rate data: {len(data)} areas, {len(periods)} periods")
+        return data

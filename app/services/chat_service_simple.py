@@ -301,6 +301,19 @@ class ChatService:
             print(f"🎯 DEBUG: Created inline_trend_initial response: {response.keys()}")
             return response
             
+        elif command_type == 'cpk_achieve_rate_initial':
+            # CPK 달성률 초기 분석 데이터 생성
+            data = self.data_generators.generate_cpk_achieve_rate_data()
+            success_message = f"✅ CPK 달성률 분석 데이터를 성공적으로 받았습니다!\n• Result Type: cpk_achieve_rate_initial\n• Total Records: {len(data) if isinstance(data, list) else 0}\n• Chat ID: {chatroom_id}"
+            
+            response = {
+                'result': 'cpk_achieve_rate_initial',
+                'real_data': json.dumps(data),
+                'success_message': success_message
+            }
+            print(f"🎯 DEBUG: Created cpk_achieve_rate_initial response: {response.keys()}")
+            return response
+            
         elif command_type == 'trend_followup':
             if "spec" in message.split(" "):
                 llm_spec = generate_plotly_spec(message)
@@ -507,6 +520,13 @@ class ChatService:
                 'criteria': 'DEVICE',
                 'real_data': json.dumps(data),
                 'success_message': f"✅ INLINE TREND INITIAL 데이터를 성공적으로 받았습니다! (Edit Mode)"
+            }
+        elif command_type == 'cpk_achieve_rate_initial':
+            data = self.data_generators.generate_cpk_achieve_rate_data()
+            return {
+                'result': 'cpk_achieve_rate_initial',
+                'real_data': json.dumps(data),
+                'success_message': f"✅ CPK 달성률 분석 데이터를 성공적으로 받았습니다! (Edit Mode)"
             }
         elif command_type == 'trend_followup':
             criteria = 'PARA'
