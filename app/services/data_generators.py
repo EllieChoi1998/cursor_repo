@@ -666,11 +666,12 @@ class DataGenerators:
     @staticmethod
     def generate_cpk_achieve_rate_data() -> Dict[str, Any]:
         """CPK 달성률 분석 데이터 생성 (table_data와 graph_data로 분리)"""
-        # 다양한 AREA와 기간별 달성률 데이터 생성
-        areas = ['AREA_A', 'AREA_B', 'AREA_C', 'AREA_D', 'AREA_E']
-        periods = ['기간1', '기간2', '기간3', '기간4', '기간5', '기간6']
+        # 다양한 AREA와 날짜별 달성률 데이터 생성
+        areas = ['CP', 'CD', 'EI', 'EH', 'F', 'P', 'W', 'T']
+        dates = ['2025/01', '2025/02', '2025/03', '2025/04', '2025/05', '2025/06']
         
-        # 테이블 데이터 생성 (AREA별 기간별 달성률)
+        # 테이블 데이터 생성 (AREA별 기간별 달성률) - 기존 구조 유지
+        periods = ['기간1', '기간2', '기간3', '기간4', '기간5', '기간6']
         table_data = []
         for area in areas:
             row = {'AREA': area}
@@ -678,21 +679,30 @@ class DataGenerators:
             # 각 기간별로 달성률 생성 (70-95% 범위)
             for period in periods:
                 # 각 AREA별로 다른 패턴의 달성률 생성
-                if area == 'AREA_A':
-                    # AREA_A는 점진적 개선 패턴
+                if area == 'CP':
+                    # CP는 점진적 개선 패턴
                     base_rate = 75 + (periods.index(period) * 3)
-                elif area == 'AREA_B':
-                    # AREA_B는 안정적인 고성능 패턴
+                elif area == 'CD':
+                    # CD는 안정적인 고성능 패턴
                     base_rate = 88 + random.uniform(-2, 2)
-                elif area == 'AREA_C':
-                    # AREA_C는 변동이 큰 패턴
+                elif area == 'EI':
+                    # EI는 변동이 큰 패턴
                     base_rate = 80 + random.uniform(-5, 5)
-                elif area == 'AREA_D':
-                    # AREA_D는 초기 저성능에서 개선 패턴
+                elif area == 'EH':
+                    # EH는 초기 저성능에서 개선 패턴
                     base_rate = 70 + (periods.index(period) * 4)
-                else:  # AREA_E
-                    # AREA_E는 중간 수준 안정 패턴
+                elif area == 'F':
+                    # F는 중간 수준 안정 패턴
                     base_rate = 82 + random.uniform(-3, 3)
+                elif area == 'P':
+                    # P는 높은 성능 패턴
+                    base_rate = 90 + random.uniform(-2, 2)
+                elif area == 'W':
+                    # W는 변동 패턴
+                    base_rate = 78 + random.uniform(-4, 4)
+                else:  # T
+                    # T는 안정적 중간 패턴
+                    base_rate = 85 + random.uniform(-2, 2)
                 
                 # 70-95% 범위로 제한
                 rate = max(70, min(95, base_rate))
@@ -700,18 +710,59 @@ class DataGenerators:
             
             table_data.append(row)
         
-        # 그래프 데이터 생성 (AREA별로 각 기간의 개별 데이터 포인트)
+        # 그래프 데이터 생성 (새로운 구조: RDATE, CPK_total, CPK_good, Rate, area)
         graph_data = []
+        
+        # Total 데이터 생성
+        for date in dates:
+            # Total은 모든 AREA의 평균으로 계산
+            total_cpk_good = random.randint(80, 95)
+            total_cpk_total = random.randint(95, 100)
+            total_rate = round((total_cpk_good / total_cpk_total) * 100, 1)
+            
+            graph_data.append({
+                'RDATE': date,
+                'CPK_total': total_cpk_total,
+                'CPK_good': total_cpk_good,
+                'Rate': total_rate,
+                'area': 'Total'
+            })
+        
+        # 각 AREA별 데이터 생성
         for area in areas:
-            for period in periods:
-                # 테이블 데이터에서 해당 값 찾기
-                area_row = next((row for row in table_data if row['AREA'] == area), None)
-                if area_row and period in area_row:
-                    graph_data.append({
-                        'AREA': area,
-                        'period': period,
-                        'value': area_row[period]
-                    })
+            for date in dates:
+                # 각 AREA별로 다른 패턴의 달성률 생성
+                if area == 'CP':
+                    base_rate = 75 + (dates.index(date) * 2)
+                elif area == 'CD':
+                    base_rate = 88 + random.uniform(-3, 3)
+                elif area == 'EI':
+                    base_rate = 80 + random.uniform(-5, 5)
+                elif area == 'EH':
+                    base_rate = 70 + (dates.index(date) * 3)
+                elif area == 'F':
+                    base_rate = 82 + random.uniform(-3, 3)
+                elif area == 'P':
+                    base_rate = 90 + random.uniform(-2, 2)
+                elif area == 'W':
+                    base_rate = 78 + random.uniform(-4, 4)
+                else:  # T
+                    base_rate = 85 + random.uniform(-2, 2)
+                
+                # 70-95% 범위로 제한
+                rate = max(70, min(95, base_rate))
+                
+                # CPK_total과 CPK_good 계산
+                cpk_total = random.randint(90, 100)
+                cpk_good = int((rate / 100) * cpk_total)
+                
+                graph_data.append({
+                    'RDATE': date,
+                    'CPK_total': cpk_total,
+                    'CPK_good': cpk_good,
+                    'Rate': round(rate, 1),
+                    'area': area
+                })
         
         print(f"📊 Generated CPK achieve rate data: {len(table_data)} table rows, {len(graph_data)} graph points")
         

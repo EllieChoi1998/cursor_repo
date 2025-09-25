@@ -34,6 +34,14 @@
         </div>
       </div>
 
+      <!-- 전체 달성률 차트 -->
+      <div class="charts-container">
+        <h3>전체 IQC 1.67 달성율</h3>
+        <div class="chart-item total-chart">
+          <div class="chart-box" ref="totalChartRef"></div>
+        </div>
+      </div>
+
       <!-- 각 AREA별 바그래프 -->
       <div class="charts-container">
         <h3>AREA별 달성률 차트</h3>
@@ -43,7 +51,7 @@
             :key="area"
             class="chart-item"
           >
-            <div class="chart-title">{{ area }} 달성률</div>
+            <div class="chart-title">{{ area }}별 IQC 1.67 달성율</div>
             <div class="chart-box" :ref="el => setChartRef(area, el)"></div>
           </div>
         </div>
@@ -95,6 +103,7 @@ export default defineComponent({
   setup(props) {
     // 차트 DOM 참조를 AREA별로 저장
     const chartRefs = ref({}) // { [area: string]: HTMLElement }
+    const totalChartRef = ref(null)
 
     const setChartRef = (area, el) => {
       if (!el) {
@@ -133,13 +142,13 @@ export default defineComponent({
     // 성공 메시지
     const successMessage = computed(() => props.backendData.success_message || '')
 
-    // AREA 목록 추출 (table_data에서)
+    // AREA 목록 추출 (graph_data에서, Total 제외)
     const areas = computed(() => {
       if (!hasData.value) return []
       const areaSet = new Set()
-      tableData.value.forEach(row => {
-        if (row.AREA) {
-          areaSet.add(row.AREA)
+      graphData.value.forEach(row => {
+        if (row.area && row.area !== 'Total') {
+          areaSet.add(row.area)
         }
       })
       return Array.from(areaSet).sort()
@@ -173,6 +182,99 @@ export default defineComponent({
       '#8C564B', '#E377C2', '#7F7F7F', '#BCBD22', '#17BECF'
     ])
 
+    // 전체 달성률 차트 생성 (Total + 각 AREA별 라인)
+    const createTotalChart = async () => {
+      try {
+        if (!totalChartRef.value) return
+
+        // 기존 차트 제거
+        try { Plotly.purge(totalChartRef.value) } catch (_) {}
+
+        // Total 데이터 찾기
+        const totalData = graphData.value.filter(r => r.area === 'Total')
+        if (totalData.length === 0) return
+
+        // Total 바그래프 생성
+        const totalXValues = totalData.map(d => d.RDATE)
+        const totalYValues = totalData.map(d => Number(d.Rate))
+        
+        const traces = [{
+          type: 'bar',
+          x: totalXValues,
+          y: totalYValues,
+          name: 'Total',
+          marker: { color: '#636EFA' },
+          text: totalYValues.map(v => `${v.toFixed(1)}%`),
+          textposition: 'outside',
+          hovertemplate: '<b>전체</b><br>날짜: %{x}<br>달성률: %{y}%<br><extra></extra>'
+        }]
+
+        // 각 AREA별 라인 추가
+        const palette = getColorPalette()
+        areas.value.forEach((area, index) => {
+          const areaData = graphData.value.filter(r => r.area === area)
+          if (areaData.length > 0) {
+            const xValues = areaData.map(d => d.RDATE)
+            const yValues = areaData.map(d => Number(d.Rate))
+            
+            traces.push({
+              type: 'scatter',
+              x: xValues,
+              y: yValues,
+              mode: 'lines+markers',
+              name: area,
+              line: { color: palette[index % palette.length] },
+              marker: { color: palette[index % palette.length] },
+              hovertemplate: `<b>${area}</b><br>날짜: %{x}<br>달성률: %{y}%<br><extra></extra>`
+            })
+          }
+        })
+
+        const layout = {
+          title: {
+            text: '전체 IQC 1.67 달성율',
+            font: { size: 18, color: '#333' }
+          },
+          xaxis: {
+            title: { text: '날짜', font: { size: 12 } },
+            showgrid: true,
+            gridcolor: '#f0f0f0',
+            tickangle: 45
+          },
+          yaxis: {
+            title: { text: '달성률 (%)', font: { size: 12 } },
+            showgrid: true,
+            gridcolor: '#f0f0f0',
+            range: [0, 100]
+          },
+          height: props.height,
+          margin: { l: 60, r: 30, t: 80, b: 80 },
+          plot_bgcolor: 'white',
+          paper_bgcolor: 'white',
+          hovermode: 'closest',
+          showlegend: true,
+          legend: {
+            orientation: 'h',
+            y: -0.15,
+            xanchor: 'center',
+            x: 0.5
+          }
+        }
+
+        await Plotly.newPlot(totalChartRef.value, traces, layout, PlotlyConfig)
+      } catch (err) {
+        console.error('전체 차트 생성 오류:', err)
+        if (totalChartRef.value) {
+          totalChartRef.value.innerHTML = `
+            <div style="padding:12px;text-align:center;color:#666;">
+              <h4>전체 차트 생성 실패</h4>
+              <p>${err?.message ?? err}</p>
+            </div>
+          `
+        }
+      }
+    }
+
     // 특정 AREA의 바그래프 생성
     const createBarChart = async (area, containerEl) => {
       try {
@@ -182,30 +284,13 @@ export default defineComponent({
         try { Plotly.purge(containerEl) } catch (_) {}
 
         // 해당 AREA의 그래프 데이터 찾기
-        const areaGraphData = graphData.value.filter(r => r.AREA === area)
+        const areaGraphData = graphData.value.filter(r => r.area === area)
         if (areaGraphData.length === 0) return
 
-        // 기간별 데이터 준비
-        const xValues = []
-        const yValues = []
-        const colors = []
-        const palette = getColorPalette()
-
-        // graph_data에서 해당 AREA의 모든 기간 데이터 수집
-        areaGraphData.forEach((dataPoint, index) => {
-          const period = dataPoint.period || dataPoint.기간 || dataPoint.PERIOD
-          const value = dataPoint.value || dataPoint.값 || dataPoint.VALUE
-          
-          if (period && value !== undefined && value !== null) {
-            const numValue = Number(value)
-            if (Number.isFinite(numValue)) {
-              xValues.push(period)
-              yValues.push(numValue)
-              colors.push(palette[index % palette.length])
-            }
-          }
-        })
-
+        // 날짜별 데이터 준비
+        const xValues = areaGraphData.map(d => d.RDATE)
+        const yValues = areaGraphData.map(d => Number(d.Rate))
+        
         if (yValues.length === 0) return
 
         // 바그래프 트레이스 생성
@@ -214,16 +299,16 @@ export default defineComponent({
           x: xValues,
           y: yValues,
           marker: {
-            color: colors,
+            color: '#636EFA',
             line: {
-              color: colors,
+              color: '#636EFA',
               width: 1
             }
           },
           text: yValues.map(v => `${v.toFixed(1)}%`),
           textposition: 'outside',
           hovertemplate: `<b>${area}</b><br>` +
-                        `기간: %{x}<br>` +
+                        `날짜: %{x}<br>` +
                         `달성률: %{y}%<br>` +
                         `<extra></extra>`,
           showlegend: false
@@ -232,11 +317,11 @@ export default defineComponent({
         // 레이아웃 설정
         const layout = {
           title: {
-            text: `${area} 달성률`,
+            text: `${area}별 IQC 1.67 달성율`,
             font: { size: 16, color: '#333' }
           },
           xaxis: {
-            title: { text: '기간', font: { size: 12 } },
+            title: { text: '날짜', font: { size: 12 } },
             showgrid: true,
             gridcolor: '#f0f0f0',
             tickangle: 45
@@ -274,6 +359,10 @@ export default defineComponent({
 
       await nextTick()
       
+      // 전체 차트 생성
+      await createTotalChart()
+      
+      // 각 AREA별 차트 생성
       for (const area of areas.value) {
         const el = chartRefs.value[area]
         await createBarChart(area, el)
@@ -296,7 +385,8 @@ export default defineComponent({
       areas,
       periodColumns,
       getValue,
-      setChartRef
+      setChartRef,
+      totalChartRef
     }
   }
 })
@@ -385,6 +475,12 @@ export default defineComponent({
 
 .charts-container {
   width: 100%;
+  margin-bottom: 30px;
+}
+
+.total-chart {
+  width: 100%;
+  max-width: none;
 }
 
 .charts-grid {
