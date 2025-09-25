@@ -120,18 +120,18 @@ export default defineComponent({
         
         // 이미 객체인 경우 그대로 사용
         if (typeof realData === 'object' && realData !== null) {
-          console.log('📊 real_data is already an object:', realData)
+          console.log(' real_data is already an object:', realData)
           return realData
         }
         
         // 문자열인 경우 JSON 파싱
         if (typeof realData === 'string') {
           const data = JSON.parse(realData) || {}
-          console.log('📊 parsed real_data from string:', data)
+          console.log(' parsed real_data from string:', data)
           return data
         }
         
-        console.log('📊 real_data is neither object nor string:', typeof realData, realData)
+        console.log(' real_data is neither object nor string:', typeof realData, realData)
         return {}
       } catch (e) {
         console.error('데이터 파싱 오류:', e)
@@ -148,10 +148,10 @@ export default defineComponent({
     // 그래프 데이터 추출
     const graphData = computed(() => {
       const data = parsedData.value.graph_data || []
-      console.log('🔍 Raw graph_data:', data)
+      console.log(' Raw graph_data:', data)
       if (data.length > 0) {
-        console.log('🔍 First graph_data item:', data[0])
-        console.log('🔍 Available fields in graph_data:', Object.keys(data[0] || {}))
+        console.log(' First graph_data item:', data[0])
+        console.log(' Available fields in graph_data:', Object.keys(data[0] || {}))
       }
       return data
     })
@@ -173,7 +173,7 @@ export default defineComponent({
           areaSet.add(row.AREA)
         }
       })
-      console.log('🔍 Areas from table_data (excluding Total):', Array.from(areaSet))
+      console.log(' Areas from table_data (excluding Total):', Array.from(areaSet))
       return Array.from(areaSet).sort()
     })
 
@@ -190,11 +190,11 @@ export default defineComponent({
 
     // 특정 AREA와 기간의 값 가져오기 (table_data에서)
     const getValue = (area, period) => {
-      console.log('🔍 getValue called with:', { area, period })
-      console.log('🔍 tableData.value:', tableData.value)
+      console.log(' getValue called with:', { area, period })
+      console.log(' tableData.value:', tableData.value)
       
       const row = tableData.value.find(r => r.AREA === area)
-      console.log('🔍 found row:', row)
+      console.log(' found row:', row)
       
       if (!row) {
         console.log('❌ No row found for area:', area)
@@ -223,8 +223,8 @@ export default defineComponent({
     // 간단한 테스트 차트 생성
     const createTestChart = async () => {
       try {
-        console.log('🎨 Creating test chart...')
-        console.log('🔍 totalChartRef.value:', totalChartRef.value)
+        console.log(' Creating test chart...')
+        console.log(' totalChartRef.value:', totalChartRef.value)
         
         if (!totalChartRef.value) {
           console.log('❌ totalChartRef.value is null for test chart')
@@ -247,7 +247,7 @@ export default defineComponent({
           height: 400
         }
 
-        console.log('🎨 Plotly.newPlot called for test chart:', { 
+        console.log(' Plotly.newPlot called for test chart:', { 
           containerEl: totalChartRef.value, 
           trace: testTrace, 
           layout: testLayout 
@@ -264,9 +264,9 @@ export default defineComponent({
     // 전체 달성률 차트 생성 (Total + 각 AREA별 라인)
     const createTotalChart = async () => {
       try {
-        console.log('🎨 Creating total chart...')
-        console.log('🔍 totalChartRef.value:', totalChartRef.value)
-        console.log('🔍 graphData.value:', graphData.value)
+        console.log(' Creating total chart...')
+        console.log(' totalChartRef.value:', totalChartRef.value)
+        console.log(' graphData.value:', graphData.value)
         
         if (!totalChartRef.value) {
           console.log('❌ totalChartRef.value is null')
@@ -284,8 +284,8 @@ export default defineComponent({
         if (totalData.length === 0) {
           totalData = graphData.value.filter(r => r.Area === 'Total')
         }
-        console.log('🔍 Total data found:', totalData)
-        console.log('🔍 All unique area values:', [...new Set(graphData.value.map(r => r.area || r.AREA || r.Area))])
+        console.log(' Total data found:', totalData)
+        console.log(' All unique area values:', [...new Set(graphData.value.map(r => r.area || r.AREA || r.Area))])
         
         if (totalData.length === 0) {
           console.log('❌ No Total data found')
@@ -329,7 +329,7 @@ export default defineComponent({
           if (areaData.length === 0) {
             areaData = graphData.value.filter(r => r.Area === area)
           }
-          console.log(`🔍 Adding line for ${area}:`, areaData)
+          console.log(` Adding line for ${area}:`, areaData)
           if (areaData.length > 0) {
             const xValues = areaData.map(d => d.RDATE)
             const yValues = areaData.map(d => Number(d.Rate))
@@ -362,7 +362,7 @@ export default defineComponent({
             title: { text: '날짜', font: { size: 12 } },
             showgrid: true,
             gridcolor: '#f0f0f0',
-            tickangle: 45
+            tickangle: 0
           },
           yaxis: {
             title: { text: '달성률 (%)', font: { size: 12 } },
@@ -388,7 +388,7 @@ export default defineComponent({
           }
         }
 
-        console.log('🎨 Plotly.newPlot called for total chart:', { 
+        console.log(' Plotly.newPlot called for total chart:', { 
           containerEl: totalChartRef.value, 
           traces, 
           layout 
@@ -419,9 +419,9 @@ export default defineComponent({
     // 특정 AREA의 바그래프 생성
     const createBarChart = async (area, containerEl) => {
       try {
-        console.log(`🎨 Creating bar chart for ${area}...`)
-        console.log('🔍 containerEl:', containerEl)
-        console.log('🔍 graphData.value:', graphData.value)
+        console.log(` Creating bar chart for ${area}...`)
+        console.log(' containerEl:', containerEl)
+        console.log(' graphData.value:', graphData.value)
         
         if (!containerEl) {
           console.log(`❌ containerEl is null for area: ${area}`)
@@ -439,7 +439,7 @@ export default defineComponent({
         if (areaGraphData.length === 0) {
           areaGraphData = graphData.value.filter(r => r.Area === area)
         }
-        console.log(`🔍 Area data for ${area}:`, areaGraphData)
+        console.log(` Area data for ${area}:`, areaGraphData)
         
         if (areaGraphData.length === 0) {
           console.log(`❌ No data found for area: ${area}`)
@@ -450,7 +450,7 @@ export default defineComponent({
         const xValues = areaGraphData.map(d => d.RDATE)
         const yValues = areaGraphData.map(d => Number(d.Rate))
         
-        console.log(`🔍 Chart data for ${area}:`, { xValues, yValues })
+        console.log(` Chart data for ${area}:`, { xValues, yValues })
         
         if (yValues.length === 0) {
           console.log(`❌ No valid yValues for ${area}`)
@@ -480,15 +480,12 @@ export default defineComponent({
 
         // 레이아웃 설정
         const layout = {
-          title: {
-            text: `${area}별 IQC 1.67 달성율`,
-            font: { size: 16, color: '#333' }
-          },
+          
           xaxis: {
             title: { text: '날짜', font: { size: 12 } },
             showgrid: true,
             gridcolor: '#f0f0f0',
-            tickangle: 45
+            tickangle: 0
           },
           yaxis: {
             title: { text: '달성률 (%)', font: { size: 12 } },
@@ -503,7 +500,7 @@ export default defineComponent({
           hovermode: 'closest'
         }
 
-        console.log(`🎨 Plotly.newPlot called for ${area}:`, { containerEl, trace, layout })
+        console.log(` Plotly.newPlot called for ${area}:`, { containerEl, trace, layout })
         
         await Plotly.newPlot(containerEl, [trace], layout, PlotlyConfig)
         
@@ -529,12 +526,12 @@ export default defineComponent({
 
     // 모든 차트 생성
     const createAllCharts = async () => {
-      console.log('🎨 Creating charts...')
-      console.log('📊 hasData:', hasData.value)
-      console.log('📊 tableData:', tableData.value)
-      console.log('📊 graphData:', graphData.value)
-      console.log('📊 areas:', areas.value)
-      console.log('📊 Plotly available:', typeof Plotly !== 'undefined')
+      console.log(' Creating charts...')
+      console.log(' hasData:', hasData.value)
+      console.log(' tableData:', tableData.value)
+      console.log(' graphData:', graphData.value)
+      console.log(' areas:', areas.value)
+      console.log(' Plotly available:', typeof Plotly !== 'undefined')
       
       if (!hasData.value) {
         console.log('❌ No data available for chart creation')
@@ -549,20 +546,20 @@ export default defineComponent({
       await nextTick()
       
       // 간단한 테스트 차트 먼저 생성
-      console.log('🎨 Creating test chart...')
+      console.log(' Creating test chart...')
       await createTestChart()
       
       // 전체 차트 생성
-      console.log('🎨 Creating total chart...')
+      console.log(' Creating total chart...')
       await createTotalChart()
       
       // 각 AREA별 차트 생성
-      console.log('🎨 Creating individual area charts...')
-      console.log('🔍 chartRefs.value:', chartRefs.value)
+      console.log(' Creating individual area charts...')
+      console.log(' chartRefs.value:', chartRefs.value)
       
       for (const area of areas.value) {
         const el = chartRefs.value[area]
-        console.log(`🎨 Creating chart for ${area}:`, el)
+        console.log(` Creating chart for ${area}:`, el)
         
         if (!el) {
           console.log(`❌ No DOM element found for area: ${area}`)
