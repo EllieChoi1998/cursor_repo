@@ -164,16 +164,16 @@ export default defineComponent({
     // 성공 메시지
     const successMessage = computed(() => props.backendData.success_message || '')
 
-    // AREA 목록 추출 (table_data에서 추출)
+    // AREA 목록 추출 (table_data에서 추출, Total 제외)
     const areas = computed(() => {
       if (!hasData.value) return []
       const areaSet = new Set()
       tableData.value.forEach(row => {
-        if (row.AREA) {
+        if (row.AREA && row.AREA !== 'Total') {
           areaSet.add(row.AREA)
         }
       })
-      console.log('🔍 Areas from table_data:', Array.from(areaSet))
+      console.log('🔍 Areas from table_data (excluding Total):', Array.from(areaSet))
       return Array.from(areaSet).sort()
     })
 
