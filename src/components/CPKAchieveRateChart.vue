@@ -316,6 +316,12 @@ export default defineComponent({
         const nonBluePalette = palette.filter(color => color !== '#636EFA')
         
         areas.value.forEach((area, index) => {
+          // Total은 바그래프로만 표시하므로 라인 추가하지 않음
+          if (area === 'Total') {
+            console.log(`⏭️ Skipping Total area line (already shown as bar)`)
+            return
+          }
+          
           let areaData = graphData.value.filter(r => r.area === area)
           if (areaData.length === 0) {
             areaData = graphData.value.filter(r => r.AREA === area)
