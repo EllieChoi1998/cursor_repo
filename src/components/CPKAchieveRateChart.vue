@@ -116,10 +116,26 @@ export default defineComponent({
     // 데이터 파싱
     const parsedData = computed(() => {
       try {
-        const data = JSON.parse(props.backendData.real_data) || {}
-        return data
+        const realData = props.backendData.real_data
+        
+        // 이미 객체인 경우 그대로 사용
+        if (typeof realData === 'object' && realData !== null) {
+          console.log('📊 real_data is already an object:', realData)
+          return realData
+        }
+        
+        // 문자열인 경우 JSON 파싱
+        if (typeof realData === 'string') {
+          const data = JSON.parse(realData) || {}
+          console.log('📊 parsed real_data from string:', data)
+          return data
+        }
+        
+        console.log('📊 real_data is neither object nor string:', typeof realData, realData)
+        return {}
       } catch (e) {
         console.error('데이터 파싱 오류:', e)
+        console.error('real_data 값:', props.backendData.real_data)
         return {}
       }
     })
@@ -355,18 +371,32 @@ export default defineComponent({
 
     // 모든 차트 생성
     const createAllCharts = async () => {
-      if (!hasData.value) return
+      console.log('🎨 Creating charts...')
+      console.log('📊 hasData:', hasData.value)
+      console.log('📊 tableData:', tableData.value)
+      console.log('📊 graphData:', graphData.value)
+      console.log('📊 areas:', areas.value)
+      
+      if (!hasData.value) {
+        console.log('❌ No data available for chart creation')
+        return
+      }
 
       await nextTick()
       
       // 전체 차트 생성
+      console.log('🎨 Creating total chart...')
       await createTotalChart()
       
       // 각 AREA별 차트 생성
+      console.log('🎨 Creating individual area charts...')
       for (const area of areas.value) {
         const el = chartRefs.value[area]
+        console.log(`🎨 Creating chart for ${area}:`, el)
         await createBarChart(area, el)
       }
+      
+      console.log('✅ All charts created')
     }
 
     onMounted(createAllCharts)
