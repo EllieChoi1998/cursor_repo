@@ -310,8 +310,11 @@ export default defineComponent({
           hovertemplate: '<b>전체 Total</b><br>날짜: %{x}<br>달성률: %{y}%<br><extra></extra>'
         }]
 
-        // 각 AREA별 라인 추가 - 여러 가능한 필드명 확인
+        // 각 AREA별 라인 추가 (Total 제외, 파란색 제외) - 여러 가능한 필드명 확인
         const palette = getColorPalette()
+        // 파란색(#636EFA) 제외하고 색상 팔레트 사용
+        const nonBluePalette = palette.filter(color => color !== '#636EFA')
+        
         areas.value.forEach((area, index) => {
           let areaData = graphData.value.filter(r => r.area === area)
           if (areaData.length === 0) {
@@ -332,11 +335,11 @@ export default defineComponent({
               mode: 'lines+markers',
               name: `${area} Area`,
               line: { 
-                color: palette[index % palette.length],
+                color: nonBluePalette[index % nonBluePalette.length],
                 width: 2
               },
               marker: { 
-                color: palette[index % palette.length],
+                color: nonBluePalette[index % nonBluePalette.length],
                 size: 6
               },
               hovertemplate: `<b>${area} Area</b><br>날짜: %{x}<br>달성률: %{y}%<br><extra></extra>`
