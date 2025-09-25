@@ -214,6 +214,47 @@ export default defineComponent({
       '#8C564B', '#E377C2', '#7F7F7F', '#BCBD22', '#17BECF'
     ])
 
+    // 간단한 테스트 차트 생성
+    const createTestChart = async () => {
+      try {
+        console.log('🎨 Creating test chart...')
+        console.log('🔍 totalChartRef.value:', totalChartRef.value)
+        
+        if (!totalChartRef.value) {
+          console.log('❌ totalChartRef.value is null for test chart')
+          return
+        }
+
+        // 기존 차트 제거
+        try { Plotly.purge(totalChartRef.value) } catch (_) {}
+
+        // 간단한 테스트 데이터
+        const testTrace = {
+          type: 'bar',
+          x: ['Test1', 'Test2', 'Test3'],
+          y: [10, 20, 30],
+          name: 'Test Chart'
+        }
+
+        const testLayout = {
+          title: 'Test Chart',
+          height: 400
+        }
+
+        console.log('🎨 Plotly.newPlot called for test chart:', { 
+          containerEl: totalChartRef.value, 
+          trace: testTrace, 
+          layout: testLayout 
+        })
+        
+        await Plotly.newPlot(totalChartRef.value, [testTrace], testLayout, PlotlyConfig)
+        
+        console.log('✅ Test chart successfully created')
+      } catch (err) {
+        console.error('Test chart creation error:', err)
+      }
+    }
+
     // 전체 달성률 차트 생성 (Total + 각 AREA별 라인)
     const createTotalChart = async () => {
       try {
@@ -306,9 +347,23 @@ export default defineComponent({
           }
         }
 
+        console.log('🎨 Plotly.newPlot called for total chart:', { 
+          containerEl: totalChartRef.value, 
+          traces, 
+          layout 
+        })
+        
         await Plotly.newPlot(totalChartRef.value, traces, layout, PlotlyConfig)
+        
+        console.log('✅ Total chart successfully created')
       } catch (err) {
         console.error('전체 차트 생성 오류:', err)
+        console.error('Total chart error details:', {
+          containerEl: totalChartRef.value,
+          traces,
+          layout,
+          error: err
+        })
         if (totalChartRef.value) {
           totalChartRef.value.innerHTML = `
             <div style="padding:12px;text-align:center;color:#666;">
@@ -348,7 +403,12 @@ export default defineComponent({
         const xValues = areaGraphData.map(d => d.RDATE)
         const yValues = areaGraphData.map(d => Number(d.Rate))
         
-        if (yValues.length === 0) return
+        console.log(`🔍 Chart data for ${area}:`, { xValues, yValues })
+        
+        if (yValues.length === 0) {
+          console.log(`❌ No valid yValues for ${area}`)
+          return
+        }
 
         // 바그래프 트레이스 생성
         const trace = {
@@ -396,9 +456,19 @@ export default defineComponent({
           hovermode: 'closest'
         }
 
+        console.log(`🎨 Plotly.newPlot called for ${area}:`, { containerEl, trace, layout })
+        
         await Plotly.newPlot(containerEl, [trace], layout, PlotlyConfig)
+        
+        console.log(`✅ Chart successfully created for ${area}`)
       } catch (err) {
         console.error(`[${area}] 차트 생성 오류:`, err)
+        console.error(`[${area}] Error details:`, {
+          containerEl,
+          trace,
+          layout,
+          error: err
+        })
         if (containerEl) {
           containerEl.innerHTML = `
             <div style="padding:12px;text-align:center;color:#666;">
@@ -417,13 +487,23 @@ export default defineComponent({
       console.log('📊 tableData:', tableData.value)
       console.log('📊 graphData:', graphData.value)
       console.log('📊 areas:', areas.value)
+      console.log('📊 Plotly available:', typeof Plotly !== 'undefined')
       
       if (!hasData.value) {
         console.log('❌ No data available for chart creation')
         return
       }
 
+      if (typeof Plotly === 'undefined') {
+        console.error('❌ Plotly is not loaded!')
+        return
+      }
+
       await nextTick()
+      
+      // 간단한 테스트 차트 먼저 생성
+      console.log('🎨 Creating test chart...')
+      await createTestChart()
       
       // 전체 차트 생성
       console.log('🎨 Creating total chart...')
@@ -431,9 +511,17 @@ export default defineComponent({
       
       // 각 AREA별 차트 생성
       console.log('🎨 Creating individual area charts...')
+      console.log('🔍 chartRefs.value:', chartRefs.value)
+      
       for (const area of areas.value) {
         const el = chartRefs.value[area]
         console.log(`🎨 Creating chart for ${area}:`, el)
+        
+        if (!el) {
+          console.log(`❌ No DOM element found for area: ${area}`)
+          continue
+        }
+        
         await createBarChart(area, el)
       }
       
