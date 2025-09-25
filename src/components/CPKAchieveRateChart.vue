@@ -147,7 +147,13 @@ export default defineComponent({
 
     // 그래프 데이터 추출
     const graphData = computed(() => {
-      return parsedData.value.graph_data || []
+      const data = parsedData.value.graph_data || []
+      console.log('🔍 Raw graph_data:', data)
+      if (data.length > 0) {
+        console.log('🔍 First graph_data item:', data[0])
+        console.log('🔍 Available fields in graph_data:', Object.keys(data[0] || {}))
+      }
+      return data
     })
 
     // 데이터가 있는지 확인
@@ -270,9 +276,16 @@ export default defineComponent({
         // 기존 차트 제거
         try { Plotly.purge(totalChartRef.value) } catch (_) {}
 
-        // Total 데이터 찾기 (area 필드 사용)
-        const totalData = graphData.value.filter(r => r.area === 'Total')
+        // Total 데이터 찾기 - 여러 가능한 필드명 확인
+        let totalData = graphData.value.filter(r => r.area === 'Total')
+        if (totalData.length === 0) {
+          totalData = graphData.value.filter(r => r.AREA === 'Total')
+        }
+        if (totalData.length === 0) {
+          totalData = graphData.value.filter(r => r.Area === 'Total')
+        }
         console.log('🔍 Total data found:', totalData)
+        console.log('🔍 All unique area values:', [...new Set(graphData.value.map(r => r.area || r.AREA || r.Area))])
         
         if (totalData.length === 0) {
           console.log('❌ No Total data found')
@@ -294,10 +307,16 @@ export default defineComponent({
           hovertemplate: '<b>전체</b><br>날짜: %{x}<br>달성률: %{y}%<br><extra></extra>'
         }]
 
-        // 각 AREA별 라인 추가 (area 필드 사용)
+        // 각 AREA별 라인 추가 - 여러 가능한 필드명 확인
         const palette = getColorPalette()
         areas.value.forEach((area, index) => {
-          const areaData = graphData.value.filter(r => r.area === area)
+          let areaData = graphData.value.filter(r => r.area === area)
+          if (areaData.length === 0) {
+            areaData = graphData.value.filter(r => r.AREA === area)
+          }
+          if (areaData.length === 0) {
+            areaData = graphData.value.filter(r => r.Area === area)
+          }
           console.log(`🔍 Adding line for ${area}:`, areaData)
           if (areaData.length > 0) {
             const xValues = areaData.map(d => d.RDATE)
@@ -390,8 +409,14 @@ export default defineComponent({
         // 기존 차트 제거
         try { Plotly.purge(containerEl) } catch (_) {}
 
-        // 해당 AREA의 그래프 데이터 찾기 (area 필드 사용)
-        const areaGraphData = graphData.value.filter(r => r.area === area)
+        // 해당 AREA의 그래프 데이터 찾기 - 여러 가능한 필드명 확인
+        let areaGraphData = graphData.value.filter(r => r.area === area)
+        if (areaGraphData.length === 0) {
+          areaGraphData = graphData.value.filter(r => r.AREA === area)
+        }
+        if (areaGraphData.length === 0) {
+          areaGraphData = graphData.value.filter(r => r.Area === area)
+        }
         console.log(`🔍 Area data for ${area}:`, areaGraphData)
         
         if (areaGraphData.length === 0) {
