@@ -300,11 +300,14 @@ export default defineComponent({
           type: 'bar',
           x: totalXValues,
           y: totalYValues,
-          name: 'Total',
-          marker: { color: '#636EFA' },
+          name: '전체 Total',
+          marker: { 
+            color: '#636EFA',
+            line: { color: '#636EFA', width: 1 }
+          },
           text: totalYValues.map(v => `${v.toFixed(1)}%`),
           textposition: 'outside',
-          hovertemplate: '<b>전체</b><br>날짜: %{x}<br>달성률: %{y}%<br><extra></extra>'
+          hovertemplate: '<b>전체 Total</b><br>날짜: %{x}<br>달성률: %{y}%<br><extra></extra>'
         }]
 
         // 각 AREA별 라인 추가 - 여러 가능한 필드명 확인
@@ -327,10 +330,16 @@ export default defineComponent({
               x: xValues,
               y: yValues,
               mode: 'lines+markers',
-              name: area,
-              line: { color: palette[index % palette.length] },
-              marker: { color: palette[index % palette.length] },
-              hovertemplate: `<b>${area}</b><br>날짜: %{x}<br>달성률: %{y}%<br><extra></extra>`
+              name: `${area} Area`,
+              line: { 
+                color: palette[index % palette.length],
+                width: 2
+              },
+              marker: { 
+                color: palette[index % palette.length],
+                size: 6
+              },
+              hovertemplate: `<b>${area} Area</b><br>날짜: %{x}<br>달성률: %{y}%<br><extra></extra>`
             })
           }
         })
@@ -353,16 +362,20 @@ export default defineComponent({
             range: [0, 100]
           },
           height: props.height,
-          margin: { l: 60, r: 30, t: 80, b: 80 },
+          margin: { l: 60, r: 30, t: 80, b: 120 },
           plot_bgcolor: 'white',
           paper_bgcolor: 'white',
           hovermode: 'closest',
           showlegend: true,
           legend: {
             orientation: 'h',
-            y: -0.15,
+            y: -0.2,
             xanchor: 'center',
-            x: 0.5
+            x: 0.5,
+            font: { size: 12 },
+            bgcolor: 'rgba(255, 255, 255, 0.8)',
+            bordercolor: '#ccc',
+            borderwidth: 1
           }
         }
 
