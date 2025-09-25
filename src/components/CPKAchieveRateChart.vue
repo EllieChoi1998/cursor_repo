@@ -158,15 +158,16 @@ export default defineComponent({
     // 성공 메시지
     const successMessage = computed(() => props.backendData.success_message || '')
 
-    // AREA 목록 추출 (graph_data에서, Total 제외)
+    // AREA 목록 추출 (table_data에서 추출)
     const areas = computed(() => {
       if (!hasData.value) return []
       const areaSet = new Set()
-      graphData.value.forEach(row => {
-        if (row.area && row.area !== 'Total') {
-          areaSet.add(row.area)
+      tableData.value.forEach(row => {
+        if (row.AREA) {
+          areaSet.add(row.AREA)
         }
       })
+      console.log('🔍 Areas from table_data:', Array.from(areaSet))
       return Array.from(areaSet).sort()
     })
 
@@ -183,11 +184,26 @@ export default defineComponent({
 
     // 특정 AREA와 기간의 값 가져오기 (table_data에서)
     const getValue = (area, period) => {
+      console.log('🔍 getValue called with:', { area, period })
+      console.log('🔍 tableData.value:', tableData.value)
+      
       const row = tableData.value.find(r => r.AREA === area)
-      if (!row || row[period] === undefined || row[period] === null) return '-'
+      console.log('🔍 found row:', row)
+      
+      if (!row) {
+        console.log('❌ No row found for area:', area)
+        return '-'
+      }
+      
+      if (row[period] === undefined || row[period] === null) {
+        console.log('❌ No value found for period:', period, 'in row:', row)
+        return '-'
+      }
       
       const value = Number(row[period])
-      return Number.isFinite(value) ? value.toFixed(1) : '-'
+      const result = Number.isFinite(value) ? value.toFixed(1) : '-'
+      console.log('✅ getValue result:', result)
+      return result
     }
 
     // 색상 팔레트
@@ -201,14 +217,26 @@ export default defineComponent({
     // 전체 달성률 차트 생성 (Total + 각 AREA별 라인)
     const createTotalChart = async () => {
       try {
-        if (!totalChartRef.value) return
+        console.log('🎨 Creating total chart...')
+        console.log('🔍 totalChartRef.value:', totalChartRef.value)
+        console.log('🔍 graphData.value:', graphData.value)
+        
+        if (!totalChartRef.value) {
+          console.log('❌ totalChartRef.value is null')
+          return
+        }
 
         // 기존 차트 제거
         try { Plotly.purge(totalChartRef.value) } catch (_) {}
 
-        // Total 데이터 찾기
+        // Total 데이터 찾기 (area 필드 사용)
         const totalData = graphData.value.filter(r => r.area === 'Total')
-        if (totalData.length === 0) return
+        console.log('🔍 Total data found:', totalData)
+        
+        if (totalData.length === 0) {
+          console.log('❌ No Total data found')
+          return
+        }
 
         // Total 바그래프 생성
         const totalXValues = totalData.map(d => d.RDATE)
@@ -225,10 +253,11 @@ export default defineComponent({
           hovertemplate: '<b>전체</b><br>날짜: %{x}<br>달성률: %{y}%<br><extra></extra>'
         }]
 
-        // 각 AREA별 라인 추가
+        // 각 AREA별 라인 추가 (area 필드 사용)
         const palette = getColorPalette()
         areas.value.forEach((area, index) => {
           const areaData = graphData.value.filter(r => r.area === area)
+          console.log(`🔍 Adding line for ${area}:`, areaData)
           if (areaData.length > 0) {
             const xValues = areaData.map(d => d.RDATE)
             const yValues = areaData.map(d => Number(d.Rate))
@@ -294,14 +323,26 @@ export default defineComponent({
     // 특정 AREA의 바그래프 생성
     const createBarChart = async (area, containerEl) => {
       try {
-        if (!containerEl) return
+        console.log(`🎨 Creating bar chart for ${area}...`)
+        console.log('🔍 containerEl:', containerEl)
+        console.log('🔍 graphData.value:', graphData.value)
+        
+        if (!containerEl) {
+          console.log(`❌ containerEl is null for area: ${area}`)
+          return
+        }
 
         // 기존 차트 제거
         try { Plotly.purge(containerEl) } catch (_) {}
 
-        // 해당 AREA의 그래프 데이터 찾기
+        // 해당 AREA의 그래프 데이터 찾기 (area 필드 사용)
         const areaGraphData = graphData.value.filter(r => r.area === area)
-        if (areaGraphData.length === 0) return
+        console.log(`🔍 Area data for ${area}:`, areaGraphData)
+        
+        if (areaGraphData.length === 0) {
+          console.log(`❌ No data found for area: ${area}`)
+          return
+        }
 
         // 날짜별 데이터 준비
         const xValues = areaGraphData.map(d => d.RDATE)
