@@ -3,8 +3,6 @@ from google import genai
 from google.genai.errors import ServerError
 import json
 import re
-
-token = 'AIzaSyD9YdnbJfXglc3zMD6EjVD_U2cDaGBlEkI'
 client = genai.Client(api_key=token)
 
 def safe_generate(prompt, max_retries=3):

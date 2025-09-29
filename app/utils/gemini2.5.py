@@ -1,4 +1,3 @@
-token = 'AIzaSyD9YdnbJfXglc3zMD6EjVD_U2cDaGBlEkI'
 from google import genai
 import json
 
