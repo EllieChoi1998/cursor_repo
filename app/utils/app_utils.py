@@ -31,7 +31,7 @@ def setup_static_files():
 
 def initialize_default_chatrooms(chat_storage: ChatStorage):
     """기본 채팅방들을 생성합니다."""
-    print(f"🔍 Initializing default chatrooms. Current chatrooms: {len(chat_storage.chatrooms)}")
+    print("🔍 Initializing default chatrooms...")
     
     # 시스템용 기본 채팅방은 생성하지 않음 (유저별 채팅방으로 변경)
     # 실제 사용자가 로그인할 때 채팅방이 생성되도록 함

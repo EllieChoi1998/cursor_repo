@@ -35,7 +35,7 @@ def main():
         logger.error(f"  Host: {os.getenv('DB_HOST', 'localhost')}")
         logger.error(f"  Database: {os.getenv('DB_DATABASE', 'chat_analysis_db')}")
         logger.error(f"  User: {os.getenv('DB_USER', 'postgres')}")
-        logger.error(f"  Port: {os.getenv('DB_PORT', '5432')}")
+        logger.error(f"  Port: {os.getenv('DB_PORT', '5433')}")
         logger.error("\nMake sure PostgreSQL is running and the database exists.")
         return False
     

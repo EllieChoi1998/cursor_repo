@@ -6,6 +6,7 @@ from typing import Dict, Optional, List
 from datetime import datetime, timedelta
 import logging
 import json
+import psycopg2.extras
 
 from app.models import SessionData
 from app.database import db_connection
@@ -30,16 +31,17 @@ class UserStorage:
             expires_at = datetime.now() + timedelta(hours=24)
             
             with db_connection.get_cursor() as cursor:
+                # JSONB 컬럼에는 psycopg2.extras.Json으로 감싸서 전달
                 cursor.execute("""
                     INSERT INTO service_user_storage (user_id, session_id, user_data, source, expires_at, updated_at)
                     VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                     RETURNING id, user_id, session_id, user_data, source, created_at, expires_at
-                """, (user_id, session_id, json.dumps(user_data), source, expires_at))
+                """, (user_id, session_id, psycopg2.extras.Json(user_data), source, expires_at))
                 
                 result = cursor.fetchone()
                 session_data = SessionData(
                     sessionId=result['session_id'],
-                    user=json.loads(result['user_data']),
+                    user=result['user_data'],  # JSONB는 자동으로 dict로 반환됨
                     source=result['source'],
                     createdAt=result['created_at'].isoformat()
                 )
@@ -64,7 +66,7 @@ class UserStorage:
                 if result:
                     return SessionData(
                         sessionId=result['session_id'],
-                        user=json.loads(result['user_data']),
+                        user=result['user_data'],  # JSONB는 자동으로 dict로 반환됨
                         source=result['source'],
                         createdAt=result['created_at'].isoformat()
                     )
@@ -86,13 +88,13 @@ class UserStorage:
                     SET user_data = %s, updated_at = CURRENT_TIMESTAMP, expires_at = %s
                     WHERE session_id = %s AND is_active = TRUE
                     RETURNING user_id, session_id, user_data, source, created_at, expires_at
-                """, (json.dumps(user_data), datetime.now() + timedelta(hours=24), session_id))
+                """, (psycopg2.extras.Json(user_data), datetime.now() + timedelta(hours=24), session_id))
                 
                 result = cursor.fetchone()
                 if result:
                     session_data = SessionData(
                         sessionId=result['session_id'],
-                        user=json.loads(result['user_data']),
+                        user=result['user_data'],
                         source=result['source'],
                         createdAt=result['created_at'].isoformat()
                     )
@@ -138,7 +140,7 @@ class UserStorage:
                 for row in results:
                     session_data = SessionData(
                         sessionId=row['session_id'],
-                        user=json.loads(row['user_data']),
+                        user=row['user_data'],
                         source=row['source'],
                         createdAt=row['created_at'].isoformat()
                     )

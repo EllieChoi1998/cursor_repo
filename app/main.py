@@ -5,6 +5,7 @@ Main FastAPI application - Refactored with proper architecture
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
 
 import sys
 import os
@@ -19,8 +20,26 @@ from app.utils import initialize_application
 from app.routers import chat_router, health_router, auth_router
 from app.repositories import ChatStorage, UserStorage
 
-# Create FastAPI app
-app = FastAPI(title=settings.APP_TITLE, version=settings.APP_VERSION)
+# Initialize global storage (in production, this would be dependency injected)
+chat_storage = ChatStorage()
+user_storage = UserStorage()
+
+# Set dependencies for routers
+from app.routers.chat_router import set_dependencies
+from app.routers.auth_router import set_auth_dependencies
+set_dependencies(chat_storage)
+set_auth_dependencies(user_storage)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan manager"""
+    # Startup
+    initialize_application(chat_storage)
+    yield
+    # Shutdown (if needed)
+
+# Create FastAPI app with lifespan
+app = FastAPI(title=settings.APP_TITLE, version=settings.APP_VERSION, lifespan=lifespan)
 
 # CORS 설정 (개발 환경에서는 모든 origin 허용)
 all_allowed_origins = settings.ALLOWED_ORIGINS + settings.SSO_ALLOWED_ORIGINS
@@ -37,16 +56,6 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# Initialize global storage (in production, this would be dependency injected)
-chat_storage = ChatStorage()
-user_storage = UserStorage()
-
-# Set dependencies for routers
-from app.routers.chat_router import set_dependencies
-from app.routers.auth_router import set_auth_dependencies
-set_dependencies(chat_storage)
-set_auth_dependencies(user_storage)
-
 # Include routers
 app.include_router(chat_router, tags=["chat"])
 app.include_router(health_router, tags=["health"])
@@ -54,12 +63,6 @@ app.include_router(auth_router, tags=["authentication"])
 
 # Static files mounting
 app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
-
-# Initialize application on startup
-@app.on_event("startup")
-async def startup_event():
-    """Application startup event"""
-    initialize_application(chat_storage)
 
 # Run the application
 if __name__ == "__main__":
