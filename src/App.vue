@@ -2802,7 +2802,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 350px;
-  max-width: 800px;
+  max-width: 100%;
   position: relative;
 }
 
