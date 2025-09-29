@@ -18,6 +18,8 @@ from .app_utils import (
     get_app_info
 )
 
+from from utils.call_llm import safe_generate, client
+
 __all__ = [
     "create_jwt_token",
     "verify_jwt_token", 
@@ -28,5 +30,7 @@ __all__ = [
     "setup_static_files",
     "initialize_default_chatrooms", 
     "initialize_application",
-    "get_app_info"
+    "get_app_info",
+    "safe_generate",
+    "client"
 ]
