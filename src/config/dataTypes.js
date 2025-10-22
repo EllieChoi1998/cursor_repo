@@ -74,6 +74,34 @@ export const DATA_TYPES = {
     },
     dataProcessor: 'generateRAGDataWithRealData',
     // 향후 RAG 전용 컴포넌트 추가 예정
+  },
+  EXCEL: {
+    name: 'EXCEL',
+    displayName: 'Excel Data Analysis',
+    description: '엑셀 파일 데이터 분석 및 시각화',
+    supportedResults: ['excel_analysis', 'excel_summary', 'excel_chart'],
+    chartTypes: {
+      excel_analysis: {
+        type: 'table',
+        component: 'ExcelDataTable',
+        title: 'Excel Data Analysis',
+        description: 'Table showing analyzed Excel data'
+      },
+      excel_chart: {
+        type: 'mixed',
+        component: 'ExcelChart',
+        title: 'Excel Data Visualization',
+        description: 'Charts based on Excel data analysis'
+      },
+      excel_summary: {
+        type: 'text',
+        component: 'ExcelSummary',
+        title: 'Excel Analysis Summary',
+        description: 'Summary of Excel data analysis results'
+      }
+    },
+    dataProcessor: 'generateExcelDataWithRealData',
+    // 엑셀 전용 컴포넌트 추가 예정
   }
 }
 
@@ -128,7 +156,7 @@ export const STREAMING_DATA_FLOW = {
   
   // 요청 구조
   requestFormat: {
-    choice: 'PCM|INLINE|RAG', // 데이터 타입 선택
+    choice: 'PCM|INLINE|RAG|EXCEL', // 데이터 타입 선택
     message: '사용자 메시지', // 구체적인 요청 내용
     chatroom_id: '채팅방 ID' // 선택사항
   },

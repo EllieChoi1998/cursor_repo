@@ -2,15 +2,18 @@
 Chat router - Handles all chat-related API endpoints
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from datetime import datetime
+import json
 
 from app.models import (
     ChatRequest, EditMessageRequest, UpdateChatRoomNameRequest
 )
+from app.models.chat_models import ExcelAnalysisRequest
 from app.services import ChatService
+from app.services.excel_analysis_service import ExcelAnalysisService
 from app.repositories import ChatStorage
 from app.utils.jwt_utils import get_user_id_from_token
 
@@ -18,6 +21,10 @@ router = APIRouter()
 
 # HTTP Bearer 토큰 검증용
 security = HTTPBearer(auto_error=False)
+
+# 서비스 초기화
+chat_service = ChatService()
+excel_analysis_service = ExcelAnalysisService()
 
 # This will be set by the main app
 chat_storage = None
@@ -189,3 +196,75 @@ async def edit_message_endpoint(request: EditMessageRequest, user_id: str = Depe
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"메시지 수정 실패: {str(e)}")
+
+
+@router.post("/excel_analysis")
+async def excel_analysis_endpoint(
+    file: UploadFile = File(...),
+    message: str = Form(...),
+    chatroom_id: int = Form(...),
+    user_id: str = Depends(get_current_user)
+):
+    """엑셀 파일 분석 API 엔드포인트"""
+    try:
+        # 엑셀 파일 분석 수행
+        result = await excel_analysis_service.analyze_excel_file(
+            file=file,
+            prompt=message,
+            chatroom_id=chatroom_id,
+            user_id=user_id
+        )
+        
+        if not result.get('success', False):
+            raise HTTPException(status_code=400, detail=result.get('error', '분석 실패'))
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"엑셀 분석 실패: {str(e)}")
+
+
+@router.post("/excel_analysis_stream")
+async def excel_analysis_stream_endpoint(
+    file: UploadFile = File(...),
+    message: str = Form(...),
+    chatroom_id: int = Form(...),
+    user_id: str = Depends(get_current_user)
+):
+    """엑셀 파일 분석 스트리밍 API 엔드포인트"""
+    async def generate():
+        try:
+            # 진행 상황 메시지
+            yield f"data: {json.dumps({'progress_message': '📊 엑셀 파일을 분석하고 있습니다...'})}\n\n"
+            
+            # 엑셀 파일 분석 수행
+            result = await excel_analysis_service.analyze_excel_file(
+                file=file,
+                prompt=message,
+                chatroom_id=chatroom_id,
+                user_id=user_id
+            )
+            
+            if not result.get('success', False):
+                error_response = {"msg": result.get('error', '분석 실패')}
+                yield f"data: {json.dumps(error_response)}\n\n"
+                return
+            
+            # 성공 응답
+            yield f"data: {json.dumps({'data': result})}\n\n"
+            
+        except Exception as e:
+            error_response = {"msg": f"엑셀 분석 중 오류가 발생했습니다: {str(e)}"}
+            yield f"data: {json.dumps(error_response)}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
