@@ -217,6 +217,17 @@
                     📁
                   </button>
                   
+                  <!-- 디버깅용 버튼 (항상 표시) -->
+                  <button 
+                    @click="triggerFileUpload" 
+                    class="file-upload-button"
+                    :disabled="isLoading"
+                    title="디버깅용 파일 업로드"
+                    style="background: red; margin-left: 10px;"
+                  >
+                    🔧
+                  </button>
+                  
                   <button 
                     @click="sendMessage" 
                     class="send-button"
@@ -226,6 +237,14 @@
                     <span v-else>📤</span>
                   </button>
 
+                </div>
+                
+                <!-- 디버깅 정보 -->
+                <div style="margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 4px;">
+                  <p><strong>디버깅 정보:</strong></p>
+                  <p>selectedDataType: {{ selectedDataType }}</p>
+                  <p>fileInput ref: {{ fileInput ? 'Found' : 'Not Found' }}</p>
+                  <p>isLoading: {{ isLoading }}</p>
                 </div>
                 
                 <!-- 숨겨진 파일 입력 -->
