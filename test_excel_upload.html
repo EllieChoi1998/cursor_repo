@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Upload Test</title>
+    <style>
+        .file-upload-button {
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: transform 0.2s ease;
+            margin-right: 8px;
+        }
+        .file-upload-button:hover {
+            transform: scale(1.05);
+        }
+        .data-type-dropdown {
+            padding: 8px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Excel Upload Test</h1>
+    
+    <div>
+        <label for="dataType">Data Type:</label>
+        <select id="dataType" v-model="selectedDataType" class="data-type-dropdown">
+            <option value="pcm">PCM (Process Control Monitor)</option>
+            <option value="inline">INLINE (Inline Analysis)</option>
+            <option value="rag">불량 이력 검색</option>
+            <option value="excel">엑셀 데이터 분석</option>
+        </select>
+    </div>
+    
+    <div>
+        <button 
+            v-if="selectedDataType === 'excel'"
+            @click="triggerFileUpload" 
+            class="file-upload-button"
+            title="엑셀 파일 업로드"
+        >
+            📁
+        </button>
+        
+        <input 
+            ref="fileInput"
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            @change="handleFileUpload"
+            style="display: none"
+        />
+    </div>
+    
+    <div>
+        <p>Selected Data Type: {{ selectedDataType }}</p>
+        <p>File Input Ref: {{ fileInput ? 'Found' : 'Not Found' }}</p>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script>
+        const { createApp, ref } = Vue;
+        
+        createApp({
+            setup() {
+                const selectedDataType = ref('pcm');
+                const fileInput = ref(null);
+                
+                const triggerFileUpload = () => {
+                    console.log('📁 File upload button clicked');
+                    console.log('📁 selectedDataType:', selectedDataType.value);
+                    console.log('📁 fileInput ref:', fileInput.value);
+                    if (fileInput.value) {
+                        fileInput.value.click();
+                        console.log('📁 File input clicked');
+                    } else {
+                        console.error('❌ fileInput ref is null');
+                    }
+                };
+                
+                const handleFileUpload = (event) => {
+                    console.log('📁 File selected:', event.target.files[0]);
+                };
+                
+                return {
+                    selectedDataType,
+                    fileInput,
+                    triggerFileUpload,
+                    handleFileUpload
+                };
+            }
+        }).mount('body');
+    </script>
+</body>
+</html>

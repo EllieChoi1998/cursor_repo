@@ -2072,12 +2072,22 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     // 엑셀 파일 업로드 관련 함수들
     const triggerFileUpload = () => {
       console.log('📁 File upload button clicked')
+      console.log('📁 selectedDataType:', selectedDataType.value)
       console.log('📁 fileInput ref:', fileInput.value)
+      
       if (fileInput.value) {
         fileInput.value.click()
-        console.log('📁 File input clicked')
+        console.log('📁 File input clicked via ref')
       } else {
-        console.error('❌ fileInput ref is null')
+        console.error('❌ fileInput ref is null, trying DOM query')
+        // ref가 작동하지 않으면 DOM에서 직접 찾기
+        const fileInputElement = document.querySelector('input[type="file"]')
+        if (fileInputElement) {
+          fileInputElement.click()
+          console.log('📁 File input clicked via DOM query')
+        } else {
+          console.error('❌ File input element not found in DOM')
+        }
       }
     }
 
@@ -2787,6 +2797,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       nextTick(() => {
         adjustTextareaHeight()
       })
+    })
+
+    // selectedDataType 변경 감지
+    watch(selectedDataType, (newValue, oldValue) => {
+      console.log('🔄 selectedDataType changed:', oldValue, '->', newValue)
     })
 
     onMounted(async () => {
