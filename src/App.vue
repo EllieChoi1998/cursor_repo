@@ -726,6 +726,7 @@ export default defineComponent({
     const isLoading = ref(false)
     const messagesContainer = ref(null)
     const messageInput = ref(null)
+    const fileInput = ref(null)
     const isDataLoading = ref(false)
     
     const chartHeight = ref(600)
@@ -2070,7 +2071,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     // 엑셀 파일 업로드 관련 함수들
     const triggerFileUpload = () => {
-      fileInput.value.click()
+      console.log('📁 File upload button clicked')
+      console.log('📁 fileInput ref:', fileInput.value)
+      if (fileInput.value) {
+        fileInput.value.click()
+        console.log('📁 File input clicked')
+      } else {
+        console.error('❌ fileInput ref is null')
+      }
     }
 
     const handleFileUpload = async (event) => {
