@@ -2874,6 +2874,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         clearErrorMessages,
         // 파일 다운로드 관련
         downloadFile,
+        // 엑셀 파일 업로드 관련
+        fileInput,
+        triggerFileUpload,
+        handleFileUpload,
 
         // 에러 상태
         currentError,
