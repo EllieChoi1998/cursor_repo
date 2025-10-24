@@ -217,17 +217,6 @@
                     📁
                   </button>
                   
-                  <!-- 디버깅용 버튼 (항상 표시) -->
-                  <button 
-                    @click="triggerFileUpload" 
-                    class="file-upload-button"
-                    :disabled="isLoading"
-                    title="디버깅용 파일 업로드"
-                    style="background: red; margin-left: 10px;"
-                  >
-                    🔧
-                  </button>
-                  
                   <button 
                     @click="sendMessage" 
                     class="send-button"
@@ -237,14 +226,6 @@
                     <span v-else>📤</span>
                   </button>
 
-                </div>
-                
-                <!-- 디버깅 정보 -->
-                <div style="margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 4px;">
-                  <p><strong>디버깅 정보:</strong></p>
-                  <p>selectedDataType: {{ selectedDataType }}</p>
-                  <p>fileInput ref: {{ fileInput ? 'Found' : 'Not Found' }}</p>
-                  <p>isLoading: {{ isLoading }}</p>
                 </div>
                 
                 <!-- 숨겨진 파일 입력 -->
@@ -2140,8 +2121,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         return
       }
 
-      // 프롬프트가 없으면 기본 메시지 사용
-      const prompt = currentMessage.value.trim() || '이 엑셀 파일을 분석해주세요.'
+      // 메시지가 없으면 에러 표시
+      const prompt = currentMessage.value.trim()
+      if (!prompt) {
+        showError('메시지를 입력해주세요.')
+        event.target.value = '' // 파일 입력 초기화
+        return
+      }
 
       // 사용자 메시지 추가
       addMessage('user', `📁 ${file.name} 업로드: ${prompt}`, true)
