@@ -218,33 +218,35 @@ export default defineComponent({
           })
         }
 
+        console.log('📊 IQC Chart - keys:', keys.length, 'devices:', devices, 'noValColumns:', noValColumns)
+
         const traces = []
         const palette = getColorPalette()
 
-        // DEVICE별 박스플롯 생성
+        // px.box(y=[col1, col2, ...], color='DEVICE')와 동일하게 동작하도록
+        // 각 key 위치에서 DEVICE별로 하나의 박스플롯 생성
         devices.forEach((device, idx) => {
           const color = palette[idx % palette.length]
-          const deviceRows = sortedData.filter(r => r.DEVICE === device)
-          
           const x = []
           const y = []
-
-          deviceRows.forEach(row => {
-            const validValues = []
-            noValColumns.forEach(noCol => {
-              const v = row[noCol]
-              if (v !== null && v !== undefined && v !== 9 && Number.isFinite(Number(v))) {
-                validValues.push(Number(v))
-              }
-            })
-
-            if (validValues.length > 0) {
-              const xValue = String(row.key || '')
-              validValues.forEach(val => {
-                y.push(val)
-                x.push(xValue)
+          
+          // 각 x 위치(key)별로 데이터 수집
+          keys.forEach(keyValue => {
+            // 해당 key와 device를 가진 행들 찾기
+            const matchingRows = sortedData.filter(r => 
+              String(r.key) === keyValue && r.DEVICE === device
+            )
+            
+            // 해당 행들의 모든 NO_VAL 값들 수집
+            matchingRows.forEach(row => {
+              noValColumns.forEach(noCol => {
+                const v = row[noCol]
+                if (v !== null && v !== undefined && v !== 9 && Number.isFinite(Number(v))) {
+                  y.push(Number(v))
+                  x.push(keyValue)
+                }
               })
-            }
+            })
           })
 
           if (y.length > 0) {
@@ -265,6 +267,7 @@ export default defineComponent({
               hoverinfo: 'all',
               hoveron: 'boxes'
             })
+            console.log(`📦 Device ${device}: ${y.length} data points`)
           }
         })
 
@@ -295,7 +298,7 @@ export default defineComponent({
 
         const layout = {
           xaxis: {
-            title: { text: item.forKey || 'Key', font: { size: 12 } },
+            title: { text: 'Date-Wafer', font: { size: 12 } },
             type: 'category',
             showgrid: true,
             gridcolor: '#f0f0f0',
@@ -331,6 +334,7 @@ export default defineComponent({
         }
 
         Plotly.newPlot(containerEl, traces, layout, PlotlyConfig)
+        console.log('✅ IQC Chart created successfully')
       } catch (err) {
         console.error('IQC 차트 생성 오류:', err)
         errorMessage.value = err?.message ?? String(err)
