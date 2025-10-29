@@ -20,6 +20,11 @@ class QueryAnalyzer:
         'rag': {
             'search': ['search', '검색', '찾기', '조회'],
             'summary': ['summary', '요약', '정리', '개요']
+        },
+        'excel': {
+            'analysis': ['analysis', '분석', '데이터', 'data'],
+            'chart': ['chart', '차트', '그래프', '시각화'],
+            'summary': ['summary', '요약', '정리', '개요']
         }
     }
 
@@ -48,6 +53,10 @@ class QueryAnalyzer:
         # choice가 'rag'인 경우
         elif choice_lower == 'rag':
             return cls.analyze_rag_query(message_lower)
+        
+        # choice가 'excel'인 경우
+        elif choice_lower == 'excel':
+            return cls.analyze_excel_query(message_lower)
         
         # choice가 없거나 인식되지 않은 경우 기존 analyze_query 로직 사용
         else:
@@ -115,6 +124,21 @@ class QueryAnalyzer:
             if keyword in message_lower:
                 return 'rag', 'search', ""
         return 'rag', 'general', ""
+
+    @classmethod
+    def analyze_excel_query(cls, message_lower: str) -> tuple[str, str, str]:
+        """EXCEL choice에 대한 메시지 분석"""
+        # 차트/시각화 관련 키워드
+        if any(k in message_lower for k in ['chart', '차트', '그래프', '시각화', 'visualization']):
+            return 'excel', 'chart', ""
+        
+        # 요약 관련 키워드
+        elif any(k in message_lower for k in ['summary', '요약', '정리', '개요', 'summary']):
+            return 'excel', 'summary', ""
+        
+        # 기본값은 분석
+        else:
+            return 'excel', 'analysis', ""
 
     @classmethod
     def analyze_query(cls, message: str) -> tuple[str, str, str]:

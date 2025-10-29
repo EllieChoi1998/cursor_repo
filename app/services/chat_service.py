@@ -57,6 +57,11 @@ class ChatService:
             yield f"data: {json.dumps({'msg': error_msg})}\n\n"
             return
         
+        # 엑셀 분석 처리
+        if detected_type == 'excel':
+            yield f"data: {json.dumps({'msg': '엑셀 파일 분석을 위해서는 파일 업로드가 필요합니다. /excel_analysis 엔드포인트를 사용해주세요.'})}\n\n"
+            return
+        
         # 사용자 메시지 시간 기록
         user_message_time = datetime.now()
         

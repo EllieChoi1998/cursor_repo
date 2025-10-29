@@ -5,6 +5,7 @@ Chat-related Pydantic models and schemas
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, Dict, Any, List
+from fastapi import UploadFile
 
 
 # 채팅방 모델
@@ -48,14 +49,14 @@ class BotResponse(BaseModel):
 
 # 요청 모델
 class ChatRequest(BaseModel):
-    choice: str  # 'pcm', 'inline', 'rag'
+    choice: str  # 'pcm', 'inline', 'rag', 'excel'
     message: str
     chatroom_id: int  # 정수로 변경
 
 
 # 메시지 수정 요청 모델 (새로 추가)
 class EditMessageRequest(BaseModel):
-    choice: str  # 'pcm', 'inline', 'rag'
+    choice: str  # 'pcm', 'inline', 'rag', 'excel'
     message: str
     chatroom_id: int
     original_chat_id: int  # 기존 chat_id
@@ -90,3 +91,21 @@ class ChatRoomDetailResponse(BaseModel):
     chatroom: ChatRoom
     messages: List[Message]
     responses: List[BotResponse]
+
+
+# 엑셀 파일 업로드 요청 모델
+class ExcelAnalysisRequest(BaseModel):
+    choice: str = "excel"  # 고정값
+    message: str  # 분석 프롬프트
+    chatroom_id: int
+    # 파일은 별도로 UploadFile로 처리
+
+
+# 엑셀 분석 결과 모델
+class ExcelAnalysisResult(BaseModel):
+    file_name: str
+    analysis_type: str  # 'excel_analysis', 'excel_chart', 'excel_summary'
+    data: Dict[str, Any]  # 분석된 데이터
+    summary: str  # 분석 요약
+    chart_config: Optional[Dict[str, Any]] = None  # 차트 설정 (있는 경우)
+    sql: Optional[str] = None  # 실행된 SQL (있는 경우)

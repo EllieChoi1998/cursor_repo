@@ -173,6 +173,7 @@
                       <option value="pcm">PCM (Process Control Monitor)</option>
                       <option value="inline">INLINE (Inline Analysis)</option>
                       <option value="rag">불량 이력 검색</option>
+                      <option value="excel">엑셀 데이터 분석</option>
                     </select>
                   </div>
                   <div class="time-toggle">
@@ -204,16 +205,37 @@
                     rows="1"
                     ref="messageInput"
                   ></textarea>
+                  
+                  <!-- 엑셀 파일 업로드 버튼 (엑셀 선택 시에만 표시) -->
+                  <button 
+                    v-if="selectedDataType === 'excel'"
+                    @click="triggerFileUpload" 
+                    class="file-upload-button"
+                    :disabled="isLoading"
+                    title="엑셀 파일 업로드"
+                  >
+                    📁
+                  </button>
+                  
                   <button 
                     @click="sendMessage" 
                     class="send-button"
                     :disabled="!currentMessage.trim() || isLoading"
                   >
                     <span v-if="isLoading">⏳</span>
-                                          <span v-else>📤</span>
+                    <span v-else>📤</span>
                   </button>
 
                 </div>
+                
+                <!-- 숨겨진 파일 입력 -->
+                <input 
+                  ref="fileInput"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  @change="handleFileUpload"
+                  style="display: none"
+                />
                 <!-- 에러 메시지 표시 영역 -->
                 <div v-if="showError" class="error-message">
                   <span class="error-icon">⚠️</span>
@@ -314,6 +336,84 @@
                   <!-- RAG Answer List (기존 RAG 로직 유지) -->
                   <div v-else-if="result.type === 'rag_search'" class="chart-section">
                     <RAGAnswerList :answer="result.answer" />
+                  </div>
+
+                  <!-- Excel Analysis Results -->
+                  <div v-else-if="result.type === 'excel_analysis' || result.type === 'excel_chart' || result.type === 'excel_summary'" class="chart-section">
+                    <div class="excel-analysis-result">
+                      <div class="excel-header">
+                        <h4>📊 {{ result.title }}</h4>
+                        <p class="file-name">파일: {{ result.fileName }}</p>
+                      </div>
+                      
+                      <!-- 분석 요약 -->
+                      <div v-if="result.summary" class="excel-summary">
+                        <h5>📋 분석 요약</h5>
+                        <div class="summary-content">{{ result.summary }}</div>
+                      </div>
+                      
+                      <!-- 차트 데이터 (excel_chart인 경우) -->
+                      <div v-if="result.type === 'excel_chart' && result.chartConfig" class="excel-chart">
+                        <h5>📈 데이터 시각화</h5>
+                        <div class="chart-info">
+                          <p><strong>차트 타입:</strong> {{ result.chartConfig.chart_type }}</p>
+                          <p v-if="result.chartConfig.x_column"><strong>X축:</strong> {{ result.chartConfig.x_column }}</p>
+                          <p v-if="result.chartConfig.y_column"><strong>Y축:</strong> {{ result.chartConfig.y_column }}</p>
+                          <p><strong>데이터 포인트:</strong> {{ result.chartConfig.data?.length || 0 }}개</p>
+                        </div>
+                        <!-- 여기에 실제 차트 컴포넌트를 추가할 수 있습니다 -->
+                      </div>
+                      
+                      <!-- 데이터 테이블 (excel_analysis인 경우) -->
+                      <div v-if="result.type === 'excel_analysis' && result.data?.basic_info" class="excel-data-table">
+                        <h5>📋 데이터 정보</h5>
+                        <div class="data-info">
+                          <p><strong>행 수:</strong> {{ result.data.basic_info.shape[0] }}</p>
+                          <p><strong>열 수:</strong> {{ result.data.basic_info.shape[1] }}</p>
+                          <p><strong>컬럼:</strong> {{ result.data.basic_info.columns.join(', ') }}</p>
+                        </div>
+                        
+                        <!-- 샘플 데이터 표시 -->
+                        <div v-if="result.data.basic_info.sample_data" class="sample-data">
+                          <h6>샘플 데이터 (상위 10행)</h6>
+                          <div class="table-container">
+                            <table class="data-table">
+                              <thead>
+                                <tr>
+                                  <th v-for="column in result.data.basic_info.columns" :key="column">
+                                    {{ column }}
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr v-for="(row, index) in result.data.basic_info.sample_data" :key="index">
+                                  <td v-for="column in result.data.basic_info.columns" :key="column">
+                                    {{ row[column] }}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- 통계 정보 (excel_analysis인 경우) -->
+                      <div v-if="result.type === 'excel_analysis' && result.data?.statistics" class="excel-statistics">
+                        <h5>📊 통계 정보</h5>
+                        <div class="stats-grid">
+                          <div v-for="(stats, column) in result.data.statistics" :key="column" class="stat-item">
+                            <h6>{{ column }}</h6>
+                            <ul>
+                              <li>평균: {{ stats.mean?.toFixed(2) }}</li>
+                              <li>표준편차: {{ stats.std?.toFixed(2) }}</li>
+                              <li>최솟값: {{ stats.min?.toFixed(2) }}</li>
+                              <li>최댓값: {{ stats.max?.toFixed(2) }}</li>
+                              <li>중앙값: {{ stats.median?.toFixed(2) }}</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <!-- Metadata Only (real_data가 없는 경우) -->
@@ -626,6 +726,7 @@ export default defineComponent({
     const isLoading = ref(false)
     const messagesContainer = ref(null)
     const messageInput = ref(null)
+    const fileInput = ref(null)
     const isDataLoading = ref(false)
     
     const chartHeight = ref(600)
@@ -958,6 +1059,25 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               success_message: responseData.success_message,
               llm_spec: responseData.llm_spec       // 👈 추가
             }
+          }
+        } else if (responseData.analysis_type === 'excel_analysis' || responseData.analysis_type === 'excel_chart' || responseData.analysis_type === 'excel_summary') {
+          // 엑셀 분석 결과 처리
+          result = {
+            id: `history_${chatId}_${Date.now()}`,
+            type: responseData.analysis_type,
+            title: `Excel Analysis - ${responseData.file_name || 'File'}`,
+            data: responseData.data || {},
+            isActive: false,
+            timestamp: new Date(),
+            chatId: chatId,
+            sql: responseData.sql,
+            realData: responseData.data?.raw_data || responseData.data?.chart_data || [],
+            resultType: responseData.analysis_type,
+            userMessage: userMessage,
+            summary: responseData.summary,
+            chartConfig: responseData.chart_config,
+            fileName: responseData.file_name,
+            metadata: responseData
           }
         } else if (responseData.result_type || responseData.result) {
           // real_data가 없어도 메타데이터만으로 결과 생성
@@ -1949,6 +2069,142 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       isLoading.value = false
     }
 
+    // 엑셀 파일 업로드 관련 함수들
+    const triggerFileUpload = () => {
+      console.log('📁 File upload button clicked')
+      console.log('📁 selectedDataType:', selectedDataType.value)
+      console.log('📁 fileInput ref:', fileInput.value)
+      
+      if (fileInput.value) {
+        fileInput.value.click()
+        console.log('📁 File input clicked via ref')
+      } else {
+        console.error('❌ fileInput ref is null, trying DOM query')
+        // ref가 작동하지 않으면 DOM에서 직접 찾기
+        const fileInputElement = document.querySelector('input[type="file"]')
+        if (fileInputElement) {
+          fileInputElement.click()
+          console.log('📁 File input clicked via DOM query')
+        } else {
+          console.error('❌ File input element not found in DOM')
+        }
+      }
+    }
+
+    const handleFileUpload = async (event) => {
+      const file = event.target.files[0]
+      if (!file) return
+
+      // 파일 형식 검증
+      const allowedTypes = ['.xlsx', '.xls', '.csv']
+      const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
+      
+      if (!allowedTypes.includes(fileExtension)) {
+        showError('지원하지 않는 파일 형식입니다. .xlsx, .xls, .csv 파일만 업로드 가능합니다.')
+        return
+      }
+
+      // 파일 크기 검증 (10MB 제한)
+      const maxSize = 10 * 1024 * 1024 // 10MB
+      if (file.size > maxSize) {
+        showError('파일 크기가 너무 큽니다. 10MB 이하의 파일을 업로드해주세요.')
+        return
+      }
+
+      // 활성 채팅방이 없으면 첫 번째 채팅방 선택
+      if (!activeChatId.value && chatRooms.value.length > 0) {
+        await selectChatRoom(chatRooms.value[0].id)
+      }
+      
+      if (!activeChatId.value) {
+        showError('채팅방을 선택해주세요.')
+        return
+      }
+
+      // 메시지가 없으면 에러 표시
+      const prompt = currentMessage.value.trim()
+      if (!prompt) {
+        showError('메시지를 입력해주세요.')
+        event.target.value = '' // 파일 입력 초기화
+        return
+      }
+
+      // 사용자 메시지 추가
+      addMessage('user', `📁 ${file.name} 업로드: ${prompt}`, true)
+      currentMessage.value = ''
+      isLoading.value = true
+
+      try {
+        // FormData 생성
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('message', prompt)
+        formData.append('chatroom_id', activeChatId.value)
+
+        // API 호출
+        const response = await fetch('/excel_analysis_stream', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: formData
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        // 스트리밍 응답 처리
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6))
+                
+                if (data.progress_message) {
+                  // 진행 상황 메시지
+                  addMessage('bot', data.progress_message, false)
+                } else if (data.data) {
+                  // 분석 결과 처리
+                  const result = data.data
+                  const createdResult = createResultFromResponseData(result, prompt, activeChatId.value)
+                  if (createdResult) {
+                    createdResult.isActive = true
+                    const currentResults = chatResults.value[activeChatId.value] || []
+                    currentResults.push(createdResult)
+                    chatResults.value[activeChatId.value] = currentResults
+                    console.log('✅ Excel analysis result added:', createdResult)
+                  }
+                } else if (data.msg) {
+                  // 에러 메시지
+                  addMessage('bot', data.msg, false)
+                }
+              } catch (e) {
+                console.error('JSON 파싱 오류:', e)
+              }
+            }
+          }
+        }
+
+      } catch (error) {
+        console.error('파일 업로드 오류:', error)
+        addMessage('bot', `파일 업로드 중 오류가 발생했습니다: ${error.message}`, false)
+      } finally {
+        isLoading.value = false
+        // 파일 입력 초기화
+        event.target.value = ''
+      }
+    }
+
     // 메시지 수정 관련 함수들
     const startEdit = (messageIndex) => {
       const messages = chatMessages.value[activeChatId.value]
@@ -2548,6 +2804,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       })
     })
 
+    // selectedDataType 변경 감지
+    watch(selectedDataType, (newValue, oldValue) => {
+      console.log('🔄 selectedDataType changed:', oldValue, '->', newValue)
+    })
+
     onMounted(async () => {
       // 인증 상태 확인
       checkAuthentication()
@@ -2613,6 +2874,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         clearErrorMessages,
         // 파일 다운로드 관련
         downloadFile,
+        // 엑셀 파일 업로드 관련
+        fileInput,
+        triggerFileUpload,
+        handleFileUpload,
 
         // 에러 상태
         currentError,
@@ -3091,6 +3356,184 @@ body {
 .send-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.file-upload-button {
+  width: 45px;
+  height: 45px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: transform 0.2s ease;
+  margin-right: 8px;
+}
+
+.file-upload-button:hover:not(:disabled) {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.file-upload-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Excel Analysis Results */
+.excel-analysis-result {
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.excel-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.excel-header h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.file-name {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.excel-summary {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #007bff;
+}
+
+.excel-summary h5 {
+  margin: 0 0 0.5rem 0;
+  color: #007bff;
+}
+
+.summary-content {
+  white-space: pre-line;
+  line-height: 1.6;
+}
+
+.excel-chart {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #28a745;
+}
+
+.excel-chart h5 {
+  margin: 0 0 0.5rem 0;
+  color: #28a745;
+}
+
+.chart-info p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.excel-data-table {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #ffc107;
+}
+
+.excel-data-table h5 {
+  margin: 0 0 0.5rem 0;
+  color: #ffc107;
+}
+
+.data-info p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.sample-data h6 {
+  margin: 1rem 0 0.5rem 0;
+  color: #333;
+}
+
+.table-container {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.data-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.excel-statistics {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #dc3545;
+}
+
+.excel-statistics h5 {
+  margin: 0 0 0.5rem 0;
+  color: #dc3545;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.stat-item {
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.stat-item h6 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.stat-item ul {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.85rem;
+}
+
+.stat-item li {
+  margin: 0.25rem 0;
 }
 
 /* Results Section */
