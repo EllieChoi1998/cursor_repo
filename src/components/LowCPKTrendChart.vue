@@ -216,11 +216,32 @@ export default defineComponent({
           return row
         })
 
-        // key 값으로 정렬
+        // Python과 동일한 정렬: ['TRANS_DATE', 'WAFER_ID', 'USL', 'TGT', 'LSL']
         const sortedData = [...dataWithKeys].sort((a, b) => {
-          const keyA = String(a.key || '')
-          const keyB = String(b.key || '')
-          return keyA.localeCompare(keyB)
+          // 1. TRANS_DATE 비교
+          const dateA = String(a.TRANS_DATE || '')
+          const dateB = String(b.TRANS_DATE || '')
+          if (dateA !== dateB) return dateA.localeCompare(dateB)
+          
+          // 2. WAFER_ID 비교
+          const waferA = String(a.WAFER_ID || '')
+          const waferB = String(b.WAFER_ID || '')
+          if (waferA !== waferB) return waferA.localeCompare(waferB)
+          
+          // 3. USL 비교
+          const uslA = Number(a.USL) || 0
+          const uslB = Number(b.USL) || 0
+          if (uslA !== uslB) return uslA - uslB
+          
+          // 4. TGT 비교
+          const tgtA = Number(a.TGT) || 0
+          const tgtB = Number(b.TGT) || 0
+          if (tgtA !== tgtB) return tgtA - tgtB
+          
+          // 5. LSL 비교
+          const lslA = Number(a.LSL) || 0
+          const lslB = Number(b.LSL) || 0
+          return lslA - lslB
         })
 
         // x축 카테고리 (key 값들)
