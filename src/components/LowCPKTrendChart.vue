@@ -189,10 +189,11 @@ export default defineComponent({
 
         if (graphData.length === 0 || !containerEl) return
 
-        // key 생성: TRANS_DATE + WAFER_ID (백엔드에서 없을 경우 대비)
+        // key 생성: TRANS_DATE + WAFER_ID (Python 코드와 동일)
         const dataWithKeys = graphData.map(row => {
-          if (!row.key && row.TRANS_DATE && row.WAFER_ID) {
-            // TRANS_DATE가 문자열이면 그대로, Date 객체면 포맷
+          // 기존 key가 있어도 무시하고 무조건 새로 생성
+          if (row.TRANS_DATE && row.WAFER_ID) {
+            // TRANS_DATE 포맷 변환
             let dateStr = row.TRANS_DATE
             if (dateStr instanceof Date) {
               const year = String(dateStr.getFullYear()).slice(-2)
@@ -200,14 +201,18 @@ export default defineComponent({
               const day = String(dateStr.getDate()).padStart(2, '0')
               dateStr = `${year}-${month}-${day}`
             } else if (typeof dateStr === 'string') {
-              // "2025-01-15" 같은 형식이면 "25-01-15"로 변환
-              const parts = dateStr.split(/[-\/]/)
-              if (parts.length === 3) {
-                dateStr = `${parts[0].slice(-2)}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`
+              // "2025-01-15" 또는 "2025/01/15" 같은 형식을 "25-01-15"로 변환
+              const parts = dateStr.split(/[-\/T ]/)
+              if (parts.length >= 3) {
+                const year = parts[0].length === 4 ? parts[0].slice(-2) : parts[0]
+                const month = parts[1].padStart(2, '0')
+                const day = parts[2].padStart(2, '0')
+                dateStr = `${year}-${month}-${day}`
               }
             }
             return { ...row, key: `${dateStr}-${row.WAFER_ID}` }
           }
+          // TRANS_DATE나 WAFER_ID가 없으면 원본 반환
           return row
         })
 
@@ -414,19 +419,21 @@ export default defineComponent({
 
         if (graphData.length === 0 || !containerEl) return
 
-        // key 생성: EQMNT_DATE + MAIN_EQ (백엔드에서 없을 경우 대비)
+        // key 생성: EQMNT_DATE + MAIN_EQ (Python 코드와 동일)
         const dataWithKeys = graphData.map(row => {
-          if (!row.key && row.EQMNT_DATE) {
+          // 기존 key가 있어도 무시하고 무조건 새로 생성
+          if (row.EQMNT_DATE) {
             // MAIN_EQ 생성 (백엔드에서 없을 경우)
-            if (!row.MAIN_EQ && row['EQUIP ID']) {
-              row.MAIN_EQ = row['EQUIP ID'] + (row['SUB EQUIP ID'] ? '+' + row['SUB EQUIP ID'] : '')
+            let mainEq = row.MAIN_EQ
+            if (!mainEq && row['EQUIP ID']) {
+              mainEq = row['EQUIP ID'] + (row['SUB EQUIP ID'] ? '+' + row['SUB EQUIP ID'] : '')
             }
             
             // key 생성
-            let dateStr = String(row.EQMNT_DATE)
-            const mainEq = row.MAIN_EQ || ''
-            return { ...row, key: `${dateStr}-${mainEq}` }
+            const dateStr = String(row.EQMNT_DATE)
+            return { ...row, key: `${dateStr}-${mainEq || ''}`, MAIN_EQ: mainEq }
           }
+          // EQMNT_DATE가 없으면 원본 반환
           return row
         })
 
