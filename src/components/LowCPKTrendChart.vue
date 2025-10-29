@@ -189,8 +189,30 @@ export default defineComponent({
 
         if (graphData.length === 0 || !containerEl) return
 
+        // key 생성: TRANS_DATE + WAFER_ID (백엔드에서 없을 경우 대비)
+        const dataWithKeys = graphData.map(row => {
+          if (!row.key && row.TRANS_DATE && row.WAFER_ID) {
+            // TRANS_DATE가 문자열이면 그대로, Date 객체면 포맷
+            let dateStr = row.TRANS_DATE
+            if (dateStr instanceof Date) {
+              const year = String(dateStr.getFullYear()).slice(-2)
+              const month = String(dateStr.getMonth() + 1).padStart(2, '0')
+              const day = String(dateStr.getDate()).padStart(2, '0')
+              dateStr = `${year}-${month}-${day}`
+            } else if (typeof dateStr === 'string') {
+              // "2025-01-15" 같은 형식이면 "25-01-15"로 변환
+              const parts = dateStr.split(/[-\/]/)
+              if (parts.length === 3) {
+                dateStr = `${parts[0].slice(-2)}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`
+              }
+            }
+            return { ...row, key: `${dateStr}-${row.WAFER_ID}` }
+          }
+          return row
+        })
+
         // key 값으로 정렬
-        const sortedData = [...graphData].sort((a, b) => {
+        const sortedData = [...dataWithKeys].sort((a, b) => {
           const keyA = String(a.key || '')
           const keyB = String(b.key || '')
           return keyA.localeCompare(keyB)
@@ -218,8 +240,15 @@ export default defineComponent({
           })
         }
 
-        console.log('📊 IQC Chart - keys:', keys.length, 'devices:', devices, 'noValColumns:', noValColumns)
-        console.log('📊 Sample data (first 2 rows):', sortedData.slice(0, 2))
+        console.log('📊 IQC Chart Info:')
+        console.log('  - Keys count:', keys.length, keys)
+        console.log('  - Devices:', devices)
+        console.log('  - NO_VAL columns:', noValColumns)
+        console.log('  - Total rows:', sortedData.length)
+        console.log('  - Sample row (first):', sortedData[0])
+        console.log('  - Has key field?', sortedData[0]?.key)
+        console.log('  - Has DEVICE field?', sortedData[0]?.DEVICE)
+        console.log('  - Sample NO_VAL1:', sortedData[0]?.NO_VAL1)
 
         const traces = []
         const palette = getColorPalette()
@@ -231,16 +260,31 @@ export default defineComponent({
           const x = []
           const y = []
           
-          console.log(`\n🔍 Processing device: ${device}`)
+          console.log(`\n🔍 Processing device: "${device}"`)
           
           // 각 x 위치(key)별로 데이터 수집
-          keys.forEach(keyValue => {
+          keys.forEach((keyValue, keyIdx) => {
             // 해당 key와 device를 가진 행들 찾기
             const matchingRows = sortedData.filter(r => 
               String(r.key) === keyValue && r.DEVICE === device
             )
             
-            console.log(`  Key "${keyValue}" + Device "${device}": ${matchingRows.length} rows`)
+            if (keyIdx === 0) {
+              // 첫 번째 키에서만 자세히 로깅
+              console.log(`  Testing key "${keyValue}" with device "${device}":`)
+              console.log(`    - Matching rows: ${matchingRows.length}`)
+              if (matchingRows.length === 0) {
+                // 매칭 실패 원인 파악
+                const sameKeyRows = sortedData.filter(r => String(r.key) === keyValue)
+                const sameDeviceRows = sortedData.filter(r => r.DEVICE === device)
+                console.log(`    - Rows with same key: ${sameKeyRows.length}`)
+                console.log(`    - Rows with same device: ${sameDeviceRows.length}`)
+                if (sameKeyRows.length > 0) {
+                  console.log(`    - Sample row's DEVICE:`, sameKeyRows[0].DEVICE, `(type: ${typeof sameKeyRows[0].DEVICE})`)
+                  console.log(`    - Looking for DEVICE:`, device, `(type: ${typeof device})`)
+                }
+              }
+            }
             
             // 해당 행들의 모든 NO_VAL 값들 수집
             matchingRows.forEach(row => {
@@ -370,8 +414,24 @@ export default defineComponent({
 
         if (graphData.length === 0 || !containerEl) return
 
+        // key 생성: EQMNT_DATE + MAIN_EQ (백엔드에서 없을 경우 대비)
+        const dataWithKeys = graphData.map(row => {
+          if (!row.key && row.EQMNT_DATE) {
+            // MAIN_EQ 생성 (백엔드에서 없을 경우)
+            if (!row.MAIN_EQ && row['EQUIP ID']) {
+              row.MAIN_EQ = row['EQUIP ID'] + (row['SUB EQUIP ID'] ? '+' + row['SUB EQUIP ID'] : '')
+            }
+            
+            // key 생성
+            let dateStr = String(row.EQMNT_DATE)
+            const mainEq = row.MAIN_EQ || ''
+            return { ...row, key: `${dateStr}-${mainEq}` }
+          }
+          return row
+        })
+
         // EQMNT_DATE 기준으로 정렬
-        const sortedData = [...graphData].sort((a, b) => {
+        const sortedData = [...dataWithKeys].sort((a, b) => {
           const dateA = String(a.EQMNT_DATE || '')
           const dateB = String(b.EQMNT_DATE || '')
           return dateA.localeCompare(dateB)
