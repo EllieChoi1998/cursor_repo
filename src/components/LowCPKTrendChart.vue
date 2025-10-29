@@ -136,17 +136,26 @@ export default defineComponent({
               ? item.selected_row_data[0] 
               : {}
             
-            const area = selectedRow.AREA || ''
-            const routeDesc = selectedRow.ROUTE_DESC || ''
-            const para = selectedRow.PARA || selectedRow.PARAMETER || ''
-            const usl = selectedRow.USL || ''
-            const lsl = selectedRow.LSL || ''
+            console.log('🔍 EQC selected_row_data:', selectedRow)
+            
+            // selected_row_data와 graph_data의 첫 행에서 값 찾기
+            const firstGraphRow = graphData.length > 0 ? graphData[0] : {}
+            
+            const area = selectedRow.AREA || firstGraphRow.AREA || 'EQC'
+            const routeDesc = selectedRow.ROUTE_DESC || firstGraphRow.ROUTE_DESC || ''
+            const para = selectedRow.PARA || selectedRow.PARAMETER || firstGraphRow.PARA || firstGraphRow.PARAMETER || ''
+            const usl = selectedRow.USL || firstGraphRow.USL || ''
+            const lsl = selectedRow.LSL || firstGraphRow.LSL || ''
             const title = `${area} Trend - ${routeDesc} : ${para} (${usl} : ${lsl})`
+            
+            console.log('🔍 EQC title:', title)
             
             chartList.push({
               ...item,
               title,
-              index: chartIndex++
+              index: chartIndex++,
+              usl,
+              lsl
             })
           } else {
             // 기타 타입
@@ -286,7 +295,7 @@ export default defineComponent({
 
         const layout = {
           xaxis: {
-            title: { text: 'Key', font: { size: 12 } },
+            title: { text: keys.length <= 10 ? keys.join(', ') : `${keys.length} time points`, font: { size: 10 } },
             type: 'category',
             showgrid: true,
             gridcolor: '#f0f0f0',
@@ -423,7 +432,7 @@ export default defineComponent({
 
         // 스펙 라인 추가 (USL, LSL만)
         const pushLine = (value, name, color, dash = 'solid', width = 2) => {
-          if (value !== undefined && value !== null) {
+          if (value !== undefined && value !== null && value !== '') {
             const v = Number(value)
             if (Number.isFinite(v)) {
               traces.push({
@@ -441,16 +450,13 @@ export default defineComponent({
           }
         }
 
-        // USL, LSL 값 가져오기
-        const usl = sortedData[0]?.USL || selectedRow.USL
-        const lsl = sortedData[0]?.LSL || selectedRow.LSL
-
-        pushLine(usl, 'USL', 'rgba(0, 0, 0, 0.8)', 'solid', 2)
-        pushLine(lsl, 'LSL', 'rgba(0, 0, 0, 0.8)', 'solid', 2)
+        // USL, LSL 값 가져오기 - chartDataList에서 파싱된 값 사용
+        pushLine(item.usl, 'USL', 'rgba(0, 0, 0, 0.8)', 'solid', 2)
+        pushLine(item.lsl, 'LSL', 'rgba(0, 0, 0, 0.8)', 'solid', 2)
 
         const layout = {
           xaxis: {
-            title: { text: 'Key', font: { size: 12 } },
+            title: { text: keys.length <= 10 ? keys.join(', ') : `${keys.length} time points`, font: { size: 10 } },
             type: 'category',
             showgrid: true,
             gridcolor: '#f0f0f0',
@@ -627,12 +633,12 @@ export default defineComponent({
 }
 
 .chart-box:empty::before {
-  content: "차트 로딩 중...";
+  content: "트렌드 데이터 찾을 수 없음";
   display: flex;
   align-items: center;
   justify-content: center;
   height: 500px;
-  color: #666;
+  color: #999;
   font-size: 15px;
 }
 
