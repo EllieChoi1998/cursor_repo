@@ -195,12 +195,18 @@ export default defineComponent({
           if (row.TRANS_DATE && row.WAFER_ID) {
             // TRANS_DATE 포맷 변환
             let dateStr = row.TRANS_DATE
-            if (dateStr instanceof Date) {
-              const year = String(dateStr.getFullYear()).slice(-2)
-              const month = String(dateStr.getMonth() + 1).padStart(2, '0')
-              const day = String(dateStr.getDate()).padStart(2, '0')
-              dateStr = `${year}-${month}-${day}`
-            } else if (typeof dateStr === 'string') {
+            let dateObj = null
+            
+            // 1. 숫자(timestamp)인 경우 - Unix timestamp (밀리초)
+            if (typeof dateStr === 'number') {
+              dateObj = new Date(dateStr)
+            }
+            // 2. Date 객체인 경우
+            else if (dateStr instanceof Date) {
+              dateObj = dateStr
+            }
+            // 3. 문자열인 경우
+            else if (typeof dateStr === 'string') {
               // "2025-01-15" 또는 "2025/01/15" 같은 형식을 "25-01-15"로 변환
               const parts = dateStr.split(/[-\/T ]/)
               if (parts.length >= 3) {
@@ -210,6 +216,15 @@ export default defineComponent({
                 dateStr = `${year}-${month}-${day}`
               }
             }
+            
+            // Date 객체가 생성되었으면 포맷팅
+            if (dateObj && !isNaN(dateObj.getTime())) {
+              const year = String(dateObj.getFullYear()).slice(-2)
+              const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+              const day = String(dateObj.getDate()).padStart(2, '0')
+              dateStr = `${year}-${month}-${day}`
+            }
+            
             return { ...row, key: `${dateStr}-${row.WAFER_ID}` }
           }
           // TRANS_DATE나 WAFER_ID가 없으면 원본 반환
