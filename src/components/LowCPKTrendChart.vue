@@ -465,8 +465,37 @@ export default defineComponent({
               mainEq = row['EQUIP ID'] + (row['SUB EQUIP ID'] ? '+' + row['SUB EQUIP ID'] : '')
             }
             
-            // key 생성
-            const dateStr = String(row.EQMNT_DATE)
+            // EQMNT_DATE 포맷 변환
+            let dateStr = row.EQMNT_DATE
+            let dateObj = null
+            
+            // 1. 숫자(timestamp)인 경우 - Unix timestamp (밀리초)
+            if (typeof dateStr === 'number') {
+              dateObj = new Date(dateStr)
+            }
+            // 2. Date 객체인 경우
+            else if (dateStr instanceof Date) {
+              dateObj = dateStr
+            }
+            // 3. 문자열인 경우
+            else if (typeof dateStr === 'string') {
+              // 숫자 문자열이면 timestamp로 변환
+              if (/^\d+$/.test(dateStr)) {
+                dateObj = new Date(Number(dateStr))
+              } else {
+                // "2025-01-15" 형식은 그대로 사용
+                dateStr = dateStr
+              }
+            }
+            
+            // Date 객체가 생성되었으면 YYYY-MM-DD 형식으로 변환
+            if (dateObj && !isNaN(dateObj.getTime())) {
+              const year = dateObj.getFullYear()
+              const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+              const day = String(dateObj.getDate()).padStart(2, '0')
+              dateStr = `${year}-${month}-${day}`
+            }
+            
             return { ...row, key: `${dateStr}-${mainEq || ''}`, MAIN_EQ: mainEq }
           }
           // EQMNT_DATE가 없으면 원본 반환
