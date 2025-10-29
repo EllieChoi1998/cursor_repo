@@ -219,6 +219,7 @@ export default defineComponent({
         }
 
         console.log('📊 IQC Chart - keys:', keys.length, 'devices:', devices, 'noValColumns:', noValColumns)
+        console.log('📊 Sample data (first 2 rows):', sortedData.slice(0, 2))
 
         const traces = []
         const palette = getColorPalette()
@@ -230,12 +231,16 @@ export default defineComponent({
           const x = []
           const y = []
           
+          console.log(`\n🔍 Processing device: ${device}`)
+          
           // 각 x 위치(key)별로 데이터 수집
           keys.forEach(keyValue => {
             // 해당 key와 device를 가진 행들 찾기
             const matchingRows = sortedData.filter(r => 
               String(r.key) === keyValue && r.DEVICE === device
             )
+            
+            console.log(`  Key "${keyValue}" + Device "${device}": ${matchingRows.length} rows`)
             
             // 해당 행들의 모든 NO_VAL 값들 수집
             matchingRows.forEach(row => {
@@ -248,6 +253,9 @@ export default defineComponent({
               })
             })
           })
+
+          console.log(`  ✅ Total data points for ${device}: ${y.length}`)
+          console.log(`  Sample y values:`, y.slice(0, 5))
 
           if (y.length > 0) {
             traces.push({
@@ -267,9 +275,12 @@ export default defineComponent({
               hoverinfo: 'all',
               hoveron: 'boxes'
             })
-            console.log(`📦 Device ${device}: ${y.length} data points`)
+          } else {
+            console.warn(`  ⚠️ No data points for device ${device}`)
           }
         })
+        
+        console.log(`\n📊 Total traces created: ${traces.length}`)
 
         // 스펙 라인 추가 (USL, LSL, TGT) - chartDataList에서 파싱된 값 사용
         const pushLine = (value, name, color, dash = 'solid', width = 2) => {
