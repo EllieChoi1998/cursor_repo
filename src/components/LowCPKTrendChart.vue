@@ -295,7 +295,7 @@ export default defineComponent({
 
         const layout = {
           xaxis: {
-            title: { text: keys.length <= 10 ? keys.join(', ') : `${keys.length} time points`, font: { size: 10 } },
+            title: { text: item.forKey || 'Key', font: { size: 12 } },
             type: 'category',
             showgrid: true,
             gridcolor: '#f0f0f0',
@@ -456,7 +456,7 @@ export default defineComponent({
 
         const layout = {
           xaxis: {
-            title: { text: keys.length <= 10 ? keys.join(', ') : `${keys.length} time points`, font: { size: 10 } },
+            title: { text: 'EQMNT_DATE-MAIN_EQ', font: { size: 12 } },
             type: 'category',
             showgrid: true,
             gridcolor: '#f0f0f0',
