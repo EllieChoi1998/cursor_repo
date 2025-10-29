@@ -73,7 +73,7 @@ export default defineComponent({
       }
     }
 
-    // real_data 파싱
+    // real_data 파싱 - IQC는 FOR_KEY별로 추가 분할
     const chartDataList = computed(() => {
       try {
         let data = props.backendData.real_data
@@ -88,40 +88,77 @@ export default defineComponent({
           return []
         }
         
-        // 각 항목에 title 추가
-        return data.map((item, index) => {
+        const chartList = []
+        let chartIndex = 0
+        
+        data.forEach((item) => {
           const type = (item.type || '').toUpperCase()
-          const selectedRow = Array.isArray(item.selected_row_data) && item.selected_row_data.length > 0 
-            ? item.selected_row_data[0] 
-            : {}
+          const graphData = item.graph_data || []
           
-          let title = `${type} Trend Chart ${index + 1}`
-          
-          // IQC의 경우
-          if (type === 'IQC' && selectedRow) {
-            const routeDesc = selectedRow.ROUTE_DESC || ''
-            const oper = selectedRow.OPER || selectedRow.OPN || ''
-            const para = selectedRow.PARA || selectedRow.PARAMETER || ''
-            const usl = selectedRow.USL || ''
-            const lsl = selectedRow.LSL || ''
-            title = `IQC Trend - ${routeDesc} (${oper}) : ${para} (${usl} : ${lsl})`
-          }
-          // EQC의 경우
-          else if (type === 'EQC' && selectedRow) {
+          if (type === 'IQC' && graphData.length > 0) {
+            // IQC의 경우: FOR_KEY별로 차트를 분할
+            const forKeys = [...new Set(graphData.map(row => row.FOR_KEY))].filter(k => k !== null && k !== undefined)
+            
+            forKeys.forEach(forKey => {
+              // FOR_KEY로 데이터 필터링
+              const filteredData = graphData.filter(row => row.FOR_KEY === forKey)
+              
+              if (filteredData.length === 0) return
+              
+              // FOR_KEY를 파싱하여 title 정보 추출
+              const forKeyParts = String(forKey).split('-')
+              const para = forKeyParts[0] || ''
+              const noVal = forKeyParts[1] || ''
+              const usl = forKeyParts[2] || ''
+              const tgt = forKeyParts[3] || ''
+              const lsl = forKeyParts[4] || ''
+              
+              // title 생성
+              const routeDesc = filteredData[0]?.ROUTE_DESC || ''
+              const oper = filteredData[0]?.OPER || filteredData[0]?.OPN || ''
+              const title = `IQC Trend - ${routeDesc} (${oper}) : ${para} (${usl} : ${lsl})`
+              
+              chartList.push({
+                type: 'IQC',
+                graph_data: filteredData,
+                selected_row_data: item.selected_row_data,
+                title,
+                index: chartIndex++,
+                forKey,
+                usl,
+                lsl,
+                tgt
+              })
+            })
+          } else if (type === 'EQC') {
+            // EQC의 경우: 하나의 차트만 생성
+            const selectedRow = Array.isArray(item.selected_row_data) && item.selected_row_data.length > 0 
+              ? item.selected_row_data[0] 
+              : {}
+            
             const area = selectedRow.AREA || ''
             const routeDesc = selectedRow.ROUTE_DESC || ''
             const para = selectedRow.PARA || selectedRow.PARAMETER || ''
             const usl = selectedRow.USL || ''
             const lsl = selectedRow.LSL || ''
-            title = `${area} Trend - ${routeDesc} : ${para} (${usl} : ${lsl})`
-          }
-          
-          return {
-            ...item,
-            title,
-            index
+            const title = `${area} Trend - ${routeDesc} : ${para} (${usl} : ${lsl})`
+            
+            chartList.push({
+              ...item,
+              title,
+              index: chartIndex++
+            })
+          } else {
+            // 기타 타입
+            chartList.push({
+              ...item,
+              title: `${type} Trend Chart ${chartIndex}`,
+              index: chartIndex++
+            })
           }
         })
+        
+        return chartList
       } catch (e) {
         console.error('chartDataList 파싱 오류:', e)
         return []
@@ -136,13 +173,10 @@ export default defineComponent({
       '#8C564B', '#E377C2', '#7F7F7F', '#BCBD22', '#17BECF'
     ])
 
-    // IQC 차트 생성
+    // IQC 차트 생성 (FOR_KEY로 이미 필터링된 데이터)
     const createIQCChart = (item, containerEl) => {
       try {
         const graphData = item.graph_data || []
-        const selectedRow = Array.isArray(item.selected_row_data) && item.selected_row_data.length > 0 
-          ? item.selected_row_data[0] 
-          : {}
 
         if (graphData.length === 0 || !containerEl) return
 
@@ -225,9 +259,9 @@ export default defineComponent({
           }
         })
 
-        // 스펙 라인 추가 (USL, LSL, TGT)
+        // 스펙 라인 추가 (USL, LSL, TGT) - chartDataList에서 파싱된 값 사용
         const pushLine = (value, name, color, dash = 'solid', width = 2) => {
-          if (value !== undefined && value !== null) {
+          if (value !== undefined && value !== null && value !== '') {
             const v = Number(value)
             if (Number.isFinite(v)) {
               traces.push({
@@ -245,14 +279,10 @@ export default defineComponent({
           }
         }
 
-        // USL, LSL, TGT 값 가져오기
-        const usl = sortedData[0]?.USL || selectedRow.USL
-        const lsl = sortedData[0]?.LSL || selectedRow.LSL
-        const tgt = sortedData[0]?.TGT || selectedRow.TGT
-
-        pushLine(usl, 'USL', 'rgba(0, 0, 0, 0.8)', 'solid', 2)
-        pushLine(lsl, 'LSL', 'rgba(0, 0, 0, 0.8)', 'solid', 2)
-        pushLine(tgt, 'TGT', 'rgba(0, 0, 0, 0.5)', 'dash', 2)
+        // FOR_KEY에서 파싱된 USL, LSL, TGT 값 사용
+        pushLine(item.usl, 'USL', 'rgba(0, 0, 0, 0.8)', 'solid', 2)
+        pushLine(item.lsl, 'LSL', 'rgba(0, 0, 0, 0.8)', 'solid', 2)
+        pushLine(item.tgt, 'TGT', 'rgba(0, 0, 0, 0.5)', 'dash', 2)
 
         const layout = {
           xaxis: {
