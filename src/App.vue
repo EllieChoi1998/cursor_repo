@@ -483,7 +483,7 @@
                   </div>
 
                   <!-- Low CPK Trend Module -->
-                  <div v-else-if="result.type === 'low_cpk_trend_module'" class="chart-section inline-vertical">
+                  <div v-else-if="result.type === 'low_cpk_chart_trend' || result.type === 'low_cpk_analysis_trend'" class="chart-section inline-vertical">
                     <LowCPKTrendChart
                       :backendData="result.backendData"
                       :height="chartHeight"
@@ -606,7 +606,7 @@
           </div>
           
           <!-- Low CPK Trend Module -->
-          <div v-else-if="fullscreenResult?.type === 'low_cpk_trend_module'" class="fullscreen-chart inline-vertical">
+          <div v-else-if="fullscreenResult?.type === 'low_cpk_chart_trend' || fullscreenResult?.type === 'low_cpk_analysis_trend'" class="fullscreen-chart inline-vertical">
             <LowCPKTrendChart
               :key="`low-cpk-full-${fullscreenResult?.id}-${showFullscreen}`"
               :backendData="fullscreenResult.backendData"
@@ -1021,7 +1021,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             realData: null, // CPK 달성률은 backendData를 사용하므로 realData는 null
             userMessage: userMessage
           }
-        } else if (responseData.result === 'low_cpk_trend_module') {
+        } else if (responseData.result === 'low_cpk_chart_trend' || responseData.result === 'low_cpk_analysis_trend') {
           // Low CPK Trend Module 데이터 처리
           const realData = responseData.real_data
           
@@ -1033,7 +1033,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           
           result = {
             id: `history_${chatId}_${Date.now()}`,
-            type: 'low_cpk_trend_module',
+            type: responseData.result,
             title: 'Low CPK Trend Analysis',
             data: null,
             isActive: false,
@@ -1610,7 +1610,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 chatResults.value[activeChatId.value] = currentResults
                 console.log('✅ CPK 달성률 분석 결과 추가됨:', result)
               }
-            } else if (data.response.result === 'low_cpk_trend_module') {
+            } else if (data.response.result === 'low_cpk_chart_trend' || data.response.result === 'low_cpk_analysis_trend') {
               // Low CPK Trend Module 데이터 처리
               const realData = data.response.real_data
               
