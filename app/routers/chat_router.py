@@ -198,34 +198,6 @@ async def edit_message_endpoint(request: EditMessageRequest, user_id: str = Depe
         raise HTTPException(status_code=500, detail=f"메시지 수정 실패: {str(e)}")
 
 
-@router.post("/excel_analysis")
-async def excel_analysis_endpoint(
-    file: UploadFile = File(...),
-    message: str = Form(...),
-    chatroom_id: int = Form(...),
-    user_id: str = Depends(get_current_user)
-):
-    """엑셀 파일 분석 API 엔드포인트"""
-    try:
-        # 엑셀 파일 분석 수행
-        result = await excel_analysis_service.analyze_excel_file(
-            file=file,
-            prompt=message,
-            chatroom_id=chatroom_id,
-            user_id=user_id
-        )
-        
-        if not result.get('success', False):
-            raise HTTPException(status_code=400, detail=result.get('error', '분석 실패'))
-        
-        return result
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"엑셀 분석 실패: {str(e)}")
-
-
 @router.post("/excel_analysis_stream")
 async def excel_analysis_stream_endpoint(
     file: UploadFile = File(...),

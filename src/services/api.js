@@ -657,45 +657,6 @@ export const fetchFileContent = async (filePath) => {
   }
 }
 
-// 엑셀 파일 분석 API
-export const analyzeExcelFile = async (file, message, chatroomId) => {
-  console.log('📊 Starting Excel file analysis:', { fileName: file.name, message, chatroomId })
-  
-  try {
-    // 인증 확인
-    if (!isAuthenticated()) {
-      throw new Error('인증이 필요합니다. 로그인해주세요.')
-    }
-
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('message', message)
-    formData.append('chatroom_id', chatroomId)
-
-    const response = await fetch(`${API_BASE_URL}/excel_analysis`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: formData
-    })
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.')
-      }
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    console.log('📊 Excel analysis result:', data)
-    return data
-  } catch (error) {
-    console.error('❌ Error in analyzeExcelFile:', error)
-    throw error
-  }
-}
-
 // 엑셀 파일 분석 스트리밍 API
 export const analyzeExcelFileStream = async (file, message, chatroomId, onData) => {
   console.log('📊 Starting Excel file analysis (streaming):', { fileName: file.name, message, chatroomId })
