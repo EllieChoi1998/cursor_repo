@@ -174,6 +174,7 @@
                       <option value="inline">INLINE (Inline Analysis)</option>
                       <option value="rag">불량 이력 검색</option>
                       <option value="excel">엑셀 데이터 분석</option>
+                      <option value="dcc">DCC</option>
                     </select>
                   </div>
                   <div class="time-toggle">
@@ -702,6 +703,7 @@ import LowCPKTrendChart from './components/LowCPKTrendChart.vue'
 
 import {
   streamChatAPI,
+  streamDCCAPI,
   editMessageAPI,
   generatePCMDataWithRealData,
   generateCommonalityDataWithRealData,
@@ -1531,7 +1533,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // 초기화 - bot 메시지 인덱스 리셋
         currentBotMessageIndex.value = -1
         
-        await streamChatAPI(selectedDataType.value, message, activeChatId.value, (data) => {
+        // DCC인 경우 streamDCCAPI 사용, 그 외에는 기존 streamChatAPI 사용
+        const apiFunction = selectedDataType.value === 'dcc' ? streamDCCAPI : streamChatAPI
+        
+        await apiFunction(selectedDataType.value, message, activeChatId.value, (data) => {
           // 스트리밍 데이터 처리
           console.log(' Received streaming data:', data)
           
