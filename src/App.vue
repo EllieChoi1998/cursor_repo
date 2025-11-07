@@ -483,7 +483,7 @@
                   </div>
 
                   <!-- Low CPK Trend Module -->
-                  <div v-else-if="result.type === 'low_cpk_trend_module'" class="chart-section inline-vertical">
+                  <div v-else-if="result.type === 'low_cpk_chart_trend' || result.type === 'low_cpk_analysis_trend'" class="chart-section inline-vertical">
                     <LowCPKTrendChart
                       :backendData="result.backendData"
                       :height="chartHeight"
@@ -606,7 +606,7 @@
           </div>
           
           <!-- Low CPK Trend Module -->
-          <div v-else-if="fullscreenResult?.type === 'low_cpk_trend_module'" class="fullscreen-chart inline-vertical">
+          <div v-else-if="fullscreenResult?.type === 'low_cpk_chart_trend' || fullscreenResult?.type === 'low_cpk_analysis_trend'" class="fullscreen-chart inline-vertical">
             <LowCPKTrendChart
               :key="`low-cpk-full-${fullscreenResult?.id}-${showFullscreen}`"
               :backendData="fullscreenResult.backendData"
@@ -709,7 +709,8 @@ import {
   getChatRooms,
   getChatRoomHistory,
   deleteChatRoom as deleteChatRoomAPI,
-  fetchFileContent
+  fetchFileContent,
+  analyzeExcelFileStream
 } from './services/api.js'
 import { API_BASE_URL } from './services/api.js'
 import { isErrorResponse, extractErrorMessage } from './config/dataTypes.js'
@@ -1021,7 +1022,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             realData: null, // CPK 달성률은 backendData를 사용하므로 realData는 null
             userMessage: userMessage
           }
-        } else if (responseData.result === 'low_cpk_trend_module') {
+        } else if (responseData.result === 'low_cpk_chart_trend' || responseData.result === 'low_cpk_analysis_trend') {
           // Low CPK Trend Module 데이터 처리
           const realData = responseData.real_data
           
@@ -1033,7 +1034,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           
           result = {
             id: `history_${chatId}_${Date.now()}`,
-            type: 'low_cpk_trend_module',
+            type: responseData.result,
             title: 'Low CPK Trend Analysis',
             data: null,
             isActive: false,
@@ -1610,7 +1611,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 chatResults.value[activeChatId.value] = currentResults
                 console.log('✅ CPK 달성률 분석 결과 추가됨:', result)
               }
-            } else if (data.response.result === 'low_cpk_trend_module') {
+            } else if (data.response.result === 'low_cpk_chart_trend' || data.response.result === 'low_cpk_analysis_trend') {
               // Low CPK Trend Module 데이터 처리
               const realData = data.response.real_data
               
@@ -2200,65 +2201,27 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       isLoading.value = true
 
       try {
-        // FormData 생성
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('message', prompt)
-        formData.append('chatroom_id', activeChatId.value)
-
-        // API 호출
-        const response = await fetch('/excel_analysis_stream', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: formData
-        })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        // 스트리밍 응답 처리
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6))
-                
-                if (data.progress_message) {
-                  // 진행 상황 메시지
-                  addMessage('bot', data.progress_message, false)
-                } else if (data.data) {
-                  // 분석 결과 처리
-                  const result = data.data
-                  const createdResult = createResultFromResponseData(result, prompt, activeChatId.value)
-                  if (createdResult) {
-                    createdResult.isActive = true
-                    const currentResults = chatResults.value[activeChatId.value] || []
-                    currentResults.push(createdResult)
-                    chatResults.value[activeChatId.value] = currentResults
-                    console.log('✅ Excel analysis result added:', createdResult)
-                  }
-                } else if (data.msg) {
-                  // 에러 메시지
-                  addMessage('bot', data.msg, false)
-                }
-              } catch (e) {
-                console.error('JSON 파싱 오류:', e)
-              }
+        // API 호출 - analyzeExcelFileStream 함수 사용
+        await analyzeExcelFileStream(file, prompt, activeChatId.value, (data) => {
+          if (data.progress_message) {
+            // 진행 상황 메시지
+            addMessage('bot', data.progress_message, false)
+          } else if (data.data) {
+            // 분석 결과 처리
+            const result = data.data
+            const createdResult = createResultFromResponseData(result, prompt, activeChatId.value)
+            if (createdResult) {
+              createdResult.isActive = true
+              const currentResults = chatResults.value[activeChatId.value] || []
+              currentResults.push(createdResult)
+              chatResults.value[activeChatId.value] = currentResults
+              console.log('✅ Excel analysis result added:', createdResult)
             }
+          } else if (data.msg) {
+            // 에러 메시지
+            addMessage('bot', data.msg, false)
           }
-        }
+        })
 
       } catch (error) {
         console.error('파일 업로드 오류:', error)
