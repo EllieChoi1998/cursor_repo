@@ -242,19 +242,3 @@ async def excel_analysis_stream_endpoint(
     )
 
 
-@router.post("/dcc_stream")
-async def dcc_stream_endpoint(request: ChatRequest, user_id: str = Depends(get_current_user)):
-    """DCC 스트리밍 API 엔드포인트"""
-    async def generate():
-        # 구현 예정
-        pass
-    
-    return StreamingResponse(
-        generate(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )

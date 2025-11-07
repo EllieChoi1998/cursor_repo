@@ -703,7 +703,6 @@ import LowCPKTrendChart from './components/LowCPKTrendChart.vue'
 
 import {
   streamChatAPI,
-  streamDCCAPI,
   editMessageAPI,
   generatePCMDataWithRealData,
   generateCommonalityDataWithRealData,
@@ -1533,10 +1532,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // 초기화 - bot 메시지 인덱스 리셋
         currentBotMessageIndex.value = -1
         
-        // DCC인 경우 streamDCCAPI 사용, 그 외에는 기존 streamChatAPI 사용
-        const apiFunction = selectedDataType.value === 'dcc' ? streamDCCAPI : streamChatAPI
-        
-        await apiFunction(selectedDataType.value, message, activeChatId.value, (data) => {
+        // DCC도 기존 chat API를 사용
+        await streamChatAPI(selectedDataType.value, message, activeChatId.value, (data) => {
           // 스트리밍 데이터 처리
           console.log(' Received streaming data:', data)
           
