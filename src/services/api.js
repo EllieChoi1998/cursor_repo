@@ -678,11 +678,13 @@ export const analyzeExcelFileStream = async (file, message, chatroomId, onData) 
     formData.append('message', message)
     formData.append('chatroom_id', chatroomId)
 
+    // FormData 사용 시 Content-Type은 브라우저가 자동으로 설정하므로 제외
+    const headers = getAuthHeaders()
+    delete headers['Content-Type']  // FormData 사용 시 Content-Type 제거
+    
     const response = await fetch(`${API_BASE_URL}/excel_analysis_stream`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
+      headers: headers,
       body: formData
     })
 
