@@ -15,7 +15,7 @@ from app.models.chat_models import ExcelAnalysisRequest
 from app.services import ChatService
 from app.services.excel_analysis_service import ExcelAnalysisService
 from app.repositories import ChatStorage
-from app.utils.jwt_utils import get_user_id_from_token
+from app.utils.jwt_utils import verify_jwt_token
 
 router = APIRouter()
 
@@ -45,14 +45,19 @@ async def get_current_user(request: Request, credentials: HTTPAuthorizationCrede
         print("❌ No credentials provided")
         raise HTTPException(status_code=401, detail="인증이 필요합니다.")
     
-    # JWT 토큰에서 user_id 추출
-    user_id = get_user_id_from_token(credentials.credentials)
-    if not user_id:
-        print("❌ Invalid token")
-        raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
-    
-    print(f"✅ User authenticated: {user_id}")
-    return user_id
+    # JWT 토큰 검증 (만료 시간 포함)
+    try:
+        payload = verify_jwt_token(credentials.credentials)
+        user_id = payload.get("userId")
+        if not user_id:
+            print("❌ No userId in token")
+            raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
+        
+        print(f"✅ User authenticated: {user_id}")
+        return user_id
+    except HTTPException:
+        # verify_jwt_token에서 발생한 HTTPException을 그대로 전달
+        raise
 
 
 def set_dependencies(storage: ChatStorage):
