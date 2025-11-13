@@ -2125,6 +2125,12 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         return
       }
       
+      // 엑셀 데이터 분석 모드에서 파일이 없으면 에러 표시
+      if (selectedDataType.value === 'excel' && !selectedFile.value) {
+        showError('엑셀 데이터 분석을 위해서는 파일을 선택해주세요.')
+        return
+      }
+      
       // 새 채팅방 표시 제거 (첫 번째 메시지 전송 시)
       if (newChatroomDisplay.value[activeChatId.value]) {
         newChatroomDisplay.value[activeChatId.value] = false
@@ -2137,7 +2143,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       
       // 선택된 파일이 있으면 엑셀 업로드 처리
       if (selectedFile.value) {
-        console.log('🚀 Uploading Excel file:', selectedFile.value.name)
+        console.log('🚀 Uploading Excel file to /excel_analysis_stream:', selectedFile.value.name)
         await uploadExcelFile(selectedFile.value, message)
         selectedFile.value = null // 업로드 후 파일 제거
         chatInputs.value[activeChatId.value] = ''
@@ -2151,7 +2157,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         return
       }
       
-      console.log('📨 Processing as regular message (no file attached)')
+      console.log('📨 Processing as regular message to /chat (no file attached)')
       
       // 일반 메시지 처리
       // Add user message (모든 사용자 메시지는 수정 가능)
