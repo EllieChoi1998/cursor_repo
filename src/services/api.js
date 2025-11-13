@@ -5,26 +5,6 @@ export const FILE_API_BASE_URL = process.env.VUE_APP_FILE_API_BASE_URL || 'http:
 // 인증 유틸리티 import
 import { getAuthHeaders, isAuthenticated } from '../utils/auth.js'
 
-// 개발 환경에서 Authorization 헤더 확인을 위한 디버그 헬퍼
-const debugAuthHeader = (endpoint, headers) => {
-  if (process.env.NODE_ENV === 'production') {
-    return
-  }
-
-  const authValue = headers?.Authorization
-  if (!authValue) {
-    console.warn(`[AUTH DEBUG] ${endpoint}: Authorization 헤더가 비어 있습니다.`)
-    return
-  }
-
-  const masked =
-    authValue.startsWith('Bearer ') && authValue.length > 20
-      ? `Bearer ${authValue.slice(7, 15)}...${authValue.slice(-5)}`
-      : authValue
-
-  console.log(`[AUTH DEBUG] ${endpoint}: Authorization 헤더 확인 → ${masked}`)
-}
-
 // 디버깅을 위한 콘솔 출력 (개발 환경에서만)
 if (process.env.NODE_ENV === 'development') {
   console.log('🔗 API Base URL:', API_BASE_URL)
@@ -200,12 +180,9 @@ export const streamChatAPI = async (choice, message, chatroomId, onData) => {
       throw new Error('인증이 필요합니다. 로그인해주세요.')
     }
 
-    const headers = getAuthHeaders()
-    debugAuthHeader('/chat', headers)
-
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
-      headers,
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         choice: choice,
         message: message,
@@ -703,9 +680,7 @@ export const analyzeExcelFileStream = async (file, message, chatroomId, onData) 
 
     // FormData 사용 시 Content-Type은 브라우저가 자동으로 설정하므로 제외
     const headers = getAuthHeaders()
-    debugAuthHeader('/excel_analysis_stream (before Content-Type 제거)', headers)
     delete headers['Content-Type']  // FormData 사용 시 Content-Type 제거
-    debugAuthHeader('/excel_analysis_stream', headers)
     
     const response = await fetch(`${API_BASE_URL}/excel_analysis_stream`, {
       method: 'POST',
