@@ -3,7 +3,7 @@ export const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhos
 export const FILE_API_BASE_URL = process.env.VUE_APP_FILE_API_BASE_URL || 'http://localhost:8003'
 
 // 인증 유틸리티 import
-import { getAuthHeaders, isAuthenticated, getToken } from '../utils/auth.js'
+import { getAuthHeaders, isAuthenticated } from '../utils/auth.js'
 
 // 디버깅을 위한 콘솔 출력 (개발 환경에서만)
 if (process.env.NODE_ENV === 'development') {
@@ -678,11 +678,13 @@ export const analyzeExcelFileStream = async (file, message, chatroomId, onData) 
     formData.append('message', message)
     formData.append('chatroom_id', chatroomId)
 
+    // FormData 사용 시 Content-Type은 브라우저가 자동으로 설정하므로 제외
+    const headers = getAuthHeaders()
+    delete headers['Content-Type']  // FormData 사용 시 Content-Type 제거
+    
     const response = await fetch(`${API_BASE_URL}/excel_analysis_stream`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getToken()}`
-      },
+      headers: headers,
       body: formData
     })
 
