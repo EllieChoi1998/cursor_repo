@@ -657,9 +657,13 @@ export const fetchFileContent = async (filePath) => {
   }
 }
 
-// 엑셀 파일 분석 스트리밍 API
+// 엑셀 파일 분석 스트리밍 API (파일 선택사항)
 export const analyzeExcelFileStream = async (file, message, chatroomId, onData) => {
-  console.log('📊 Starting Excel file analysis (streaming):', { fileName: file.name, message, chatroomId })
+  console.log('📊 Starting Excel analysis (streaming):', { 
+    fileName: file ? file.name : 'no file', 
+    message, 
+    chatroomId 
+  })
   
   try {
     // 인증 확인
@@ -668,7 +672,9 @@ export const analyzeExcelFileStream = async (file, message, chatroomId, onData) 
     }
 
     const formData = new FormData()
-    formData.append('file', file)
+    if (file) {
+      formData.append('file', file)
+    }
     formData.append('message', message)
     formData.append('chatroom_id', chatroomId)
 

@@ -200,14 +200,19 @@ async def edit_message_endpoint(request: EditMessageRequest, user_id: str = Depe
 
 @router.post("/excel_analysis_stream")
 async def excel_analysis_stream_endpoint(
-    file: UploadFile = File(...),
     message: str = Form(...),
     chatroom_id: int = Form(...),
+    file: UploadFile = File(None),  # 파일은 선택사항
     user_id: str = Depends(get_current_user)
 ):
-    """엑셀 파일 분석 스트리밍 API 엔드포인트"""
+    """엑셀 파일 분석 스트리밍 API 엔드포인트 (파일 선택사항)"""
     async def generate():
         try:
+            # 파일이 없는 경우
+            if not file:
+                yield f"data: {json.dumps({'msg': '엑셀 파일이 선택되지 않았습니다. 파일을 업로드해주세요.'})}\n\n"
+                return
+            
             # 진행 상황 메시지
             yield f"data: {json.dumps({'progress_message': '📊 엑셀 파일을 분석하고 있습니다...'})}\n\n"
             
