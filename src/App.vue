@@ -2106,6 +2106,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     const sendMessage = async () => {
       const message = currentMessage.value.trim()
       
+      console.log('📤 sendMessage called')
+      console.log('📤 message:', message)
+      console.log('📤 selectedFile:', selectedFile.value)
+      console.log('📤 selectedDataType:', selectedDataType.value)
+      
       // 메시지가 없거나 로딩 중이면 리턴
       if (!message || isLoading.value) return
       
@@ -2132,6 +2137,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       
       // 선택된 파일이 있으면 엑셀 업로드 처리
       if (selectedFile.value) {
+        console.log('🚀 Uploading Excel file:', selectedFile.value.name)
         await uploadExcelFile(selectedFile.value, message)
         selectedFile.value = null // 업로드 후 파일 제거
         chatInputs.value[activeChatId.value] = ''
@@ -2144,6 +2150,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         isLoading.value = false
         return
       }
+      
+      console.log('📨 Processing as regular message (no file attached)')
       
       // 일반 메시지 처리
       // Add user message (모든 사용자 메시지는 수정 가능)
