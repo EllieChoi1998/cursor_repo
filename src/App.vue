@@ -222,6 +222,7 @@
                     @click="sendMessage" 
                     class="send-button"
                     :disabled="!currentMessage.trim() || isLoading"
+                    :title="selectedFile ? '파일과 함께 업로드' : '메시지 전송'"
                   >
                     <span v-if="isLoading">⏳</span>
                     <span v-else>📤</span>
@@ -229,12 +230,22 @@
 
                 </div>
                 
+                <!-- 선택된 파일 표시 영역 -->
+                <div v-if="selectedFile" class="selected-file-display">
+                  <span class="file-icon">📎</span>
+                  <span class="file-name">{{ selectedFile.name }}</span>
+                  <span class="file-size">({{ formatFileSize(selectedFile.size) }})</span>
+                  <button @click="removeSelectedFile" class="file-remove-btn" title="파일 제거">
+                    ✕
+                  </button>
+                </div>
+                
                 <!-- 숨겨진 파일 입력 -->
                 <input 
                   ref="fileInput"
                   type="file"
                   accept=".xlsx,.xls,.csv"
-                  @change="handleFileUpload"
+                  @change="handleFileSelect"
                   style="display: none"
                 />
                 <!-- 에러 메시지 표시 영역 -->
@@ -748,6 +759,7 @@ export default defineComponent({
     const messagesContainer = ref(null)
     const messageInput = ref(null)
     const fileInput = ref(null)
+    const selectedFile = ref(null) // 선택된 파일 저장
     const isDataLoading = ref(false)
     
     const chartHeight = ref(600)
@@ -2093,6 +2105,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
     const sendMessage = async () => {
       const message = currentMessage.value.trim()
+      
+      // 메시지가 없거나 로딩 중이면 리턴
       if (!message || isLoading.value) return
       
       // 활성 채팅방이 없으면 첫 번째 채팅방 선택
@@ -2114,10 +2128,27 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       // 새 메시지 전송 시 기존 에러 메시지들 제거
       clearErrorMessages()
       
+      isLoading.value = true
+      
+      // 선택된 파일이 있으면 엑셀 업로드 처리
+      if (selectedFile.value) {
+        await uploadExcelFile(selectedFile.value, message)
+        selectedFile.value = null // 업로드 후 파일 제거
+        chatInputs.value[activeChatId.value] = ''
+        
+        // textarea 높이 초기화
+        nextTick(() => {
+          adjustTextareaHeight()
+        })
+        
+        isLoading.value = false
+        return
+      }
+      
+      // 일반 메시지 처리
       // Add user message (모든 사용자 메시지는 수정 가능)
       addMessage('user', message, true)
       chatInputs.value[activeChatId.value] = ''
-      isLoading.value = true
       
       // textarea 높이 초기화
       nextTick(() => {
@@ -2159,7 +2190,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
-    const handleFileUpload = async (event) => {
+    // 파일 선택 핸들러 (파일 선택만 처리)
+    const handleFileSelect = (event) => {
       const file = event.target.files[0]
       if (!file) return
 
@@ -2169,6 +2201,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       
       if (!allowedTypes.includes(fileExtension)) {
         showError('지원하지 않는 파일 형식입니다. .xlsx, .xls, .csv 파일만 업로드 가능합니다.')
+        event.target.value = ''
         return
       }
 
@@ -2176,33 +2209,39 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       const maxSize = 10 * 1024 * 1024 // 10MB
       if (file.size > maxSize) {
         showError('파일 크기가 너무 큽니다. 10MB 이하의 파일을 업로드해주세요.')
+        event.target.value = ''
         return
       }
 
-      // 활성 채팅방이 없으면 첫 번째 채팅방 선택
-      if (!activeChatId.value && chatRooms.value.length > 0) {
-        await selectChatRoom(chatRooms.value[0].id)
-      }
+      // 파일 선택 완료
+      selectedFile.value = file
+      console.log('📁 File selected:', file.name)
       
-      if (!activeChatId.value) {
-        showError('채팅방을 선택해주세요.')
-        return
-      }
+      // 파일 입력 초기화 (같은 파일을 다시 선택 가능하도록)
+      event.target.value = ''
+    }
 
-      // 메시지가 없으면 에러 표시
-      const prompt = currentMessage.value.trim()
-      if (!prompt) {
-        showError('메시지를 입력해주세요.')
-        event.target.value = '' // 파일 입력 초기화
-        return
-      }
+    // 선택된 파일 제거
+    const removeSelectedFile = () => {
+      selectedFile.value = null
+      console.log('📁 File removed')
+    }
 
-      // 사용자 메시지 추가
-      addMessage('user', `📁 ${file.name} 업로드: ${prompt}`, true)
-      currentMessage.value = ''
-      isLoading.value = true
+    // 파일 크기 포맷팅
+    const formatFileSize = (bytes) => {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+    }
 
+    // 실제 파일 업로드 처리 함수
+    const uploadExcelFile = async (file, prompt) => {
       try {
+        // 사용자 메시지 추가
+        addMessage('user', `📁 ${file.name} 업로드: ${prompt}`, true)
+        
         // API 호출 - analyzeExcelFileStream 함수 사용
         await analyzeExcelFileStream(file, prompt, activeChatId.value, (data) => {
           if (data.progress_message) {
@@ -2224,14 +2263,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             addMessage('bot', data.msg, false)
           }
         })
-
       } catch (error) {
         console.error('파일 업로드 오류:', error)
         addMessage('bot', `파일 업로드 중 오류가 발생했습니다: ${error.message}`, false)
-      } finally {
-        isLoading.value = false
-        // 파일 입력 초기화
-        event.target.value = ''
       }
     }
 
@@ -2906,8 +2940,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         downloadFile,
         // 엑셀 파일 업로드 관련
         fileInput,
+        selectedFile,
         triggerFileUpload,
-        handleFileUpload,
+        handleFileSelect,
+        removeSelectedFile,
+        formatFileSize,
 
         // 에러 상태
         currentError,
@@ -3412,6 +3449,71 @@ body {
 .file-upload-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Selected File Display */
+.selected-file-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border: 1px solid #81c784;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.selected-file-display .file-icon {
+  font-size: 1.2rem;
+}
+
+.selected-file-display .file-name {
+  flex: 1;
+  font-weight: 600;
+  color: #2e7d32;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-file-display .file-size {
+  color: #558b2f;
+  font-size: 0.85rem;
+}
+
+.selected-file-display .file-remove-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: #d32f2f;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.selected-file-display .file-remove-btn:hover {
+  background: #c62828;
+  transform: scale(1.1);
 }
 
 /* Excel Analysis Results */
