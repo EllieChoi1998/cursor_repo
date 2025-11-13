@@ -3,7 +3,7 @@ export const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhos
 export const FILE_API_BASE_URL = process.env.VUE_APP_FILE_API_BASE_URL || 'http://localhost:8003'
 
 // 인증 유틸리티 import
-import { getAuthHeaders, isAuthenticated } from '../utils/auth.js'
+import { getAuthHeaders, isAuthenticated, getToken } from '../utils/auth.js'
 
 // 디버깅을 위한 콘솔 출력 (개발 환경에서만)
 if (process.env.NODE_ENV === 'development') {
@@ -681,7 +681,7 @@ export const analyzeExcelFileStream = async (file, message, chatroomId, onData) 
     const response = await fetch(`${API_BASE_URL}/excel_analysis_stream`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getToken()}`
       },
       body: formData
     })
