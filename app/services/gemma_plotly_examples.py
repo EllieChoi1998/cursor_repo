@@ -397,6 +397,96 @@ def build_box_plot_prompt(
     )
 
 
+def build_scatter_plot_prompt(
+    dataset_key: str,
+    dataset_schema: Dict[str, Any],
+    dataset_preview: Dict[str, Any],
+    conversation_history: List[Dict[str, str]],
+    user_prompt_en: str,
+    user_prompt_ko: str,
+) -> PromptContext:
+    """Prompt and skeleton for a scatter plot (optionally colored/sized)."""
+    system_prompts = _build_system_prompts(
+        dataset_key, dataset_schema, dataset_preview, conversation_history
+    )
+    user_prompt_en_full = dedent(
+        f"""
+        Goal: scatter plot illustrating relationships between columns.
+        Additional user instructions:
+        {user_prompt_en}
+
+        Response format:
+        {{
+          "figure": {{
+            "data": [...],
+            "layout": {{...}},
+            "config": {{...}}
+          }},
+          "metadata": {{
+            "dataset_key": "{dataset_key}"
+          }}
+        }}
+        """
+    ).strip()
+    user_prompt_ko_full = dedent(
+        f"""
+        목표: 컬럼 간 관계를 보여주는 산점도(scatter plot)를 생성.
+        추가 사용자 지시사항:
+        {user_prompt_ko}
+
+        응답 형식:
+        {{
+          "figure": {{
+            "data": [...],
+            "layout": {{...}},
+            "config": {{...}}
+          }},
+          "metadata": {{
+            "dataset_key": "{dataset_key}"
+          }}
+        }}
+        """
+    ).strip()
+
+    skeleton = {
+        "figure": {
+            "data": [
+                {
+                    "type": "scatter",
+                    "mode": "markers",
+                    "name": "Scatter Series",
+                    "x": f"EXTERNAL_REF::{dataset_key}::x_value",
+                    "y": f"EXTERNAL_REF::{dataset_key}::y_value",
+                    "marker": {
+                        "color": f"EXTERNAL_REF::{dataset_key}::category",
+                        "size": f"EXTERNAL_REF::{dataset_key}::size_metric",
+                        "sizemode": "area",
+                        "sizeref": 2.0,
+                    },
+                    "customdata": f"EXTERNAL_REF::{dataset_key}::tooltip",
+                    "hovertemplate": "%{x}, %{y}<br>%{customdata}<extra></extra>",
+                }
+            ],
+            "layout": {
+                "title": {"text": "Scatter Plot"},
+                "xaxis": {"title": {"text": "X Axis"}},
+                "yaxis": {"title": {"text": "Y Axis"}},
+            },
+            "config": {"displaylogo": False},
+        },
+        "metadata": {"dataset_key": dataset_key},
+    }
+
+    return PromptContext(
+        chart_type="scatter_plot",
+        system_prompt_en=system_prompts["en"],
+        system_prompt_ko=system_prompts["ko"],
+        user_prompt_en=user_prompt_en_full,
+        user_prompt_ko=user_prompt_ko_full,
+        expected_response_skeleton=skeleton,
+    )
+
+
 def request_plotly_spec(prompt: str) -> Dict[str, Any]:
     """
     Example HTTP call to the locally served Gemma model. Adjust the payload to
@@ -494,6 +584,44 @@ _EXAMPLE_PREVIEW_BOX = {
     "numeric_summary": {"value": {"median": 1.31, "iqr": 0.12}},
 }
 
+_EXAMPLE_SCHEMA_SCATTER = {
+    "dataset_key": "correlation_points",
+    "columns": {
+        "x_value": "float",
+        "y_value": "float",
+        "category": "string",
+        "size_metric": "float",
+        "tooltip": "string",
+    },
+    "row_count": 512,
+    "source": "uploaded_excel/correlation_points.xlsx",
+}
+
+_EXAMPLE_PREVIEW_SCATTER = {
+    "head": [
+        {
+            "x_value": 1.2,
+            "y_value": 3.4,
+            "category": "Group A",
+            "size_metric": 20.5,
+            "tooltip": "Sample A",
+        },
+        {
+            "x_value": 2.1,
+            "y_value": 2.8,
+            "category": "Group B",
+            "size_metric": 10.0,
+            "tooltip": "Sample B",
+        },
+    ],
+    "shape": [512, 5],
+    "numeric_summary": {
+        "x_value": {"mean": 2.4},
+        "y_value": {"mean": 3.1},
+        "size_metric": {"mean": 15.0},
+    },
+}
+
 _EXAMPLE_CONVERSATION = [
     {"role": "user", "content": "지난번에 만든 그래프에서 범례 순서를 바꿔주세요."},
     {"role": "assistant", "content": "범례 순서를 Current, Baseline 순으로 변경했습니다."},
@@ -524,6 +652,14 @@ EXAMPLE_PROMPTS: List[PromptContext] = [
         conversation_history=_EXAMPLE_CONVERSATION,
         user_prompt_en="Create box plots by device and include wafer_count in hover.",
         user_prompt_ko="디바이스별 박스플롯을 만들고 hover에 wafer_count를 보여주세요.",
+    ),
+    build_scatter_plot_prompt(
+        dataset_key="correlation_points",
+        dataset_schema=_EXAMPLE_SCHEMA_SCATTER,
+        dataset_preview=_EXAMPLE_PREVIEW_SCATTER,
+        conversation_history=_EXAMPLE_CONVERSATION,
+        user_prompt_en="Create a scatter plot of x_value vs y_value, colored by category and sized by size_metric.",
+        user_prompt_ko="x_value와 y_value를 산점도로 그리고, category로 색상을, size_metric으로 점 크기를 조절해주세요.",
     ),
 ]
 
@@ -653,4 +789,41 @@ if __name__ == "__main__":
 #     "[{\"device\":\"D2\",\"lot\":\"L004\",\"status\":\"REVIEW\"}]"
 #   ],
 #   "success_message": "검증 대상 로트 목록을 정리했습니다."
+# }
+
+# 6) scatter_plot
+# {
+#   "analysis_type": "scatter_plot",
+#   "file_name": "scatter.xlsx",
+#   "graph_spec": {
+#     "figure": {
+#       "data": [
+#         {
+#           "type": "scatter",
+#           "mode": "markers",
+#           "name": "Scatter Series",
+#           "x": "EXTERNAL_REF::correlation_points::x_value",
+#           "y": "EXTERNAL_REF::correlation_points::y_value",
+#           "marker": {
+#             "color": "EXTERNAL_REF::correlation_points::category",
+#             "size": "EXTERNAL_REF::correlation_points::size_metric",
+#             "sizemode": "area"
+#           },
+#           "customdata": "EXTERNAL_REF::correlation_points::tooltip",
+#           "hovertemplate": "%{x}, %{y}<br>%{customdata}<extra></extra>"
+#         }
+#       ],
+#       "layout": {
+#         "title": {"text": "Scatter Plot"},
+#         "xaxis": {"title": {"text": "X Axis"}},
+#         "yaxis": {"title": {"text": "Y Axis"}}
+#       },
+#       "config": {"displaylogo": false}
+#     },
+#     "metadata": {"dataset_key": "correlation_points"}
+#   },
+#   "real_data": [
+#     "[{\"x_value\":1.2,\"y_value\":3.4,\"category\":\"Group A\",\"size_metric\":20.5,\"tooltip\":\"Sample A\"}]"
+#   ],
+#   "success_message": "산점도를 통해 두 변수 간 상관 관계를 시각화했습니다."
 # }
