@@ -32,16 +32,31 @@ class PlotlyPrompt:
     expected_response_skeleton: Dict[str, Any]
 
 
-def build_bar_chart_prompt() -> PlotlyPrompt:
+def _schema_block(schema: Dict[str, Any]) -> str:
+    """Render dataset schema information as pretty JSON for prompt injection."""
+    return json.dumps(schema, indent=2, ensure_ascii=False)
+
+
+def build_bar_chart_prompt(
+    user_prompt: str,
+    dataset_schema: Dict[str, Any],
+    dataset_key: str = "device_yield_summary",
+) -> PlotlyPrompt:
     """Prompt and skeleton for a grouped bar graph spec."""
     prompt = dedent(
-        """
+        f"""
         You are a Plotly.js specialist. Produce ONLY valid JSON.
 
         Goal: grouped bar chart specification.
-        Data source: do NOT inline the data array. Instead, refer to an external
-        dataset key called "dataset_key". The frontend will join traces with
-        the actual rows by this key at runtime.
+        Data source: do NOT inline the data array. Instead, refer to the external
+        dataset key "{dataset_key}". The frontend will join traces with the actual
+        rows by this key at runtime.
+
+        User request:
+        {user_prompt}
+
+        Dataset schema for "{dataset_key}":
+        {_schema_block(dataset_schema)}
 
         Requirements:
           - use layout.title.text == "Device Yield Comparison".
@@ -71,15 +86,15 @@ def build_bar_chart_prompt() -> PlotlyPrompt:
                 {
                     "type": "bar",
                     "name": "Current",
-                    "x": "EXTERNAL_REF::dataset_key::device",
-                    "y": "EXTERNAL_REF::dataset_key::yield_current",
+                    "x": f"EXTERNAL_REF::{dataset_key}::device",
+                    "y": f"EXTERNAL_REF::{dataset_key}::yield_current",
                     "marker": {"color": "#1f77b4"},
                 },
                 {
                     "type": "bar",
                     "name": "Baseline",
-                    "x": "EXTERNAL_REF::dataset_key::device",
-                    "y": "EXTERNAL_REF::dataset_key::yield_baseline",
+                    "x": f"EXTERNAL_REF::{dataset_key}::device",
+                    "y": f"EXTERNAL_REF::{dataset_key}::yield_baseline",
                     "marker": {"color": "#ff7f0e"},
                 },
             ],
@@ -92,19 +107,30 @@ def build_bar_chart_prompt() -> PlotlyPrompt:
             },
             "config": {"displaylogo": False, "responsive": True},
         },
-        "metadata": {"dataset_key": "device_yield_summary"},
+        "metadata": {"dataset_key": dataset_key},
     }
     return PlotlyPrompt(chart_type="bar_graph", prompt=prompt, expected_response_skeleton=skeleton)
 
 
-def build_line_chart_prompt() -> PlotlyPrompt:
+def build_line_chart_prompt(
+    user_prompt: str,
+    dataset_schema: Dict[str, Any],
+    dataset_key: str = "kpi_timeseries",
+    maintenance_key: str = "maintenance_events_key",
+) -> PlotlyPrompt:
     """Prompt and skeleton for a multi-line trend plot."""
     prompt = dedent(
-        """
+        f"""
         You are a Plotly.js specialist. Produce ONLY valid JSON.
 
         Goal: multi-series line chart showing KPI trends over time.
-        Data source: external dataset key "kpi_timeseries". Do not inline raw data.
+        Data source: external dataset key "{dataset_key}". Do not inline raw data.
+
+        User request:
+        {user_prompt}
+
+        Dataset schema for "{dataset_key}":
+        {_schema_block(dataset_schema)}
 
         Requirements:
           - Show two traces for columns "timestamp" vs "kpi_value" grouped by
@@ -113,7 +139,7 @@ def build_line_chart_prompt() -> PlotlyPrompt:
           - Provide hovertemplate referencing %{customdata.metric_unit}.
           - Add vertical line shapes for maintenance windows provided via an
             external array "maintenance_events" (do not inline coordinates; just
-            reference the key).
+            reference the key "{maintenance_key}").
           - Layout.title.text == "KPI Trend".
 
         Response format:
@@ -141,9 +167,9 @@ def build_line_chart_prompt() -> PlotlyPrompt:
                     "type": "scatter",
                     "mode": "lines+markers",
                     "name": "Series Placeholder",
-                    "x": "EXTERNAL_REF::kpi_timeseries::timestamp",
-                    "y": "EXTERNAL_REF::kpi_timeseries::kpi_value",
-                    "customdata": "EXTERNAL_REF::kpi_timeseries::metric_unit",
+                    "x": f"EXTERNAL_REF::{dataset_key}::timestamp",
+                    "y": f"EXTERNAL_REF::{dataset_key}::kpi_value",
+                    "customdata": f"EXTERNAL_REF::{dataset_key}::metric_unit",
                     "hovertemplate": "%{y:.2f} %{customdata}",
                 }
             ],
@@ -151,27 +177,37 @@ def build_line_chart_prompt() -> PlotlyPrompt:
                 "title": {"text": "KPI Trend"},
                 "xaxis": {"title": {"text": "Timestamp"}},
                 "yaxis": {"title": {"text": "KPI Value"}},
-                "shapes": "EXTERNAL_REF::maintenance_events_key",
+                "shapes": f"EXTERNAL_REF::{maintenance_key}",
             },
             "config": {"displaylogo": False, "scrollZoom": True},
             "frames": [],
         },
         "metadata": {
-            "dataset_key": "kpi_timeseries",
-            "auxiliary_keys": {"maintenance_events": "maintenance_events_key"},
+            "dataset_key": dataset_key,
+            "auxiliary_keys": {"maintenance_events": maintenance_key},
         },
     }
     return PlotlyPrompt(chart_type="line_graph", prompt=prompt, expected_response_skeleton=skeleton)
 
 
-def build_box_plot_prompt() -> PlotlyPrompt:
+def build_box_plot_prompt(
+    user_prompt: str,
+    dataset_schema: Dict[str, Any],
+    dataset_key: str = "param_distribution",
+) -> PlotlyPrompt:
     """Prompt and skeleton for a grouped box plot."""
     prompt = dedent(
-        """
+        f"""
         You are a Plotly.js specialist. Produce ONLY valid JSON.
 
         Goal: grouped box plot comparing parameter distributions across devices.
-        Data source: external dataset key "param_distribution".
+        Data source: external dataset key "{dataset_key}".
+
+        User request:
+        {user_prompt}
+
+        Dataset schema for "{dataset_key}":
+        {_schema_block(dataset_schema)}
 
         Requirements:
           - Do not inline data arrays.
@@ -201,10 +237,10 @@ def build_box_plot_prompt() -> PlotlyPrompt:
                 {
                     "type": "box",
                     "name": "Device Placeholder",
-                    "x": "EXTERNAL_REF::param_distribution::device",
-                    "y": "EXTERNAL_REF::param_distribution::value",
+                    "x": f"EXTERNAL_REF::{dataset_key}::device",
+                    "y": f"EXTERNAL_REF::{dataset_key}::value",
                     "marker": {"color": "#636efa"},
-                    "customdata": "EXTERNAL_REF::param_distribution::wafer_count",
+                    "customdata": f"EXTERNAL_REF::{dataset_key}::wafer_count",
                     "hovertemplate": "Device: %{x}<br>Value: %{y:.2f}<br>Wafers: %{customdata}<extra></extra>",
                 }
             ],
@@ -225,7 +261,7 @@ def build_box_plot_prompt() -> PlotlyPrompt:
             },
             "config": {"displaylogo": False},
         },
-        "metadata": {"dataset_key": "param_distribution"},
+        "metadata": {"dataset_key": dataset_key},
     }
     return PlotlyPrompt(chart_type="box_plot", prompt=prompt, expected_response_skeleton=skeleton)
 
@@ -254,10 +290,58 @@ def request_plotly_spec(prompt: str) -> Dict[str, Any]:
     return json.loads(content)
 
 
+_EXAMPLE_SCHEMA_BAR = {
+    "dataset_key": "device_yield_summary",
+    "columns": {
+        "device": "string",
+        "yield_current": "float",
+        "yield_baseline": "float",
+        "lot_count": "integer",
+    },
+    "row_count": 128,
+    "source": "uploaded_excel/device_yield_summary.xlsx",
+}
+
+_EXAMPLE_SCHEMA_LINE = {
+    "dataset_key": "kpi_timeseries",
+    "columns": {
+        "timestamp": "datetime",
+        "kpi_value": "float",
+        "series_label": "string",
+        "metric_unit": "string",
+    },
+    "row_count": 720,
+    "source": "uploaded_excel/kpi_export.xlsx",
+}
+
+_EXAMPLE_SCHEMA_BOX = {
+    "dataset_key": "param_distribution",
+    "columns": {
+        "device": "string",
+        "value": "float",
+        "wafer_count": "integer",
+    },
+    "row_count": 256,
+    "source": "uploaded_excel/param_distribution.csv",
+}
+
 EXAMPLE_PROMPTS: List[PlotlyPrompt] = [
-    build_bar_chart_prompt(),
-    build_line_chart_prompt(),
-    build_box_plot_prompt(),
+    build_bar_chart_prompt(
+        user_prompt="현재/기준 수율을 비교하는 grouped bar chart를 생성해줘.",
+        dataset_schema=_EXAMPLE_SCHEMA_BAR,
+        dataset_key="device_yield_summary",
+    ),
+    build_line_chart_prompt(
+        user_prompt="시리즈 레이블별 KPI 추세를 시간축으로 비교하고, 유지보수 구간은 세로선으로 표시해줘.",
+        dataset_schema=_EXAMPLE_SCHEMA_LINE,
+        dataset_key="kpi_timeseries",
+        maintenance_key="maintenance_events_key",
+    ),
+    build_box_plot_prompt(
+        user_prompt="디바이스별 파라미터 분포(box plot)를 만들고 wafer_count 필드를 hover에 포함해줘.",
+        dataset_schema=_EXAMPLE_SCHEMA_BOX,
+        dataset_key="param_distribution",
+    ),
 ]
 
 
