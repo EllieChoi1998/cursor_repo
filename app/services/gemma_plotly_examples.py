@@ -26,9 +26,12 @@ GEMMA_ENDPOINT = "http://localhost:8000/v1/chat/completions"
 
 
 @dataclass
-class PlotlyPrompt:
+class PromptContext:
     chart_type: str
-    prompt: str
+    system_prompt_en: str
+    system_prompt_ko: str
+    user_prompt_en: str
+    user_prompt_ko: str
     expected_response_skeleton: Dict[str, Any]
 
 
@@ -37,46 +40,131 @@ def _schema_block(schema: Dict[str, Any]) -> str:
     return json.dumps(schema, indent=2, ensure_ascii=False)
 
 
-def build_bar_chart_prompt(
-    user_prompt: str,
+def _preview_block(preview: Dict[str, Any]) -> str:
+    """Render dataset preview info (head, shape, etc.) as JSON string."""
+    return json.dumps(preview, indent=2, ensure_ascii=False)
+
+
+def _conversation_block(messages: List[Dict[str, str]]) -> str:
+    """Render previous conversation turns as JSON."""
+    return json.dumps(messages, indent=2, ensure_ascii=False)
+
+
+def _build_system_prompts(
+    dataset_key: str,
     dataset_schema: Dict[str, Any],
-    dataset_key: str = "device_yield_summary",
-) -> PlotlyPrompt:
-    """Prompt and skeleton for a grouped bar graph spec."""
-    prompt = dedent(
+    dataset_preview: Dict[str, Any],
+    conversation_history: List[Dict[str, str]],
+) -> Dict[str, str]:
+    """Return English/Korean system prompts that embed schema, preview, history."""
+    schema_json = _schema_block(dataset_schema)
+    preview_json = _preview_block(dataset_preview)
+    history_json = _conversation_block(conversation_history)
+
+    system_en = dedent(
         f"""
-        You are a Plotly.js specialist. Produce ONLY valid JSON.
+        You are an expert Plotly.js spec generator.  Use only JSON responses.
 
-        Goal: grouped bar chart specification.
-        Data source: do NOT inline the data array. Instead, refer to the external
-        dataset key "{dataset_key}". The frontend will join traces with the actual
-        rows by this key at runtime.
+        Data Origin:
+          - Parsed from an uploaded Excel file.
+          - Dataset key: "{dataset_key}" (do NOT inline raw values; reference via EXTERNAL_REF markers).
 
-        User request:
-        {user_prompt}
+        Dataset Schema:
+        {schema_json}
 
-        Dataset schema for "{dataset_key}":
-        {_schema_block(dataset_schema)}
+        Dataset Preview (head, summary):
+        {preview_json}
+
+        Conversation History (latest last):
+        {history_json}
 
         Requirements:
-          - use layout.title.text == "Device Yield Comparison".
-          - xaxis.title.text == "Device".
-          - yaxis.title.text == "Yield (%)".
-          - Provide two bar traces referencing fields "device" and
-            "yield_current" / "yield_baseline" in the dataset.
-          - Include legend grouped on trace names "Current" and "Baseline".
+          1. Follow user modifications or corrections implied by the latest messages.
+          2. Do not include raw data arrays in traces; instead use placeholders like
+             EXTERNAL_REF::{dataset_key}::column_name.
+          3. Ensure any auxiliary references (shapes, annotations, etc.) also use keys
+             provided in "metadata".
+          4. Response must be valid JSON without extra commentary.
+        """
+    ).strip()
+
+    system_ko = dedent(
+        f"""
+        당신은 Plotly.js 스펙을 작성하는 전문가입니다. 반드시 JSON만 응답하세요.
+
+        데이터 출처:
+          - 업로드된 엑셀 파일을 파싱한 결과입니다.
+          - 데이터셋 키: "{dataset_key}" (실제 값을 인라인하지 말고 EXTERNAL_REF 표기법으로 참조하세요)
+
+        데이터셋 스키마:
+        {schema_json}
+
+        데이터 미리보기(head, 통계 요약 등):
+        {preview_json}
+
+        이전 대화 이력(최신 메시지가 마지막):
+        {history_json}
+
+        지침:
+          1. 최신 메시지에 포함된 수정/요청 사항이 있다면 반드시 반영하세요.
+          2. raw 데이터 배열을 trace에 직접 넣지 말고
+             EXTERNAL_REF::{dataset_key}::컬럼명 형태로 참조하세요.
+          3. shapes, annotations 등 보조 요소도 metadata에 정의된 키만 사용하세요.
+          4. JSON 외의 설명 문구는 절대 포함하지 마세요.
+        """
+    ).strip()
+
+    return {"en": system_en, "ko": system_ko}
+
+
+def build_bar_chart_prompt(
+    dataset_key: str,
+    dataset_schema: Dict[str, Any],
+    dataset_preview: Dict[str, Any],
+    conversation_history: List[Dict[str, str]],
+    user_prompt_en: str,
+    user_prompt_ko: str,
+) -> PromptContext:
+    """Prompt and skeleton for a grouped bar graph spec."""
+    system_prompts = _build_system_prompts(
+        dataset_key, dataset_schema, dataset_preview, conversation_history
+    )
+    user_prompt_en_full = dedent(
+        f"""
+        Goal: grouped bar chart specification.
+        Additional user instructions:
+        {user_prompt_en}
 
         Response format:
-        {
-          "figure": {
+        {{
+          "figure": {{
             "data": [...],
-            "layout": {...},
-            "config": {...}
-          },
-          "metadata": {
-            "dataset_key": "string identifying the external dataset"
-          }
-        }
+            "layout": {{...}},
+            "config": {{...}}
+          }},
+          "metadata": {{
+            "dataset_key": "{dataset_key}"
+          }}
+        }}
+        """
+    ).strip()
+    user_prompt_ko_full = dedent(
+        f"""
+        목표: grouped bar chart 스펙 생성.
+        추가 사용자 지시사항:
+        {user_prompt_ko}
+
+        응답 형식:
+        {{
+          "figure": {{
+            "data": [...],
+            "layout": {{...}},
+            "config": {{...}}
+          }},
+          "metadata": {{
+            "dataset_key": "{dataset_key}"
+          }}
+        }}
         """
     ).strip()
 
@@ -109,54 +197,73 @@ def build_bar_chart_prompt(
         },
         "metadata": {"dataset_key": dataset_key},
     }
-    return PlotlyPrompt(chart_type="bar_graph", prompt=prompt, expected_response_skeleton=skeleton)
+    return PromptContext(
+        chart_type="bar_graph",
+        system_prompt_en=system_prompts["en"],
+        system_prompt_ko=system_prompts["ko"],
+        user_prompt_en=user_prompt_en_full,
+        user_prompt_ko=user_prompt_ko_full,
+        expected_response_skeleton=skeleton,
+    )
 
 
 def build_line_chart_prompt(
-    user_prompt: str,
+    dataset_key: str,
     dataset_schema: Dict[str, Any],
-    dataset_key: str = "kpi_timeseries",
+    dataset_preview: Dict[str, Any],
+    conversation_history: List[Dict[str, str]],
+    user_prompt_en: str,
+    user_prompt_ko: str,
     maintenance_key: str = "maintenance_events_key",
-) -> PlotlyPrompt:
+) -> PromptContext:
     """Prompt and skeleton for a multi-line trend plot."""
-    prompt = dedent(
+    system_prompts = _build_system_prompts(
+        dataset_key, dataset_schema, dataset_preview, conversation_history
+    )
+    user_prompt_en_full = dedent(
         f"""
-        You are a Plotly.js specialist. Produce ONLY valid JSON.
-
-        Goal: multi-series line chart showing KPI trends over time.
-        Data source: external dataset key "{dataset_key}". Do not inline raw data.
-
-        User request:
-        {user_prompt}
-
-        Dataset schema for "{dataset_key}":
-        {_schema_block(dataset_schema)}
-
-        Requirements:
-          - Show two traces for columns "timestamp" vs "kpi_value" grouped by
-            the column "series_label".
-          - Use scatter traces with mode "lines+markers".
-          - Provide hovertemplate referencing %{customdata.metric_unit}.
-          - Add vertical line shapes for maintenance windows provided via an
-            external array "maintenance_events" (do not inline coordinates; just
-            reference the key "{maintenance_key}").
-          - Layout.title.text == "KPI Trend".
+        Goal: multi-series line chart (time-series).
+        Additional user instructions:
+        {user_prompt_en}
 
         Response format:
-        {
-          "figure": {
+        {{
+          "figure": {{
             "data": [...],
-            "layout": {...},
-            "config": {...},
+            "layout": {{...}},
+            "config": {{...}},
             "frames": []
-          },
-          "metadata": {
-            "dataset_key": "kpi_timeseries",
-            "auxiliary_keys": {
-              "maintenance_events": "maintenance_events_key"
-            }
-          }
-        }
+          }},
+          "metadata": {{
+            "dataset_key": "{dataset_key}",
+            "auxiliary_keys": {{
+              "maintenance_events": "{maintenance_key}"
+            }}
+          }}
+        }}
+        """
+    ).strip()
+    user_prompt_ko_full = dedent(
+        f"""
+        목표: 다중 시리즈 선형 차트(시계열).
+        추가 사용자 지시사항:
+        {user_prompt_ko}
+
+        응답 형식:
+        {{
+          "figure": {{
+            "data": [...],
+            "layout": {{...}},
+            "config": {{...}},
+            "frames": []
+          }},
+          "metadata": {{
+            "dataset_key": "{dataset_key}",
+            "auxiliary_keys": {{
+              "maintenance_events": "{maintenance_key}"
+            }}
+          }}
+        }}
         """
     ).strip()
 
@@ -187,47 +294,64 @@ def build_line_chart_prompt(
             "auxiliary_keys": {"maintenance_events": maintenance_key},
         },
     }
-    return PlotlyPrompt(chart_type="line_graph", prompt=prompt, expected_response_skeleton=skeleton)
+    return PromptContext(
+        chart_type="line_graph",
+        system_prompt_en=system_prompts["en"],
+        system_prompt_ko=system_prompts["ko"],
+        user_prompt_en=user_prompt_en_full,
+        user_prompt_ko=user_prompt_ko_full,
+        expected_response_skeleton=skeleton,
+    )
 
 
 def build_box_plot_prompt(
-    user_prompt: str,
+    dataset_key: str,
     dataset_schema: Dict[str, Any],
-    dataset_key: str = "param_distribution",
-) -> PlotlyPrompt:
+    dataset_preview: Dict[str, Any],
+    conversation_history: List[Dict[str, str]],
+    user_prompt_en: str,
+    user_prompt_ko: str,
+) -> PromptContext:
     """Prompt and skeleton for a grouped box plot."""
-    prompt = dedent(
+    system_prompts = _build_system_prompts(
+        dataset_key, dataset_schema, dataset_preview, conversation_history
+    )
+    user_prompt_en_full = dedent(
         f"""
-        You are a Plotly.js specialist. Produce ONLY valid JSON.
-
-        Goal: grouped box plot comparing parameter distributions across devices.
-        Data source: external dataset key "{dataset_key}".
-
-        User request:
-        {user_prompt}
-
-        Dataset schema for "{dataset_key}":
-        {_schema_block(dataset_schema)}
-
-        Requirements:
-          - Do not inline data arrays.
-          - Each box trace should reference fields "device" and "value".
-          - Use color per device via Plotly template, but you may specify marker.color.
-          - Add annotations describing the number of wafers per device from the
-            field "wafer_count".
-          - Layout.boxmode == "group".
+        Goal: grouped box plot comparing device distributions.
+        Additional user instructions:
+        {user_prompt_en}
 
         Response format:
-        {
-          "figure": {
+        {{
+          "figure": {{
             "data": [...],
-            "layout": {...},
-            "config": {...}
-          },
-          "metadata": {
-            "dataset_key": "param_distribution"
-          }
-        }
+            "layout": {{...}},
+            "config": {{...}}
+          }},
+          "metadata": {{
+            "dataset_key": "{dataset_key}"
+          }}
+        }}
+        """
+    ).strip()
+    user_prompt_ko_full = dedent(
+        f"""
+        목표: 디바이스별 분포를 비교하는 박스플롯.
+        추가 사용자 지시사항:
+        {user_prompt_ko}
+
+        응답 형식:
+        {{
+          "figure": {{
+            "data": [...],
+            "layout": {{...}},
+            "config": {{...}}
+          }},
+          "metadata": {{
+            "dataset_key": "{dataset_key}"
+          }}
+        }}
         """
     ).strip()
 
@@ -263,7 +387,14 @@ def build_box_plot_prompt(
         },
         "metadata": {"dataset_key": dataset_key},
     }
-    return PlotlyPrompt(chart_type="box_plot", prompt=prompt, expected_response_skeleton=skeleton)
+    return PromptContext(
+        chart_type="box_plot",
+        system_prompt_en=system_prompts["en"],
+        system_prompt_ko=system_prompts["ko"],
+        user_prompt_en=user_prompt_en_full,
+        user_prompt_ko=user_prompt_ko_full,
+        expected_response_skeleton=skeleton,
+    )
 
 
 def request_plotly_spec(prompt: str) -> Dict[str, Any]:
@@ -325,22 +456,74 @@ _EXAMPLE_SCHEMA_BOX = {
     "source": "uploaded_excel/param_distribution.csv",
 }
 
-EXAMPLE_PROMPTS: List[PlotlyPrompt] = [
+# Example preview data (head, stats)
+_EXAMPLE_PREVIEW_BAR = {
+    "head": [
+        {"device": "D1", "yield_current": 95.1, "yield_baseline": 91.4, "lot_count": 12},
+        {"device": "D2", "yield_current": 94.8, "yield_baseline": 90.1, "lot_count": 10},
+    ],
+    "shape": [128, 4],
+    "numeric_summary": {"yield_current": {"mean": 93.2}, "yield_baseline": {"mean": 89.5}},
+}
+
+_EXAMPLE_PREVIEW_LINE = {
+    "head": [
+        {
+            "timestamp": "2024-01-01 00:00:00",
+            "kpi_value": 10.2,
+            "series_label": "Metric A",
+            "metric_unit": "%",
+        },
+        {
+            "timestamp": "2024-01-01 01:00:00",
+            "kpi_value": 11.5,
+            "series_label": "Metric B",
+            "metric_unit": "%",
+        },
+    ],
+    "shape": [720, 4],
+    "numeric_summary": {"kpi_value": {"mean": 9.8, "std": 1.2}},
+}
+
+_EXAMPLE_PREVIEW_BOX = {
+    "head": [
+        {"device": "A1", "value": 1.23, "wafer_count": 42},
+        {"device": "A2", "value": 1.35, "wafer_count": 38},
+    ],
+    "shape": [256, 3],
+    "numeric_summary": {"value": {"median": 1.31, "iqr": 0.12}},
+}
+
+_EXAMPLE_CONVERSATION = [
+    {"role": "user", "content": "지난번에 만든 그래프에서 범례 순서를 바꿔주세요."},
+    {"role": "assistant", "content": "범례 순서를 Current, Baseline 순으로 변경했습니다."},
+]
+
+EXAMPLE_PROMPTS: List[PromptContext] = [
     build_bar_chart_prompt(
-        user_prompt="현재/기준 수율을 비교하는 grouped bar chart를 생성해줘.",
-        dataset_schema=_EXAMPLE_SCHEMA_BAR,
         dataset_key="device_yield_summary",
+        dataset_schema=_EXAMPLE_SCHEMA_BAR,
+        dataset_preview=_EXAMPLE_PREVIEW_BAR,
+        conversation_history=_EXAMPLE_CONVERSATION,
+        user_prompt_en="Compare current vs baseline yield per device. Place legend below.",
+        user_prompt_ko="디바이스별 현재/기준 수율을 비교하고 범례는 아래쪽에 배치해주세요.",
     ),
     build_line_chart_prompt(
-        user_prompt="시리즈 레이블별 KPI 추세를 시간축으로 비교하고, 유지보수 구간은 세로선으로 표시해줘.",
-        dataset_schema=_EXAMPLE_SCHEMA_LINE,
         dataset_key="kpi_timeseries",
+        dataset_schema=_EXAMPLE_SCHEMA_LINE,
+        dataset_preview=_EXAMPLE_PREVIEW_LINE,
+        conversation_history=_EXAMPLE_CONVERSATION,
+        user_prompt_en="Plot KPI trend by series_label. Highlight maintenance windows.",
+        user_prompt_ko="series_label별 KPI 추세를 그리고, 유지보수 기간은 강조해주세요.",
         maintenance_key="maintenance_events_key",
     ),
     build_box_plot_prompt(
-        user_prompt="디바이스별 파라미터 분포(box plot)를 만들고 wafer_count 필드를 hover에 포함해줘.",
-        dataset_schema=_EXAMPLE_SCHEMA_BOX,
         dataset_key="param_distribution",
+        dataset_schema=_EXAMPLE_SCHEMA_BOX,
+        dataset_preview=_EXAMPLE_PREVIEW_BOX,
+        conversation_history=_EXAMPLE_CONVERSATION,
+        user_prompt_en="Create box plots by device and include wafer_count in hover.",
+        user_prompt_ko="디바이스별 박스플롯을 만들고 hover에 wafer_count를 보여주세요.",
     ),
 ]
 
