@@ -2601,10 +2601,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             // 분석 결과 처리
             const result = data.data
 
-            // success_message -> final mesasge
+            // success_message -> final message
             const successMessage = result.success_message || result.summary
             if (successMessage) {
-              if (currentBotMessage.Index.value === -1) {
+              if (currentBotMessageIndex.value === -1) {
                 addMessage('bot', successMessage, false)
                 const messages = chatMessages.value[activeChatId.value]
                 currentBotMessageIndex.value = messages.length - 1
