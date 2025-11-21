@@ -127,7 +127,7 @@
                               <strong>내용:</strong> {{ file.content.substring(0, 200) }}{{ file.content.length > 200 ? '...' : '' }}
                             </div>
                             <div v-if="file.similarity || file.score" class="file-score">
-                              <strong>유사도 점수:</strong> {{ ((file.similarity || file.score) * 100).toFixed(2) }}%
+                              <strong>유사도 점수:</strong> {{ ((file.similarity || file.score)).toFixed(2) }}%
                             </div>
                             <div v-if="file.file_path" class="file-path">
                               <strong>경로:</strong> {{ file.file_path }}
@@ -144,6 +144,48 @@
                            </div>
                         </div>
                       </div>
+                    </div>
+                    <div v-else-if="/^(SEARCH|SUMMARY)\|(True|False)\|/.test(message.text)">
+                      <!-- RAG 검색 결과 중 파일 목록 형태의 메시지 -->
+                      <div v-if="(() => { 
+                        try {
+                          const obj = JSON.parse(message.text.split('|')[2]);
+                          return true
+                        } catch(e) {
+                          return false
+                        }}) ()" class="file-list">
+                        <div 
+                          v-for="(file, fileIndex) in JSON.parse(message.text.split('|')[2])" 
+                          :key="fileIndex"
+                          class="file-item"
+                        >
+                          <div class="file-info">
+                            <h4 class="file-name">
+                               {{ file.file_name || file.filename || 'Unknown File' }}
+                            </h4>
+                            <div v-if="file.content" class="file-preview">
+                              <strong>내용:</strong> {{ file.content.substring(0, 200) }}{{ file.content.length > 200 ? '...' : '' }}
+                            </div>
+                            <div v-if="file.similarity || file.score" class="file-score">
+                              <strong>유사도 점수:</strong> {{ ((file.similarity || file.score)).toFixed(2) }}%
+                            </div>
+                            <div v-if="file.file_path" class="file-path">
+                              <strong>경로:</strong> {{ file.file_path }}
+                            </div>
+                          </div>
+                                                     <div class="file-actions">
+                             <button 
+                               @click="downloadFile(file.file_name || file.filename || 'Unknown File', file.file_path)"
+                               class="file-download-btn"
+                               :disabled="!file.file_path"
+                             >
+                                파일 다운로드
+                             </button>
+                           </div>
+                        </div>
+                      </div>
+                      <!-- RAG 검색 결과 중 일반 텍스트 메시지 -->
+                      <div v-else class="message-text" v-html="message.text.split('|')[2]"></div>
                     </div>
                     <!-- 일반 텍스트 메시지 -->
                     <div v-else class="message-text" v-html="message.text"></div>
@@ -173,8 +215,8 @@
                       <option value="pcm">PCM (Process Control Monitor)</option>
                       <option value="inline">INLINE (Inline Analysis)</option>
                       <option value="rag">불량 이력 검색</option>
-                      <option value="excel">엑셀 데이터 분석</option>
-                      <option value="dcc">DCC</option>
+                      <!-- <option value="excel">엑셀 데이터 분석</option> -->
+                      <option value="dcc">표준 문서 검색</option>
                     </select>
                   </div>
                   <div class="time-toggle">
@@ -432,7 +474,7 @@
                     </div>
 
                     <!-- Plotly Graph Results -->
-                    <div v-else-if="isPlotlyGraphType(result.type)" class="chart-section plotly-section">
+                    <div v-if="isPlotlyGraphType(result.type)" class="chart-section plotly-section">
                       <PlotlyGraph
                         :graph-spec="result.graphSpec"
                         :title="result.title"
@@ -495,7 +537,7 @@
                         표시할 데이터가 없습니다.
                       </div>
                     </div>
-                  </div>
+                    </div>
 
                   <!-- Metadata Only (real_data가 없는 경우) -->
                   <div v-else-if="result.type === 'metadata_only'" class="chart-section">
@@ -2543,13 +2585,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           : prompt
         addMessage('user', userMessageText, true)
         
-        // 진행 메시지 추적 인덱스 초기화
         currentBotMessageIndex.value = -1
-        
         // API 호출 - analyzeExcelFileStream 함수 사용
         await analyzeExcelFileStream(file, prompt, activeChatId.value, (data) => {
           if (data.progress_message) {
-            // 진행 상황 메시지는 단일 말풍선을 갱신
+            // 진행 상황 메시지
             if (currentBotMessageIndex.value === -1) {
               addMessage('bot', data.progress_message, false)
               const messages = chatMessages.value[activeChatId.value]
@@ -2560,11 +2600,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           } else if (data.data) {
             // 분석 결과 처리
             const result = data.data
-            
-            // success_message가 있으면 최종 봇 메시지로 표시
-            const successMessage = result.success_message || result.summary || '✅ 엑셀 분석이 완료되었습니다.'
+
+            // success_message -> final mesasge
+            const successMessage = result.success_message || result.summary
             if (successMessage) {
-              if (currentBotMessageIndex.value === -1) {
+              if (currentBotMessage.Index.value === -1) {
                 addMessage('bot', successMessage, false)
                 const messages = chatMessages.value[activeChatId.value]
                 currentBotMessageIndex.value = messages.length - 1
@@ -2572,7 +2612,6 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 updateBotMessage(currentBotMessageIndex.value, successMessage)
               }
             }
-            
             const createdResult = createResultFromResponseData(result, prompt, activeChatId.value)
             if (createdResult) {
               createdResult.isActive = true
