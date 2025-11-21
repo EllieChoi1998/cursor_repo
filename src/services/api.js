@@ -698,23 +698,47 @@ export const analyzeExcelFileStream = async (file, message, chatroomId, onData) 
     // 스트리밍 응답 처리
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
+    let buffer = ''
 
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
 
-      const chunk = decoder.decode(value)
-      const lines = chunk.split('\n')
+      const chunk = decoder.decode(value, { stream: true })
+      buffer += chunk
+
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
 
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6))
+        const trimmed = line.trim()
+        if (!trimmed || !trimmed.startsWith('data:')) continue
+
+        try {
+          const jsonString = trimmed.slice(5).trim()
+          if (jsonString) {
+            const data = JSON.parse(jsonString)
             onData(data)
-          } catch (e) {
-            console.error('JSON 파싱 오류:', e)
           }
+        } catch (e) {
+          console.error('JSON 파싱 오류:', e)
+          console.error('문제 발생 라인:', trimmed.substring(0, 200))
         }
+      }
+    }
+
+    // 남아 있는 버퍼 처리
+    const finalLine = buffer.trim()
+    if (finalLine && finalLine.startsWith('data:')) {
+      try {
+        const jsonString = finalLine.slice(5).trim()
+        if (jsonString) {
+          const data = JSON.parse(jsonString)
+          onData(data)
+        }
+      } catch (e) {
+        console.error('JSON 파싱 오류(마지막 버퍼):', e)
+        console.error('문제 발생 라인:', finalLine.substring(0, 200))
       }
     }
   } catch (error) {
