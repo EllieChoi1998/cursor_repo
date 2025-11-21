@@ -2543,14 +2543,36 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           : prompt
         addMessage('user', userMessageText, true)
         
+        // 진행 메시지 추적 인덱스 초기화
+        currentBotMessageIndex.value = -1
+        
         // API 호출 - analyzeExcelFileStream 함수 사용
         await analyzeExcelFileStream(file, prompt, activeChatId.value, (data) => {
           if (data.progress_message) {
-            // 진행 상황 메시지
-            addMessage('bot', data.progress_message, false)
+            // 진행 상황 메시지는 단일 말풍선을 갱신
+            if (currentBotMessageIndex.value === -1) {
+              addMessage('bot', data.progress_message, false)
+              const messages = chatMessages.value[activeChatId.value]
+              currentBotMessageIndex.value = messages.length - 1
+            } else {
+              updateBotMessage(currentBotMessageIndex.value, data.progress_message)
+            }
           } else if (data.data) {
             // 분석 결과 처리
             const result = data.data
+            
+            // success_message가 있으면 최종 봇 메시지로 표시
+            const successMessage = result.success_message || result.summary || '✅ 엑셀 분석이 완료되었습니다.'
+            if (successMessage) {
+              if (currentBotMessageIndex.value === -1) {
+                addMessage('bot', successMessage, false)
+                const messages = chatMessages.value[activeChatId.value]
+                currentBotMessageIndex.value = messages.length - 1
+              } else {
+                updateBotMessage(currentBotMessageIndex.value, successMessage)
+              }
+            }
+            
             const createdResult = createResultFromResponseData(result, prompt, activeChatId.value)
             if (createdResult) {
               createdResult.isActive = true
