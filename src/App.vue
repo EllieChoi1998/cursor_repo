@@ -350,13 +350,17 @@
                     <RAGAnswerList :answer="result.answer" />
                   </div>
 
-                  <!-- Excel Analysis Results -->
-                  <div v-else-if="result.type === 'excel_analysis' || result.type === 'excel_chart' || result.type === 'excel_summary'" class="chart-section">
+                    <!-- Excel Analysis Results -->
+                    <div v-else-if="result.type === 'excel_analysis' || result.type === 'excel_chart' || result.type === 'excel_summary'" class="chart-section">
                     <div class="excel-analysis-result">
                       <div class="excel-header">
                         <h4>📊 {{ result.title }}</h4>
                         <p class="file-name">파일: {{ result.fileName }}</p>
                       </div>
+
+                        <div v-if="result.successMessage" class="excel-success-message">
+                          {{ result.successMessage }}
+                        </div>
                       
                       <!-- 분석 요약 -->
                       <div v-if="result.summary" class="excel-summary">
@@ -424,6 +428,71 @@
                             </ul>
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    <!-- Plotly Graph Results -->
+                    <div v-else-if="isPlotlyGraphType(result.type)" class="chart-section plotly-section">
+                      <PlotlyGraph
+                        :graph-spec="result.graphSpec"
+                        :title="result.title"
+                        :file-name="result.fileName"
+                        :success-message="result.successMessage"
+                        :height="chartHeight"
+                      />
+
+                      <div
+                        v-if="result.realDataSets && result.realDataSets.length"
+                        class="plotly-real-data"
+                      >
+                        <details
+                          v-for="(dataset, datasetIndex) in result.realDataSets"
+                          :key="`${result.id}-dataset-${datasetIndex}`"
+                          class="plotly-data-set"
+                          open
+                        >
+                          <summary>
+                            📄 데이터셋 {{ datasetIndex + 1 }}
+                            <span v-if="dataset && dataset.length">({{ dataset.length }}행)</span>
+                          </summary>
+                          <DynamicTable
+                            :data="dataset"
+                            :title="`Dataset ${datasetIndex + 1}`"
+                          />
+                        </details>
+                      </div>
+                    </div>
+
+                    <!-- General Text Results -->
+                    <div v-else-if="result.type === 'general_text'" class="chart-section general-text-section">
+                      <div class="general-text-card">
+                        <h5>📝 분석 결과</h5>
+                        <p v-if="result.successMessage">{{ result.successMessage }}</p>
+                        <p v-else-if="result.summary">{{ result.summary }}</p>
+                        <p v-else-if="result.textContent">{{ result.textContent }}</p>
+                        <p v-else class="empty-text">표시할 메시지가 없습니다.</p>
+                      </div>
+                    </div>
+
+                    <!-- Table Results -->
+                    <div v-else-if="result.type === 'table'" class="chart-section table-result-section">
+                      <div v-if="result.successMessage" class="table-success-message">
+                        {{ result.successMessage }}
+                      </div>
+
+                      <div
+                        v-if="result.realDataSets && result.realDataSets.length"
+                        class="table-datasets"
+                      >
+                        <DynamicTable
+                          v-for="(dataset, datasetIndex) in result.realDataSets"
+                          :key="`${result.id}-table-${datasetIndex}`"
+                          :data="dataset"
+                          :title="`Table ${datasetIndex + 1}`"
+                        />
+                      </div>
+                      <div v-else class="empty-table">
+                        표시할 데이터가 없습니다.
                       </div>
                     </div>
                   </div>
@@ -658,6 +727,66 @@
           <div v-else-if="fullscreenResult?.type === 'rag_search'" class="fullscreen-chart">
             <RAGAnswerList :answer="fullscreenResult.answer" />
           </div>
+        
+        <div v-else-if="isPlotlyGraphType(fullscreenResult?.type)" class="fullscreen-chart">
+          <PlotlyGraph
+            :graph-spec="fullscreenResult.graphSpec"
+            :title="fullscreenResult.title"
+            :file-name="fullscreenResult.fileName"
+            :success-message="fullscreenResult.successMessage"
+            :height="800"
+          />
+          <div
+            v-if="fullscreenResult?.realDataSets && fullscreenResult.realDataSets.length"
+            class="plotly-real-data fullscreen"
+          >
+            <details
+              v-for="(dataset, datasetIndex) in fullscreenResult.realDataSets"
+              :key="`full-${fullscreenResult.id}-dataset-${datasetIndex}`"
+              class="plotly-data-set"
+              open
+            >
+              <summary>
+                📄 데이터셋 {{ datasetIndex + 1 }}
+                <span v-if="dataset && dataset.length">({{ dataset.length }}행)</span>
+              </summary>
+              <DynamicTable
+                :data="dataset"
+                :title="`Dataset ${datasetIndex + 1}`"
+              />
+            </details>
+          </div>
+        </div>
+        
+        <div v-else-if="fullscreenResult?.type === 'general_text'" class="fullscreen-chart general-text-section">
+          <div class="general-text-card">
+            <h5>📝 분석 결과</h5>
+            <p v-if="fullscreenResult?.successMessage">{{ fullscreenResult.successMessage }}</p>
+            <p v-else-if="fullscreenResult?.summary">{{ fullscreenResult.summary }}</p>
+            <p v-else-if="fullscreenResult?.textContent">{{ fullscreenResult.textContent }}</p>
+            <p v-else class="empty-text">표시할 메시지가 없습니다.</p>
+          </div>
+        </div>
+        
+        <div v-else-if="fullscreenResult?.type === 'table'" class="fullscreen-chart table-result-section">
+          <div v-if="fullscreenResult?.successMessage" class="table-success-message">
+            {{ fullscreenResult.successMessage }}
+          </div>
+          <div
+            v-if="fullscreenResult?.realDataSets && fullscreenResult.realDataSets.length"
+            class="table-datasets"
+          >
+            <DynamicTable
+              v-for="(dataset, datasetIndex) in fullscreenResult.realDataSets"
+              :key="`full-${fullscreenResult.id}-table-${datasetIndex}`"
+              :data="dataset"
+              :title="`Table ${datasetIndex + 1}`"
+            />
+          </div>
+          <div v-else class="empty-table">
+            표시할 데이터가 없습니다.
+          </div>
+        </div>
           
           <!-- Metadata Only (전체화면) -->
           <div v-else-if="fullscreenResult?.type === 'metadata_only'" class="fullscreen-chart">
@@ -704,6 +833,7 @@ import PCMTrendChart from './components/PCMTrendChart.vue'
 import PCMTrendPointChart from './components/PCMTrendPointChart.vue'
 import PCMToTrend from './components/PCMToTrend.vue'
 import DynamicTable from './components/DynamicTable.vue'
+import PlotlyGraph from './components/PlotlyGraph.vue'
 import TwoDynamicTables from './components/TwoDynamicTables.vue'
 import ChatRoomList from './components/ChatRoomList.vue'
 import RAGAnswerList from './components/RAGAnswerList.vue'
@@ -741,6 +871,7 @@ export default defineComponent({
     PCMTrendPointChart,
     PCMToTrend,
     DynamicTable,
+    PlotlyGraph,
     TwoDynamicTables,
     ChatRoomList,
     RAGAnswerList,
@@ -938,7 +1069,126 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
-    // 응답 데이터로부터 결과 객체 생성하는 함수
+      const stripCodeFences = (value) => {
+        if (typeof value !== 'string') return value
+        const trimmed = value.trim()
+        if (!trimmed) return trimmed
+        const fenceMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
+        return fenceMatch ? fenceMatch[1].trim() : trimmed
+      }
+
+      const parseJsonLoose = (value) => {
+        if (value === null || value === undefined) return null
+        if (typeof value === 'object') return value
+        if (typeof value !== 'string') return null
+        const cleaned = stripCodeFences(value)
+        if (!cleaned) return null
+        try {
+          const parsed = JSON.parse(cleaned)
+          if (typeof parsed === 'string') {
+            return parseJsonLoose(parsed)
+          }
+          return parsed
+        } catch (error) {
+          console.warn('Failed to parse JSON string:', error, cleaned)
+          return null
+        }
+      }
+
+      const normalizeGraphSpec = (spec) => {
+        if (!spec && spec !== 0) return null
+        const parsed = parseJsonLoose(spec) ?? spec
+        if (!parsed) return null
+
+        if (Array.isArray(parsed)) {
+          return {
+            data: parsed,
+            layout: {},
+            config: {}
+          }
+        }
+
+        let figure = parsed
+        if (parsed.figure && typeof parsed.figure === 'object') {
+          figure = parsed.figure
+        }
+
+        const data = Array.isArray(figure.data)
+          ? figure.data
+          : Array.isArray(figure.traces)
+            ? figure.traces
+            : []
+
+        const layout = figure.layout && typeof figure.layout === 'object'
+          ? { ...figure.layout }
+          : {}
+
+        const config = figure.config && typeof figure.config === 'object'
+          ? { ...figure.config }
+          : {}
+
+        const frames = Array.isArray(figure.frames) ? [...figure.frames] : []
+
+        return {
+          data,
+          layout,
+          config,
+          frames,
+          raw: figure
+        }
+      }
+
+      const normalizeRealDataSets = (payload) => {
+        if (payload === null || payload === undefined) return []
+        const items = Array.isArray(payload) ? payload : [payload]
+        const datasets = []
+
+        items.forEach((entry) => {
+          if (entry === null || entry === undefined) return
+          let parsed = entry
+
+          if (typeof parsed === 'string') {
+            parsed = parseJsonLoose(parsed) ?? parsed
+          }
+
+          if (typeof parsed === 'string') {
+            parsed = parseJsonLoose(parsed)
+          }
+
+          if (Array.isArray(parsed)) {
+            datasets.push(parsed)
+            return
+          }
+
+          if (parsed && typeof parsed === 'object') {
+            if (Array.isArray(parsed.records)) {
+              datasets.push(parsed.records)
+              return
+            }
+            if (Array.isArray(parsed.data)) {
+              datasets.push(parsed.data)
+              return
+            }
+            datasets.push([parsed])
+          }
+        })
+
+        return datasets
+      }
+
+      const plotlyGraphTypes = ['bar_graph', 'line_graph', 'box_plot']
+
+      const plotlyTitleMap = {
+        bar_graph: 'Bar Graph',
+        line_graph: 'Line Graph',
+        box_plot: 'Box Plot',
+        general_text: 'Analysis Summary',
+        table: 'Table Data'
+      }
+
+      const isPlotlyGraphType = (type) => plotlyGraphTypes.includes(type)
+
+      // 응답 데이터로부터 결과 객체 생성하는 함수
     const createResultFromResponseData = (responseData, userMessage, chatId) => {
       try {
         console.log(' Creating result from response data:', responseData)
@@ -1136,7 +1386,47 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             summary: responseData.summary,
             chartConfig: responseData.chart_config,
             fileName: responseData.file_name,
-            metadata: responseData
+            metadata: responseData,
+            successMessage: responseData.success_message || ''
+          }
+        } else if (
+          plotlyGraphTypes.includes(responseData.analysis_type) ||
+          responseData.analysis_type === 'general_text' ||
+          responseData.analysis_type === 'table'
+        ) {
+          const analysisType = responseData.analysis_type
+          const realDataSets = normalizeRealDataSets(responseData.real_data)
+          const primaryRealData = realDataSets[0] || []
+          const hasGraphSpec = plotlyGraphTypes.includes(analysisType)
+          const graphSpec = hasGraphSpec ? normalizeGraphSpec(responseData.graph_spec) : null
+          const successMessage = responseData.success_message || responseData.summary || ''
+          const baseTitle = plotlyTitleMap[analysisType] || 'Excel Analysis'
+          const fileSuffix = responseData.file_name ? ` - ${responseData.file_name}` : ''
+
+          result = {
+            id: `history_${chatId}_${Date.now()}`,
+            type: analysisType,
+            title: `${baseTitle}${fileSuffix}`,
+            isActive: false,
+            timestamp: new Date(),
+            chatId: chatId,
+            sql: responseData.sql,
+            fileName: responseData.file_name || null,
+            successMessage,
+            summary: responseData.summary,
+            graphSpec,
+            realData: primaryRealData,
+            realDataSets,
+            metadata: responseData,
+            resultType: analysisType
+          }
+
+          if (analysisType === 'table') {
+            result.data = primaryRealData
+          }
+
+          if (analysisType === 'general_text') {
+            result.textContent = successMessage || responseData.text || ''
           }
         } else if (responseData.result_type || responseData.result) {
           // real_data가 없어도 메타데이터만으로 결과 생성
@@ -2912,7 +3202,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     })
 
-          return {
+      return {
         messages,
         currentMessage,
         selectedDataType,
@@ -2983,7 +3273,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         currentUser,
         isUserAuthenticated,
         logout,
-        checkAuthentication
+        checkAuthentication,
+        isPlotlyGraphType
       }
   }
 })
@@ -3546,6 +3837,17 @@ body {
   color: #333;
 }
 
+.excel-success-message {
+  margin: 0 0 1rem 0;
+  padding: 0.75rem 1rem;
+  background: #e3fcef;
+  border-left: 4px solid #28a745;
+  border-radius: 6px;
+  color: #1b5e20;
+  font-weight: 500;
+  white-space: pre-line;
+}
+
 .file-name {
   margin: 0;
   color: #666;
@@ -3677,6 +3979,106 @@ body {
 
 .stat-item li {
   margin: 0.25rem 0;
+}
+
+.plotly-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.plotly-real-data {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.plotly-real-data.fullscreen {
+  margin-top: 1.5rem;
+}
+
+.plotly-data-set {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.plotly-data-set summary {
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  background: #f5f5f5;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.plotly-data-set summary span {
+  color: #007bff;
+  font-weight: 500;
+}
+
+.general-text-section .general-text-card {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  padding: 1.25rem;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  white-space: pre-line;
+}
+
+.general-text-section .general-text-card h5 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.general-text-section .general-text-card p {
+  margin: 0;
+  line-height: 1.6;
+  color: #444;
+  font-size: 0.95rem;
+}
+
+.general-text-section .general-text-card .empty-text {
+  color: #777;
+  font-style: italic;
+}
+
+.table-result-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.table-success-message {
+  padding: 0.75rem 1rem;
+  background: #e8f4ff;
+  border-left: 4px solid #1976d2;
+  border-radius: 6px;
+  color: #0d47a1;
+  font-weight: 500;
+  white-space: pre-line;
+}
+
+.table-datasets {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.empty-table {
+  padding: 1.5rem;
+  text-align: center;
+  color: #666;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #ccc;
 }
 
 /* Results Section */
