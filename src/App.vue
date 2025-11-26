@@ -1423,7 +1423,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         return buildBarFigure(rows, encodings, rawSpec)
       }
 
-      const buildGraphSpec = (rawSpec, realDataSets) => {
+      const buildGraphSpec = (rawSpec, realDataSets, rawRealData = null) => {
         if (!rawSpec && rawSpec !== 0) return null
         const parsed = parseJsonLoose(rawSpec) ?? rawSpec
         if (!parsed) return null
@@ -1432,6 +1432,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           const figure = buildPlotlyFigureFromSchema(parsed, realDataSets)
           if (figure) {
             return normalizeGraphSpec(figure)
+          }
+        }
+
+        if (hasExternalReferences(parsed)) {
+          const registry = buildDatasetRegistry(rawRealData, realDataSets, parsed)
+          if (registry.size) {
+            const hydrated = hydrateExternalReferences(parsed, registry)
+            return normalizeGraphSpec(hydrated)
           }
         }
 
@@ -1474,6 +1482,167 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         })
 
         return datasets
+      }
+
+      const EXTERNAL_REF_PATTERN = /^EXTERNAL_REF::([^:]+)::(.+)$/i
+
+      const extractRowsFromEntry = (entry) => {
+        if (entry === null || entry === undefined) return null
+        if (Array.isArray(entry)) return entry
+        if (typeof entry === 'string') {
+          const parsed = parseJsonLoose(entry)
+          return extractRowsFromEntry(parsed)
+        }
+        if (typeof entry === 'object') {
+          if (Array.isArray(entry.records)) return entry.records
+          if (Array.isArray(entry.data)) return entry.data
+          if (Array.isArray(entry.rows)) return entry.rows
+        }
+        return null
+      }
+
+      const buildDatasetRegistry = (rawRealData, realDataSets = [], spec = null) => {
+        const registry = new Map()
+        const register = (key, rows) => {
+          if (!key || registry.has(key)) return
+          const datasetRows = extractRowsFromEntry(rows)
+          if (Array.isArray(datasetRows) && datasetRows.length) {
+            registry.set(key, datasetRows)
+          }
+        }
+
+        realDataSets.forEach((rows, index) => {
+          register(String(index), rows)
+          register(`dataset_${index}`, rows)
+        })
+
+        const primary = realDataSets.find((rows) => Array.isArray(rows) && rows.length)
+        if (primary) {
+          register('default', primary)
+        }
+
+        const ingestEntry = (entry, fallbackKey) => {
+          if (entry === null || entry === undefined) return
+          if (typeof entry === 'string') {
+            const parsed = parseJsonLoose(entry)
+            ingestEntry(parsed, fallbackKey)
+            return
+          }
+          if (Array.isArray(entry)) {
+            register(fallbackKey, entry)
+            return
+          }
+          if (typeof entry === 'object') {
+            const directRows = extractRowsFromEntry(entry)
+            if (directRows) {
+              const candidateKey =
+                entry.dataset_key ||
+                entry.key ||
+                entry.name ||
+                entry.id ||
+                fallbackKey
+              register(candidateKey, directRows)
+              return
+            }
+            Object.entries(entry).forEach(([nestedKey, value]) => {
+              ingestEntry(value, nestedKey)
+            })
+          }
+        }
+
+        if (Array.isArray(rawRealData)) {
+          rawRealData.forEach((entry, index) => ingestEntry(entry, `dataset_${index}`))
+        } else if (rawRealData && typeof rawRealData === 'object') {
+          ingestEntry(rawRealData, 'default')
+        }
+
+        const metadata = spec && spec.metadata ? spec.metadata : null
+        if (metadata) {
+          if (metadata.dataset_key) {
+            register(metadata.dataset_key, primary || realDataSets[0])
+          }
+          if (Array.isArray(metadata.datasets)) {
+            metadata.datasets.forEach((datasetMeta, idx) => {
+              const datasetIndex = Number.isInteger(datasetMeta.dataset_index)
+                ? datasetMeta.dataset_index
+                : idx
+              const rows = realDataSets[datasetIndex] || primary
+              if (rows) {
+                register(datasetMeta.key || datasetMeta.dataset_key || `dataset_${datasetIndex}`, rows)
+              }
+            })
+          }
+          if (metadata.dataset_map && typeof metadata.dataset_map === 'object') {
+            Object.entries(metadata.dataset_map).forEach(([key, indexValue]) => {
+              const datasetIndex = Number.isInteger(indexValue) ? indexValue : parseInt(indexValue, 10)
+              const rows = realDataSets[Number.isNaN(datasetIndex) ? 0 : datasetIndex] || primary
+              if (rows) {
+                register(key, rows)
+              }
+            })
+          }
+        }
+
+        return registry
+      }
+
+      const hasExternalReferences = (node) => {
+        if (typeof node === 'string') {
+          return EXTERNAL_REF_PATTERN.test(node)
+        }
+        if (Array.isArray(node)) {
+          return node.some((item) => hasExternalReferences(item))
+        }
+        if (node && typeof node === 'object') {
+          return Object.values(node).some((value) => hasExternalReferences(value))
+        }
+        return false
+      }
+
+      const resolveExternalReference = (value, registry) => {
+        if (typeof value !== 'string') return null
+        const match = value.match(EXTERNAL_REF_PATTERN)
+        if (!match) return null
+        const [, datasetId, fieldPath] = match
+        const candidates = [
+          datasetId,
+          datasetId.toLowerCase(),
+          datasetId.toUpperCase(),
+          `dataset_${datasetId}`,
+          datasetId.replace(/\s+/g, '_')
+        ]
+
+        let dataset = null
+        for (const key of candidates) {
+          if (registry.has(key)) {
+            dataset = registry.get(key)
+            break
+          }
+        }
+
+        if (!dataset && registry.has('default')) {
+          dataset = registry.get('default')
+        }
+
+        if (!dataset) return null
+        return dataset.map((row) => getValueByPath(row, fieldPath))
+      }
+
+      const hydrateExternalReferences = (node, registry) => {
+        if (typeof node === 'string') {
+          const resolved = resolveExternalReference(node, registry)
+          return resolved ?? node
+        }
+        if (Array.isArray(node)) {
+          return node.map((item) => hydrateExternalReferences(item, registry))
+        }
+        if (node && typeof node === 'object') {
+          Object.keys(node).forEach((key) => {
+            node[key] = hydrateExternalReferences(node[key], registry)
+          })
+          return node
+        }
+        return node
       }
 
       const plotlyGraphTypes = ['bar_graph', 'line_graph', 'box_plot']
@@ -1681,7 +1850,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             responseData.data?.raw_data ??
             []
           const realDataSets = normalizeRealDataSets(excelRealDataSource)
-          const graphSpec = responseData.graph_spec ? buildGraphSpec(responseData.graph_spec, realDataSets) : null
+          const graphSpec = responseData.graph_spec
+            ? buildGraphSpec(responseData.graph_spec, realDataSets, excelRealDataSource)
+            : null
           const primaryRealData = realDataSets[0] || (Array.isArray(excelRealDataSource) ? excelRealDataSource : [])
 
           result = {
@@ -1713,7 +1884,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           const realDataSets = normalizeRealDataSets(responseData.real_data)
           const primaryRealData = realDataSets[0] || []
           const hasGraphSpec = plotlyGraphTypes.includes(analysisType)
-          const graphSpec = hasGraphSpec ? buildGraphSpec(responseData.graph_spec, realDataSets) : null
+          const graphSpec = hasGraphSpec
+            ? buildGraphSpec(responseData.graph_spec, realDataSets, responseData.real_data)
+            : null
           const successMessage = responseData.success_message || responseData.summary || ''
           const baseTitle = plotlyTitleMap[analysisType] || 'Excel Analysis'
           const fileSuffix = responseData.file_name ? ` - ${responseData.file_name}` : ''
