@@ -22,7 +22,7 @@ This document summarizes the payload requirements discussed in the last answer s
     "summary": "string",
     "success_message": "string",
     "real_data": [ ... ],          // see section 3
-    "graph_spec": { ... },         // Plotly config for graph types
+    "graph_spec": { ... },         // Declarative spec, see section 3
     "sql": "string | null",
     "timestamp": "ISO-8601 string",
     "additional_fields": "pass anything else the frontend might need"
@@ -38,12 +38,44 @@ The frontend (`src/App.vue`) reads `analysis_type` to decide how to render the r
 - `excel_analysis`, `excel_chart`, `excel_summary` → specialized Excel cards using `data`, `summary`, and `chart_config`.
 
 
-## 3. `real_data` & Graph Specs
+## 3. `real_data` & Declarative Graph Specs
 
 - `real_data` should be an array of datasets.  
   `[[{...}, {...}], [{...}]]` means “two data tables”, while a single dataset looks like `[[{...}, {...}]]`.
-- For graphs, `graph_spec` must be a valid Plotly JSON (`data`, `layout`, `config` blocks).  
-  The frontend converts it directly via `normalizeGraphSpec`.
+- `graph_spec` now only describes *how* to map `real_data` columns into a Plotly figure.  
+  The frontend reads this schema, looks up the referenced dataset, and builds the Plotly traces locally—so no raw values live inside `graph_spec`.
+
+### 3.1 Required fields
+
+| Field | Description |
+| --- | --- |
+| `schema_version` | Optional string (`"1.0"`) to track future changes. |
+| `chart_type` | `bar_graph`, `line_graph`, `box_plot`, `scatter`, … |
+| `dataset_index` | Which dataset inside `real_data` to read (defaults to `0`). |
+| `encodings` | Column mapping definition (see below). |
+| `transforms` | Optional array of `{ type, field, ... }` instructions (filter/sort). |
+| `layout` / `config` | Passed straight to Plotly after traces are built. |
+
+### 3.2 Encodings
+
+```
+"encodings": {
+  "x": { "field": "OPER", "type": "categorical" },
+  "y": { "field": "DEFECT", "type": "quantitative", "agg": "sum" },
+  "series": { "field": "DEVICE" },         // optional (per-trace grouping)
+  "category": { "field": "EQ" },           // alias for x when categories make more sense
+  "value": { "field": "VALUE" }            // primarily for box plots
+}
+```
+
+Supported aggregations: `sum`, `avg/mean`, `max`, `min`, `count`, `median`, `identity` (default for line/scatter).
+Supported transforms:
+
+```
+{ "type": "filter", "field": "CPK", "op": ">", "value": 1.2 }
+{ "type": "filter", "field": "OPER", "op": "in", "value": ["1100", "1200"] }
+{ "type": "sort", "field": "DATE", "direction": "asc" }
+```
 
 
 ## 4. Example Payloads
@@ -88,19 +120,20 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
       ]
     ],
     "graph_spec": {
-      "data": [
-        {
-          "type": "box",
-          "x": ["EQ01", "EQ02"],
-          "y": [[1.12, 1.09, 1.10], [1.08, 1.05, 1.11]],
-          "name": "WIDTH"
-        }
-      ],
+      "schema_version": "1.0",
+      "chart_type": "box_plot",
+      "dataset_index": 0,
+      "encodings": {
+        "category": { "field": "EQ" },
+        "value": { "field": "VALUE" },
+        "series": { "field": "PARA" }
+      },
       "layout": {
         "title": "WIDTH 분포",
         "yaxis": {"title": "Value"},
         "xaxis": {"title": "EQ"}
-      }
+      },
+      "boxpoints": "outliers"
     },
     "timestamp": "2025-11-20T09:30:25.456Z"
   }
@@ -125,21 +158,16 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
       ]
     ],
     "graph_spec": {
-      "data": [
-        {
-          "type": "scatter",
-          "mode": "lines+markers",
-          "x": ["2025-11-01", "2025-11-02"],
-          "y": [1.4, 1.5],
-          "name": "A1"
-        },
-        {
-          "type": "scatter",
-          "mode": "lines+markers",
-          "x": ["2025-11-01"],
-          "y": [1.2],
-          "name": "B2"
-        }
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "CPK", "type": "quantitative" },
+        "series": { "field": "DEVICE" }
+      },
+      "transforms": [
+        { "type": "filter", "field": "CPK", "op": ">", "value": 0 }
       ],
       "layout": {
         "title": "CPK Trend",
@@ -169,14 +197,13 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
       ]
     ],
     "graph_spec": {
-      "data": [
-        {
-          "type": "bar",
-          "x": ["1100", "1200"],
-          "y": [15, 9],
-          "marker": {"color": ["#ff6b6b", "#4dabf7"]}
-        }
-      ],
+      "schema_version": "1.0",
+      "chart_type": "bar_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "OPER", "type": "categorical" },
+        "y": { "field": "DEFECT", "type": "quantitative", "agg": "sum" }
+      },
       "layout": {
         "title": "Defect Count by OPER",
         "xaxis": {"title": "OPER"},
