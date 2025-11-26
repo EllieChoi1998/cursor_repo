@@ -3105,6 +3105,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             const history = await getChatRoomHistory(room.id)
             console.log(`Loading history for room ${room.id}:`, history)
             const messages = []
+            let roomResults = []
             
             // 히스토리를 메시지 형태로 변환
             if (history.recent_conversations && history.recent_conversations.length > 0) {
@@ -3186,7 +3187,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               })
             
             // 결과 설정
-            chatResults.value[room.id] = results
+            roomResults = results
             } else {
               console.log(`No conversations found for room ${room.id}`)
             }
@@ -3197,7 +3198,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               ...chatMessages.value,
               [room.id]: messages
             }
-            chatResults.value[room.id] = []
+            chatResults.value = {
+              ...chatResults.value,
+              [room.id]: roomResults
+            }
             console.log(`After setting, chatMessages[${room.id}]:`, chatMessages.value[room.id])
           } catch (error) {
             console.error(`Failed to load history for room ${room.id}:`, error)
@@ -3211,7 +3215,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               ...chatMessages.value,
               [room.id]: [welcomeMessage]
             }
-            chatResults.value[room.id] = []
+            chatResults.value = {
+              ...chatResults.value,
+              [room.id]: []
+            }
           }
         }
         
