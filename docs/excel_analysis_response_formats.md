@@ -17,7 +17,7 @@ This document summarizes the payload requirements discussed in the last answer s
 ```json
 {
   "data": {
-    "analysis_type": "table | bar_graph | line_graph | box_plot | general_text | excel_analysis | excel_chart | excel_summary",
+    "analysis_type": "table | bar_graph | line_graph | box_plot | scatter_plot | general_text | excel_analysis | excel_chart | excel_summary",
     "file_name": "string",
     "summary": "string",
     "success_message": "string",
@@ -33,7 +33,7 @@ This document summarizes the payload requirements discussed in the last answer s
 The frontend (`src/App.vue`) reads `analysis_type` to decide how to render the result tab:
 
 - `table` → `result.data` becomes the primary table rows.
-- `bar_graph`, `line_graph`, `box_plot` → Plotly charts are rendered from `graph_spec`.
+- `bar_graph`, `line_graph`, `box_plot`, `scatter_plot` → Plotly charts are rendered from `graph_spec`.
 - `general_text` → plain text block.
 - `excel_analysis`, `excel_chart`, `excel_summary` → specialized Excel cards using `data`, `summary`, and `chart_config`.
 
@@ -50,7 +50,7 @@ The frontend (`src/App.vue`) reads `analysis_type` to decide how to render the r
 | Field | Description |
 | --- | --- |
 | `schema_version` | Optional string (`"1.0"`) to track future changes. |
-| `chart_type` | `bar_graph`, `line_graph`, `box_plot`, `scatter`, … |
+| `chart_type` | `bar_graph`, `line_graph`, `box_plot`, `scatter_plot`, … |
 | `dataset_index` | Which dataset inside `real_data` to read (defaults to `0`). |
 | `encodings` | Column mapping definition (see below). |
 | `transforms` | Optional array of `{ type, field, ... }` instructions (filter/sort). |
@@ -211,6 +211,52 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
       }
     },
     "timestamp": "2025-11-20T09:30:55.101Z"
+  }
+}
+```
+
+
+### 4.5 Scatter Plot Result
+
+```json
+{
+  "data": {
+    "analysis_type": "scatter_plot",
+    "file_name": "correlation_analysis.xlsx",
+    "summary": "변수 간 상관관계 분석",
+    "success_message": "✅ 산점도 생성 완료",
+    "real_data": [
+      [
+        {"TEMP": 25.3, "YIELD": 98.5, "DEVICE": "A1"},
+        {"TEMP": 26.1, "YIELD": 97.8, "DEVICE": "A1"},
+        {"TEMP": 24.8, "YIELD": 99.2, "DEVICE": "A1"},
+        {"TEMP": 25.5, "YIELD": 96.5, "DEVICE": "B2"},
+        {"TEMP": 26.3, "YIELD": 95.8, "DEVICE": "B2"},
+        {"TEMP": 24.2, "YIELD": 97.1, "DEVICE": "B2"}
+      ]
+    ],
+    "graph_spec": {
+      "schema_version": "1.0",
+      "chart_type": "scatter_plot",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "TEMP", "type": "quantitative" },
+        "y": { "field": "YIELD", "type": "quantitative" },
+        "series": { "field": "DEVICE" }
+      },
+      "transforms": [
+        { "type": "filter", "field": "YIELD", "op": ">", "value": 0 }
+      ],
+      "layout": {
+        "title": "Temperature vs Yield Correlation",
+        "xaxis": {"title": "Temperature (°C)"},
+        "yaxis": {"title": "Yield (%)"}
+      },
+      "config": {
+        "mode": "markers"
+      }
+    },
+    "timestamp": "2025-11-26T10:45:30.123Z"
   }
 }
 ```

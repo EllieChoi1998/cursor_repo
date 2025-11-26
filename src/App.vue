@@ -1504,12 +1504,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         return datasets
       }
 
-      const plotlyGraphTypes = ['bar_graph', 'line_graph', 'box_plot']
+      const plotlyGraphTypes = ['bar_graph', 'line_graph', 'box_plot', 'scatter_plot']
 
       const plotlyTitleMap = {
         bar_graph: 'Bar Graph',
         line_graph: 'Line Graph',
         box_plot: 'Box Plot',
+        scatter_plot: 'Scatter Plot',
         general_text: 'Analysis Summary',
         table: 'Table Data'
       }
