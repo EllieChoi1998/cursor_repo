@@ -472,9 +472,10 @@
                         </div>
                       </div>
                     </div>
+                    </div>
 
                     <!-- Plotly Graph Results -->
-                    <div v-if="isPlotlyGraphType(result.type)" class="chart-section plotly-section">
+                    <div v-else-if="isPlotlyGraphType(result.type)" class="chart-section plotly-section">
                       <PlotlyGraph
                         :graph-spec="result.graphSpec"
                         :title="result.title"
@@ -536,7 +537,6 @@
                       <div v-else class="empty-table">
                         표시할 데이터가 없습니다.
                       </div>
-                    </div>
                     </div>
 
                   <!-- Metadata Only (real_data가 없는 경우) -->
