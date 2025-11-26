@@ -1180,6 +1180,264 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         }
       }
 
+      const getValueByPath = (record, field) => {
+        if (!record || !field) return undefined
+        if (!field.includes('.')) return record[field]
+        return field.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), record)
+      }
+
+      const coerceNumber = (value) => {
+        if (value === null || value === undefined) return null
+        if (typeof value === 'number' && Number.isFinite(value)) return value
+        const num = Number(value)
+        return Number.isFinite(num) ? num : null
+      }
+
+      const applyDeclarativeTransforms = (rows, transforms) => {
+        if (!Array.isArray(transforms) || !transforms.length) return rows
+        return transforms.reduce((currentRows, transform) => {
+          if (!transform || typeof transform !== 'object') return currentRows
+          if (transform.type === 'filter') {
+            const { field, op = '==', value } = transform
+            return currentRows.filter((row) => {
+              const target = getValueByPath(row, field)
+              switch (op) {
+                case '>':
+                  return target > value
+                case '>=':
+                  return target >= value
+                case '<':
+                  return target < value
+                case '<=':
+                  return target <= value
+                case '!=':
+                case '<>':
+                  return target !== value
+                case 'in':
+                  return Array.isArray(value) ? value.includes(target) : false
+                case 'not_in':
+                  return Array.isArray(value) ? !value.includes(target) : true
+                case 'contains':
+                  return Array.isArray(target) ? target.includes(value) : String(target ?? '').includes(String(value ?? ''))
+                default:
+                  return target === value
+              }
+            })
+          }
+          if (transform.type === 'sort') {
+            const { field, direction = 'asc' } = transform
+            const multiplier = direction === 'desc' ? -1 : 1
+            return [...currentRows].sort((a, b) => {
+              const valueA = getValueByPath(a, field)
+              const valueB = getValueByPath(b, field)
+              if (valueA === valueB) return 0
+              return valueA > valueB ? multiplier : -multiplier
+            })
+          }
+          return currentRows
+        }, rows)
+      }
+
+      const aggregatePoints = (points, agg) => {
+        if (!agg || agg === 'identity' || agg === 'none') return points
+        const mode = agg.toLowerCase()
+        const grouped = new Map()
+
+        points.forEach(({ x, y }) => {
+          const key = x ?? '__missing__'
+          if (!grouped.has(key)) {
+            grouped.set(key, { values: [], order: grouped.size })
+          }
+          if (y !== null && y !== undefined) {
+            grouped.get(key).values.push(y)
+          }
+        })
+
+        const summarise = (values) => {
+          if (!values.length) return null
+          switch (mode) {
+            case 'sum':
+              return values.reduce((acc, val) => acc + val, 0)
+            case 'avg':
+            case 'average':
+            case 'mean':
+              return values.reduce((acc, val) => acc + val, 0) / values.length
+            case 'max':
+              return Math.max(...values)
+            case 'min':
+              return Math.min(...values)
+            case 'count':
+              return values.length
+            case 'median': {
+              const sorted = [...values].sort((a, b) => a - b)
+              const mid = Math.floor(sorted.length / 2)
+              return sorted.length % 2
+                ? sorted[mid]
+                : (sorted[mid - 1] + sorted[mid]) / 2
+            }
+            default:
+              return values[values.length - 1]
+          }
+        }
+
+        const aggregated = Array.from(grouped.entries())
+          .sort((a, b) => a[1].order - b[1].order)
+          .map(([x, { values }]) => ({ x: x === '__missing__' ? null : x, y: summarise(values) }))
+
+        return aggregated
+      }
+
+      const splitSeriesPoints = (rows, { xField, yField, seriesField }) => {
+        const seriesMap = new Map()
+        const safeField = (field) => field || null
+
+        rows.forEach((row) => {
+          const xValue = safeField(xField) ? getValueByPath(row, xField) : null
+          const yRaw = safeField(yField) ? getValueByPath(row, yField) : null
+          const yValue = coerceNumber(yRaw)
+          const seriesKey = safeField(seriesField) ? getValueByPath(row, seriesField) : 'Series'
+          if (!seriesMap.has(seriesKey)) {
+            seriesMap.set(seriesKey, [])
+          }
+          seriesMap.get(seriesKey).push({ x: xValue, y: yValue })
+        })
+
+        return seriesMap
+      }
+
+      const buildBarFigure = (rows, encodings = {}, spec = {}) => {
+        const xField = encodings.x?.field || encodings.category?.field
+        const yField = encodings.y?.field || encodings.value?.field
+        if (!xField || !yField) return null
+
+        const seriesField = encodings.series?.field || encodings.group?.field || encodings.color?.field
+        const aggregator = encodings.y?.agg || encodings.y?.aggregate || 'sum'
+        const seriesMap = splitSeriesPoints(rows, { xField, yField, seriesField })
+
+        const data = Array.from(seriesMap.entries()).map(([seriesKey, points]) => {
+          const aggregated = aggregatePoints(points, aggregator)
+          return {
+            type: 'bar',
+            name: seriesKey,
+            x: aggregated.map((point) => point.x),
+            y: aggregated.map((point) => point.y),
+            marker: spec.encodings?.color?.palette ? { color: spec.encodings.color.palette } : undefined
+          }
+        })
+
+        return {
+          data,
+          layout: { ...(spec.layout || {}) },
+          config: { ...(spec.config || {}) }
+        }
+      }
+
+      const buildLineFigure = (rows, encodings = {}, spec = {}, chartType = 'line') => {
+        const xField = encodings.x?.field || encodings.category?.field
+        const yField = encodings.y?.field || encodings.value?.field
+        if (!xField || !yField) return null
+
+        const seriesField = encodings.series?.field || encodings.group?.field || encodings.color?.field
+        const aggregator = encodings.y?.agg || encodings.y?.aggregate || 'identity'
+        const seriesMap = splitSeriesPoints(rows, { xField, yField, seriesField })
+
+        const baseMode = spec.mode || (chartType === 'scatter' ? 'markers' : 'lines+markers')
+        const traces = Array.from(seriesMap.entries()).map(([seriesKey, points]) => {
+          const aggregated = aggregatePoints(points, aggregator)
+          return {
+            type: chartType === 'scatter' ? 'scatter' : 'scatter',
+            mode: baseMode,
+            name: seriesKey,
+            x: aggregated.map((point) => point.x),
+            y: aggregated.map((point) => point.y)
+          }
+        })
+
+        return {
+          data: traces,
+          layout: { ...(spec.layout || {}) },
+          config: { ...(spec.config || {}) }
+        }
+      }
+
+      const buildBoxFigure = (rows, encodings = {}, spec = {}) => {
+        const valueField = encodings.value?.field || encodings.y?.field
+        const categoryField = encodings.category?.field || encodings.x?.field
+        const seriesField = encodings.series?.field || encodings.group?.field || encodings.color?.field
+        if (!valueField) return null
+
+        const groups = new Map()
+        rows.forEach((row) => {
+          const bucketKey = seriesField ? getValueByPath(row, seriesField) : getValueByPath(row, categoryField) || 'Series'
+          if (!groups.has(bucketKey)) {
+            groups.set(bucketKey, [])
+          }
+          const value = coerceNumber(getValueByPath(row, valueField))
+          if (value !== null) {
+            groups.get(bucketKey).push(value)
+          }
+        })
+
+        const data = Array.from(groups.entries()).map(([key, values]) => ({
+          type: 'box',
+          name: key,
+          y: values,
+          boxpoints: spec.boxpoints || 'outliers'
+        }))
+
+        return {
+          data,
+          layout: { ...(spec.layout || {}) },
+          config: { ...(spec.config || {}) }
+        }
+      }
+
+      const isDeclarativeGraphSpec = (spec) => {
+        return (
+          spec &&
+          typeof spec === 'object' &&
+          (spec.encodings || spec.schema_version || spec.dataset_index !== undefined || spec.chart_type)
+        )
+      }
+
+      const buildPlotlyFigureFromSchema = (rawSpec, realDataSets = []) => {
+        if (!rawSpec || typeof rawSpec !== 'object') return null
+
+        const datasetIndex = Number.isInteger(rawSpec.dataset_index) ? rawSpec.dataset_index : 0
+        const dataset = realDataSets[datasetIndex] || realDataSets[0] || []
+        if (!Array.isArray(dataset) || !dataset.length) return null
+
+        const rows = applyDeclarativeTransforms(dataset, rawSpec.transforms)
+        const chartType = (rawSpec.chart_type || rawSpec.type || 'bar').toLowerCase()
+        const encodings = rawSpec.encodings || {}
+
+        if (chartType.includes('box')) {
+          return buildBoxFigure(rows, encodings, rawSpec)
+        }
+        if (chartType.includes('line')) {
+          return buildLineFigure(rows, encodings, rawSpec, 'line')
+        }
+        if (chartType.includes('scatter')) {
+          return buildLineFigure(rows, encodings, rawSpec, 'scatter')
+        }
+        return buildBarFigure(rows, encodings, rawSpec)
+      }
+
+      const buildGraphSpec = (rawSpec, realDataSets) => {
+        if (!rawSpec && rawSpec !== 0) return null
+        const parsed = parseJsonLoose(rawSpec) ?? rawSpec
+        if (!parsed) return null
+
+        if (isDeclarativeGraphSpec(parsed)) {
+          const figure = buildPlotlyFigureFromSchema(parsed, realDataSets)
+          if (figure) {
+            return normalizeGraphSpec(figure)
+          }
+        }
+
+        return normalizeGraphSpec(parsed)
+      }
+
       const normalizeRealDataSets = (payload) => {
         if (payload === null || payload === undefined) return []
         const items = Array.isArray(payload) ? payload : [payload]
@@ -1440,7 +1698,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           const realDataSets = normalizeRealDataSets(responseData.real_data)
           const primaryRealData = realDataSets[0] || []
           const hasGraphSpec = plotlyGraphTypes.includes(analysisType)
-          const graphSpec = hasGraphSpec ? normalizeGraphSpec(responseData.graph_spec) : null
+          const graphSpec = hasGraphSpec ? buildGraphSpec(responseData.graph_spec, realDataSets) : null
           const successMessage = responseData.success_message || responseData.summary || ''
           const baseTitle = plotlyTitleMap[analysisType] || 'Excel Analysis'
           const fileSuffix = responseData.file_name ? ` - ${responseData.file_name}` : ''
