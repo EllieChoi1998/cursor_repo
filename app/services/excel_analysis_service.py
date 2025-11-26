@@ -56,11 +56,12 @@ class ExcelAnalysisService:
             result = {
                 'success': True,
                 'file_name': file.filename,
-                'data_type': 'excel_analysis',
                 'analysis_type': analysis_result['type'],
-                'data': analysis_result['data'],
+                'data': analysis_result.get('data'),
+                'real_data': analysis_result.get('real_data'),
+                'graph_spec': analysis_result.get('graph_spec'),
                 'summary': analysis_result['summary'],
-                'chart_config': analysis_result.get('chart_config'),
+                'success_message': '✅ 엑셀 분석이 완료되었습니다.',
                 'sql': analysis_result.get('sql'),
                 'chatroom_id': chatroom_id,
                 'user_id': user_id,
@@ -174,13 +175,11 @@ class ExcelAnalysisService:
         """.strip()
         
         return {
-            'type': 'excel_analysis',
-            'data': {
-                'basic_info': basic_info,
-                'statistics': stats,
-                'raw_data': df.to_dict('records')
-            },
-            'summary': summary
+            'type': 'table',  # Use 'table' type for general analysis
+            'data': df.to_dict('records'),
+            'real_data': [df.to_dict('records')],
+            'summary': summary,
+            'statistics': stats
         }
     
     async def _create_chart_analysis(self, df: pd.DataFrame, prompt: str, basic_info: Dict) -> Dict[str, Any]:
@@ -189,40 +188,90 @@ class ExcelAnalysisService:
         numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
         categorical_columns = df.select_dtypes(include=['object', 'category']).columns.tolist()
         
-        chart_config = {
-            'chart_type': 'bar',  # 기본값
-            'x_column': categorical_columns[0] if categorical_columns else None,
-            'y_column': numeric_columns[0] if numeric_columns else None,
-            'data': df.to_dict('records')
-        }
-        
         # 프롬프트에 따른 차트 타입 결정
         prompt_lower = prompt.lower()
-        if any(keyword in prompt_lower for keyword in ['선', 'line', '트렌드']):
-            chart_config['chart_type'] = 'line'
+        chart_type = 'bar_graph'  # 기본값
+        analysis_type = 'bar_graph'
+        
+        if any(keyword in prompt_lower for keyword in ['선', 'line', '트렌드', '추세']):
+            chart_type = 'line_graph'
+            analysis_type = 'line_graph'
+        elif any(keyword in prompt_lower for keyword in ['박스', 'box', '분포', '상자']):
+            chart_type = 'box_plot'
+            analysis_type = 'box_plot'
         elif any(keyword in prompt_lower for keyword in ['산점도', 'scatter', '상관관계']):
-            chart_config['chart_type'] = 'scatter'
-        elif any(keyword in prompt_lower for keyword in ['파이', 'pie', '비율']):
-            chart_config['chart_type'] = 'pie'
+            chart_type = 'scatter'
+            analysis_type = 'scatter'
+        
+        # X축과 Y축 컬럼 결정
+        x_column = categorical_columns[0] if categorical_columns else (numeric_columns[0] if len(numeric_columns) > 1 else None)
+        y_column = numeric_columns[0] if numeric_columns else None
+        
+        # 시계열 데이터 체크 (날짜/시간 컬럼)
+        date_columns = []
+        for col in df.columns:
+            if pd.api.types.is_datetime64_any_dtype(df[col]) or any(keyword in col.lower() for keyword in ['date', 'time', '날짜', '시간']):
+                date_columns.append(col)
+        
+        if date_columns and chart_type == 'line_graph':
+            x_column = date_columns[0]
+        
+        # graph_spec 생성 (declarative format)
+        encodings = {}
+        if chart_type == 'box_plot':
+            # Box plot은 category와 value 사용
+            encodings = {
+                'category': {'field': x_column} if x_column else None,
+                'value': {'field': y_column} if y_column else None
+            }
+        else:
+            # Bar/Line/Scatter는 x, y 사용
+            encodings = {
+                'x': {
+                    'field': x_column,
+                    'type': 'temporal' if date_columns and x_column in date_columns else 'categorical'
+                } if x_column else None,
+                'y': {
+                    'field': y_column,
+                    'type': 'quantitative',
+                    'agg': 'sum' if chart_type == 'bar_graph' else 'identity'
+                } if y_column else None
+            }
+        
+        # None 값 제거
+        encodings = {k: v for k, v in encodings.items() if v is not None}
+        
+        graph_spec = {
+            'schema_version': '1.0',
+            'chart_type': chart_type,
+            'dataset_index': 0,
+            'encodings': encodings,
+            'layout': {
+                'title': f'{y_column} by {x_column}' if x_column and y_column else 'Chart',
+                'xaxis': {'title': x_column or 'X'},
+                'yaxis': {'title': y_column or 'Y'}
+            }
+        }
+        
+        if chart_type == 'box_plot':
+            graph_spec['boxpoints'] = 'outliers'
         
         summary = f"""
 차트 분석 결과:
-- 차트 타입: {chart_config['chart_type']}
-- X축: {chart_config['x_column'] or 'N/A'}
-- Y축: {chart_config['y_column'] or 'N/A'}
+- 차트 타입: {chart_type}
+- X축: {x_column or 'N/A'}
+- Y축: {y_column or 'N/A'}
 - 데이터 포인트: {len(df)}
 
 분석 요청: {prompt}
         """.strip()
         
         return {
-            'type': 'excel_chart',
-            'data': {
-                'basic_info': basic_info,
-                'chart_data': df.to_dict('records')
-            },
+            'type': analysis_type,
+            'data': df.to_dict('records'),
             'summary': summary,
-            'chart_config': chart_config
+            'graph_spec': graph_spec,
+            'real_data': [df.to_dict('records')]  # 중요: real_data 배열로 전달
         }
     
     async def _create_summary_analysis(self, df: pd.DataFrame, prompt: str, basic_info: Dict) -> Dict[str, Any]:
@@ -271,13 +320,11 @@ class ExcelAnalysisService:
         """.strip()
         
         return {
-            'type': 'excel_summary',
-            'data': {
-                'basic_info': basic_info,
-                'insights': insights,
-                'sample_data': df.head(5).to_dict('records')
-            },
-            'summary': summary
+            'type': 'table',  # Use 'table' type for summary
+            'data': df.head(10).to_dict('records'),
+            'real_data': [df.head(10).to_dict('records')],
+            'summary': summary,
+            'insights': insights
         }
     
     def _format_stats(self, stats: Dict[str, Dict[str, float]]) -> str:
