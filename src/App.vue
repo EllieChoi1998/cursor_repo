@@ -1486,7 +1486,10 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         table: 'Table Data'
       }
 
-      const isPlotlyGraphType = (type) => plotlyGraphTypes.includes(type)
+      const isPlotlyGraphType = (type) => {
+        if (!type) return false
+        return plotlyGraphTypes.includes(type) || type === 'excel_chart'
+      }
 
       // 응답 데이터로부터 결과 객체 생성하는 함수
     const createResultFromResponseData = (responseData, userMessage, chatId) => {
@@ -1670,7 +1673,17 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             }
           }
         } else if (responseData.analysis_type === 'excel_analysis' || responseData.analysis_type === 'excel_chart' || responseData.analysis_type === 'excel_summary') {
-          // 엑셀 분석 결과 처리
+          // 엑셀 분석 결과 처리 (Plotly graph_spec 지원)
+          const excelRealDataSource =
+            responseData.real_data ??
+            responseData.data?.real_data ??
+            responseData.data?.chart_data ??
+            responseData.data?.raw_data ??
+            []
+          const realDataSets = normalizeRealDataSets(excelRealDataSource)
+          const graphSpec = responseData.graph_spec ? buildGraphSpec(responseData.graph_spec, realDataSets) : null
+          const primaryRealData = realDataSets[0] || (Array.isArray(excelRealDataSource) ? excelRealDataSource : [])
+
           result = {
             id: `history_${chatId}_${Date.now()}`,
             type: responseData.analysis_type,
@@ -1680,14 +1693,16 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             timestamp: new Date(),
             chatId: chatId,
             sql: responseData.sql,
-            realData: responseData.data?.raw_data || responseData.data?.chart_data || [],
+            realData: primaryRealData || [],
+            realDataSets,
             resultType: responseData.analysis_type,
             userMessage: userMessage,
             summary: responseData.summary,
             chartConfig: responseData.chart_config,
             fileName: responseData.file_name,
             metadata: responseData,
-            successMessage: responseData.success_message || ''
+            successMessage: responseData.success_message || '',
+            graphSpec
           }
         } else if (
           plotlyGraphTypes.includes(responseData.analysis_type) ||
