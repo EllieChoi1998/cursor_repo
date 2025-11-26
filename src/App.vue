@@ -215,7 +215,7 @@
                       <option value="pcm">PCM (Process Control Monitor)</option>
                       <option value="inline">INLINE (Inline Analysis)</option>
                       <option value="rag">불량 이력 검색</option>
-                      <!-- <option value="excel">엑셀 데이터 분석</option> -->
+                      <option value="excel">엑셀 데이터 분석</option>
                       <option value="dcc">표준 문서 검색</option>
                     </select>
                   </div>
@@ -472,9 +472,10 @@
                         </div>
                       </div>
                     </div>
+                    </div>
 
                     <!-- Plotly Graph Results -->
-                    <div v-if="isPlotlyGraphType(result.type)" class="chart-section plotly-section">
+                    <div v-else-if="isPlotlyGraphType(result.type)" class="chart-section plotly-section">
                       <PlotlyGraph
                         :graph-spec="result.graphSpec"
                         :title="result.title"
@@ -536,7 +537,6 @@
                       <div v-else class="empty-table">
                         표시할 데이터가 없습니다.
                       </div>
-                    </div>
                     </div>
 
                   <!-- Metadata Only (real_data가 없는 경우) -->
@@ -1316,13 +1316,17 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
         const data = Array.from(seriesMap.entries()).map(([seriesKey, points]) => {
           const aggregated = aggregatePoints(points, aggregator)
-          return {
+          const trace = {
             type: 'bar',
             name: seriesKey,
             x: aggregated.map((point) => point.x),
-            y: aggregated.map((point) => point.y),
-            marker: spec.encodings?.color?.palette ? { color: spec.encodings.color.palette } : undefined
+            y: aggregated.map((point) => point.y)
           }
+          // Only add marker if color palette is specified
+          if (spec.encodings?.color?.palette) {
+            trace.marker = { color: spec.encodings.color.palette }
+          }
+          return trace
         })
 
         return {
@@ -1401,40 +1405,64 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
 
       const buildPlotlyFigureFromSchema = (rawSpec, realDataSets = []) => {
-        if (!rawSpec || typeof rawSpec !== 'object') return null
+        console.log('🔧 buildPlotlyFigureFromSchema called:', { rawSpec, realDataSets })
+        if (!rawSpec || typeof rawSpec !== 'object') {
+          console.warn('⚠️ buildPlotlyFigureFromSchema: invalid rawSpec')
+          return null
+        }
 
         const datasetIndex = Number.isInteger(rawSpec.dataset_index) ? rawSpec.dataset_index : 0
         const dataset = realDataSets[datasetIndex] || realDataSets[0] || []
-        if (!Array.isArray(dataset) || !dataset.length) return null
+        console.log('🔧 dataset:', dataset?.length, 'rows')
+        if (!Array.isArray(dataset) || !dataset.length) {
+          console.warn('⚠️ buildPlotlyFigureFromSchema: no dataset')
+          return null
+        }
 
         const rows = applyDeclarativeTransforms(dataset, rawSpec.transforms)
         const chartType = (rawSpec.chart_type || rawSpec.type || 'bar').toLowerCase()
         const encodings = rawSpec.encodings || {}
+        console.log('🔧 chartType:', chartType, 'encodings:', encodings)
 
         if (chartType.includes('box')) {
+          console.log('✅ Building box plot')
           return buildBoxFigure(rows, encodings, rawSpec)
         }
         if (chartType.includes('line')) {
+          console.log('✅ Building line graph')
           return buildLineFigure(rows, encodings, rawSpec, 'line')
         }
         if (chartType.includes('scatter')) {
+          console.log('✅ Building scatter plot')
           return buildLineFigure(rows, encodings, rawSpec, 'scatter')
         }
+        console.log('✅ Building bar graph (default)')
         return buildBarFigure(rows, encodings, rawSpec)
       }
 
       const buildGraphSpec = (rawSpec, realDataSets) => {
-        if (!rawSpec && rawSpec !== 0) return null
+        console.log('🔍 buildGraphSpec called with:', { rawSpec, realDataSets })
+        if (!rawSpec && rawSpec !== 0) {
+          console.warn('⚠️ buildGraphSpec: rawSpec is null/undefined')
+          return null
+        }
         const parsed = parseJsonLoose(rawSpec) ?? rawSpec
-        if (!parsed) return null
+        console.log('🔍 buildGraphSpec parsed:', parsed)
+        if (!parsed) {
+          console.warn('⚠️ buildGraphSpec: parsed is null')
+          return null
+        }
 
         if (isDeclarativeGraphSpec(parsed)) {
+          console.log('✅ buildGraphSpec: Using declarative spec')
           const figure = buildPlotlyFigureFromSchema(parsed, realDataSets)
+          console.log('🔍 buildGraphSpec figure:', figure)
           if (figure) {
             return normalizeGraphSpec(figure)
           }
         }
 
+        console.log('⚠️ buildGraphSpec: Using legacy spec')
         return normalizeGraphSpec(parsed)
       }
 
@@ -1694,10 +1722,15 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           responseData.analysis_type === 'general_text' ||
           responseData.analysis_type === 'table'
         ) {
+          console.log('📊 Processing Plotly/Table/Text type:', responseData.analysis_type)
+          console.log('📊 responseData.graph_spec:', responseData.graph_spec)
+          console.log('📊 responseData.real_data:', responseData.real_data)
+          
           const analysisType = responseData.analysis_type
           const realDataSets = normalizeRealDataSets(responseData.real_data)
           const primaryRealData = realDataSets[0] || []
           const hasGraphSpec = plotlyGraphTypes.includes(analysisType)
+          console.log('📊 hasGraphSpec:', hasGraphSpec, 'analysisType:', analysisType)
           const graphSpec = hasGraphSpec ? buildGraphSpec(responseData.graph_spec, realDataSets) : null
           const successMessage = responseData.success_message || responseData.summary || ''
           const baseTitle = plotlyTitleMap[analysisType] || 'Excel Analysis'
@@ -1720,6 +1753,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             metadata: responseData,
             resultType: analysisType
           }
+          console.log('📊 Created result with graphSpec:', result.graphSpec)
 
           if (analysisType === 'table') {
             result.data = primaryRealData
@@ -4233,7 +4267,7 @@ body {
 }
 
 .table-container {
-  max-height: 300px;
+  max-height: max-content;
   overflow: auto;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -4598,9 +4632,9 @@ body {
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  overflow-x: auto;
+  /* overflow-x: auto; */
   animation: slideIn 0.3s ease-out;
-  min-width: 1200px;
+  /* min-width: 1200px; */
 }
 
 @keyframes slideIn {
@@ -5076,7 +5110,7 @@ body {
   height: 100%;
   display: flex;
   /* align-items: center; */
-  justify-content: center;
+  /* justify-content: center; */
   min-width: 1200px;
   overflow-x: auto;
 }
