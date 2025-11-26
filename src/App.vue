@@ -1316,13 +1316,17 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
         const data = Array.from(seriesMap.entries()).map(([seriesKey, points]) => {
           const aggregated = aggregatePoints(points, aggregator)
-          return {
+          const trace = {
             type: 'bar',
             name: seriesKey,
             x: aggregated.map((point) => point.x),
-            y: aggregated.map((point) => point.y),
-            marker: spec.encodings?.color?.palette ? { color: spec.encodings.color.palette } : undefined
+            y: aggregated.map((point) => point.y)
           }
+          // Only add marker if color palette is specified
+          if (spec.encodings?.color?.palette) {
+            trace.marker = { color: spec.encodings.color.palette }
+          }
+          return trace
         })
 
         return {
