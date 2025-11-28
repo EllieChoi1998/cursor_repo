@@ -2899,13 +2899,19 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 updateBotMessage(currentBotMessageIndex.value, successMessage)
               }
             }
-            const createdResult = createResultFromResponseData(result, prompt, activeChatId.value)
-            if (createdResult) {
-              createdResult.isActive = true
-              const currentResults = chatResults.value[activeChatId.value] || []
-              currentResults.push(createdResult)
-              chatResults.value[activeChatId.value] = currentResults
-              console.log('✅ Excel analysis result added:', createdResult)
+            
+            // general_text 타입일 때는 analysis result를 생성하지 않음 (봇 메시지만 표시)
+            if (result.analysis_type === 'general_text') {
+              console.log('⏭️ Skipping analysis result for general_text type (bot message only)')
+            } else {
+              const createdResult = createResultFromResponseData(result, prompt, activeChatId.value)
+              if (createdResult) {
+                createdResult.isActive = true
+                const currentResults = chatResults.value[activeChatId.value] || []
+                currentResults.push(createdResult)
+                chatResults.value[activeChatId.value] = currentResults
+                console.log('✅ Excel analysis result added:', createdResult)
+              }
             }
           } else if (data.msg) {
             // 에러 메시지
