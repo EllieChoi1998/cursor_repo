@@ -519,10 +519,6 @@
 
                     <!-- Table Results -->
                     <div v-else-if="result.type === 'table'" class="chart-section table-result-section">
-                      <div v-if="result.successMessage" class="table-success-message">
-                        {{ result.successMessage }}
-                      </div>
-
                       <div
                         v-if="result.realDataSets && result.realDataSets.length"
                         class="table-datasets"
@@ -531,7 +527,7 @@
                           v-for="(dataset, datasetIndex) in result.realDataSets"
                           :key="`${result.id}-table-${datasetIndex}`"
                           :data="dataset"
-                          :title="`Table ${datasetIndex + 1}`"
+                          :title="`데이터 테이블`"
                         />
                       </div>
                       <div v-else class="empty-table">
@@ -813,9 +809,6 @@
         </div>
         
         <div v-else-if="fullscreenResult?.type === 'table'" class="fullscreen-chart table-result-section">
-          <div v-if="fullscreenResult?.successMessage" class="table-success-message">
-            {{ fullscreenResult.successMessage }}
-          </div>
           <div
             v-if="fullscreenResult?.realDataSets && fullscreenResult.realDataSets.length"
             class="table-datasets"
@@ -824,7 +817,7 @@
               v-for="(dataset, datasetIndex) in fullscreenResult.realDataSets"
               :key="`full-${fullscreenResult.id}-table-${datasetIndex}`"
               :data="dataset"
-              :title="`Table ${datasetIndex + 1}`"
+              :title="`데이터 테이블`"
             />
           </div>
           <div v-else class="empty-table">
