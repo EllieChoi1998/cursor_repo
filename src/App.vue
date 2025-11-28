@@ -133,15 +133,15 @@
                               <strong>경로:</strong> {{ file.file_path }}
                             </div>
                           </div>
-                                                     <div class="file-actions">
-                             <button 
-                               @click="downloadFile(file.file_name || file.filename || 'Unknown File', file.file_path)"
-                               class="file-download-btn"
-                               :disabled="!file.file_path"
-                             >
-                                파일 다운로드
-                             </button>
-                           </div>
+                          <div class="file-actions">
+                            <button 
+                            @click="downloadFile(file.file_name || file.filename || 'Unknown File', file.file_path)"
+                            class="file-download-btn"
+                            :disabled="!file.file_path"
+                            >
+                             파일 다운로드
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -173,15 +173,15 @@
                               <strong>경로:</strong> {{ file.file_path }}
                             </div>
                           </div>
-                                                     <div class="file-actions">
-                             <button 
-                               @click="downloadFile(file.file_name || file.filename || 'Unknown File', file.file_path)"
-                               class="file-download-btn"
-                               :disabled="!file.file_path"
-                             >
-                                파일 다운로드
-                             </button>
-                           </div>
+                          <div class="file-actions">
+                            <button 
+                            @click="downloadFile(file.file_name || file.filename || 'Unknown File', file.file_path)"
+                            class="file-download-btn"
+                            :disabled="!file.file_path"
+                            >
+                             파일 다운로드
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <!-- RAG 검색 결과 중 일반 텍스트 메시지 -->
@@ -392,14 +392,14 @@
                     <RAGAnswerList :answer="result.answer" />
                   </div>
 
-                    <!-- Excel Analysis Results -->
-                    <div v-else-if="result.type === 'excel_analysis' || result.type === 'excel_chart' || result.type === 'excel_summary'" class="chart-section">
+                  <!-- Excel Analysis Results -->
+                  <div v-else-if="result.type === 'excel_analysis' || result.type === 'excel_chart' || result.type === 'excel_summary'" class="chart-section">
                     <div class="excel-analysis-result">
                       <div class="excel-header">
                         <h4>📊 {{ result.title }}</h4>
                         <p class="file-name">파일: {{ result.fileName }}</p>
                       </div>
-
+                      
                         <div v-if="result.successMessage" class="excel-success-message">
                           {{ result.successMessage }}
                         </div>
@@ -480,7 +480,7 @@
                         :graph-spec="result.graphSpec"
                         :title="result.title"
                         :file-name="result.fileName"
-                        :success-message="result.successMessage"
+                        :success-message="''"
                         :height="chartHeight"
                       />
 
@@ -495,12 +495,12 @@
                           open
                         >
                           <summary>
-                            📄 데이터셋 {{ datasetIndex + 1 }}
+                            📄 데이터셋
                             <span v-if="dataset && dataset.length">({{ dataset.length }}행)</span>
                           </summary>
                           <DynamicTable
                             :data="dataset"
-                            :title="`Dataset ${datasetIndex + 1}`"
+                            :title="`데이터셋`"
                           />
                         </details>
                       </div>
@@ -519,10 +519,6 @@
 
                     <!-- Table Results -->
                     <div v-else-if="result.type === 'table'" class="chart-section table-result-section">
-                      <div v-if="result.successMessage" class="table-success-message">
-                        {{ result.successMessage }}
-                      </div>
-
                       <div
                         v-if="result.realDataSets && result.realDataSets.length"
                         class="table-datasets"
@@ -531,13 +527,14 @@
                           v-for="(dataset, datasetIndex) in result.realDataSets"
                           :key="`${result.id}-table-${datasetIndex}`"
                           :data="dataset"
-                          :title="`Table ${datasetIndex + 1}`"
+                          :title="`데이터 테이블`"
                         />
                       </div>
                       <div v-else class="empty-table">
                         표시할 데이터가 없습니다.
                       </div>
                     </div>
+                  </div>
 
                   <!-- Metadata Only (real_data가 없는 경우) -->
                   <div v-else-if="result.type === 'metadata_only'" class="chart-section">
@@ -661,7 +658,7 @@
 
         </div>
         
-        <div class="fullscreen-body">
+        <div class="fullscreen-body" :class="{ 'fullscreen-body-stretch': isPlotlyGraphType(fullscreenResult?.type) }">
           <!-- PCM Trend Chart -->
           <div v-if="fullscreenResult?.type === 'pcm_trend'" class="fullscreen-chart">
             <PCMTrendChart 
@@ -789,12 +786,12 @@
               open
             >
               <summary>
-                📄 데이터셋 {{ datasetIndex + 1 }}
+                📄 데이터셋
                 <span v-if="dataset && dataset.length">({{ dataset.length }}행)</span>
               </summary>
               <DynamicTable
                 :data="dataset"
-                :title="`Dataset ${datasetIndex + 1}`"
+                :title="`데이터셋`"
               />
             </details>
           </div>
@@ -811,9 +808,6 @@
         </div>
         
         <div v-else-if="fullscreenResult?.type === 'table'" class="fullscreen-chart table-result-section">
-          <div v-if="fullscreenResult?.successMessage" class="table-success-message">
-            {{ fullscreenResult.successMessage }}
-          </div>
           <div
             v-if="fullscreenResult?.realDataSets && fullscreenResult.realDataSets.length"
             class="table-datasets"
@@ -822,7 +816,7 @@
               v-for="(dataset, datasetIndex) in fullscreenResult.realDataSets"
               :key="`full-${fullscreenResult.id}-table-${datasetIndex}`"
               :data="dataset"
-              :title="`Table ${datasetIndex + 1}`"
+              :title="`데이터 테이블`"
             />
           </div>
           <div v-else class="empty-table">
@@ -1504,19 +1498,20 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         return datasets
       }
 
-      const plotlyGraphTypes = ['bar_graph', 'line_graph', 'box_plot']
+      const plotlyGraphTypes = ['bar_graph', 'line_graph', 'box_plot', 'scatter_plot']
 
       const plotlyTitleMap = {
         bar_graph: 'Bar Graph',
         line_graph: 'Line Graph',
         box_plot: 'Box Plot',
+        scatter_plot: 'Scatter Plot',
         general_text: 'Analysis Summary',
         table: 'Table Data'
       }
 
       const isPlotlyGraphType = (type) => plotlyGraphTypes.includes(type)
 
-      // 응답 데이터로부터 결과 객체 생성하는 함수
+    // 응답 데이터로부터 결과 객체 생성하는 함수
     const createResultFromResponseData = (responseData, userMessage, chatId) => {
       try {
         console.log(' Creating result from response data:', responseData)
@@ -2857,7 +2852,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     const removeSelectedFile = () => {
       selectedFile.value = null
       console.log('📁 File removed')
-    }
+      }
 
     // 파일 크기 포맷팅
     const formatFileSize = (bytes) => {
@@ -2871,7 +2866,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     // 실제 파일 업로드 처리 함수
     const uploadExcelFile = async (file, prompt) => {
       try {
-        // 사용자 메시지 추가
+      // 사용자 메시지 추가
         const userMessageText = file 
           ? `📁 ${file.name} 업로드: ${prompt}` 
           : prompt
@@ -2883,7 +2878,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           if (data.progress_message) {
             // 진행 상황 메시지
             if (currentBotMessageIndex.value === -1) {
-              addMessage('bot', data.progress_message, false)
+            addMessage('bot', data.progress_message, false)
               const messages = chatMessages.value[activeChatId.value]
               currentBotMessageIndex.value = messages.length - 1
             } else {
@@ -2904,13 +2899,19 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 updateBotMessage(currentBotMessageIndex.value, successMessage)
               }
             }
-            const createdResult = createResultFromResponseData(result, prompt, activeChatId.value)
-            if (createdResult) {
-              createdResult.isActive = true
-              const currentResults = chatResults.value[activeChatId.value] || []
-              currentResults.push(createdResult)
-              chatResults.value[activeChatId.value] = currentResults
-              console.log('✅ Excel analysis result added:', createdResult)
+            
+            // general_text 타입일 때는 analysis result를 생성하지 않음 (봇 메시지만 표시)
+            if (result.analysis_type === 'general_text') {
+              console.log('⏭️ Skipping analysis result for general_text type (bot message only)')
+            } else {
+              const createdResult = createResultFromResponseData(result, prompt, activeChatId.value)
+              if (createdResult) {
+                createdResult.isActive = true
+                const currentResults = chatResults.value[activeChatId.value] || []
+                currentResults.push(createdResult)
+                chatResults.value[activeChatId.value] = currentResults
+                console.log('✅ Excel analysis result added:', createdResult)
+              }
             }
           } else if (data.msg) {
             // 에러 메시지
@@ -3377,6 +3378,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         console.log(`💬 Final messages count: ${(chatMessages.value[roomId] || []).length}`)
         console.log(`📈 Final results count: ${(chatResults.value[roomId] || []).length}`)
       }
+
+      scrollToBottom()
     }
 
     const createNewChatRoom = async (newRoom) => {
@@ -3555,7 +3558,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     })
 
-      return {
+          return {
         messages,
         currentMessage,
         selectedDataType,
@@ -3874,12 +3877,14 @@ body {
 }
 
 .message.user .message-text {
+  word-break: keep-all;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-bottom-right-radius: 4px;
 }
 
 .message.bot .message-text {
+  word-break: keep-all;
   background: #f0f0f0;
   color: #333;
   border-bottom-left-radius: 4px;
@@ -5105,6 +5110,12 @@ body {
   justify-content: center;
 }
 
+/* Plotly 전용 fullscreen body 스타일 */
+.fullscreen-body.fullscreen-body-stretch {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
 .fullscreen-chart {
   width: 100%;
   height: 100%;
@@ -5113,6 +5124,34 @@ body {
   /* justify-content: center; */
   min-width: 1200px;
   overflow-x: auto;
+}
+
+/* Fullscreen Plotly vertical layout */
+.fullscreen-chart.fullscreen-plotly-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 2rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: unset;
+  max-width: 100%;
+}
+
+.fullscreen-plotly-graph {
+  width: 100%;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
+.fullscreen-plotly-graph .plotly-graph-wrapper {
+  width: 100%;
+}
+
+.plotly-real-data.fullscreen {
+  width: 100%;
+  margin-top: 0;
+  flex: 0 0 auto;
 }
 
 @keyframes fadeIn {
