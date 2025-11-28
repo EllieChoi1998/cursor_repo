@@ -534,7 +534,6 @@
                         표시할 데이터가 없습니다.
                       </div>
                     </div>
-                  </div>
 
                   <!-- Metadata Only (real_data가 없는 경우) -->
                   <div v-else-if="result.type === 'metadata_only'" class="chart-section">
