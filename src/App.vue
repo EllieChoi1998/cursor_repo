@@ -480,7 +480,7 @@
                         :graph-spec="result.graphSpec"
                         :title="result.title"
                         :file-name="result.fileName"
-                        :success-message="result.successMessage"
+                        :success-message="''"
                         :height="chartHeight"
                       />
 
@@ -495,12 +495,12 @@
                           open
                         >
                           <summary>
-                            📄 데이터셋 {{ datasetIndex + 1 }}
+                            📄 데이터셋
                             <span v-if="dataset && dataset.length">({{ dataset.length }}행)</span>
                           </summary>
                           <DynamicTable
                             :data="dataset"
-                            :title="`Dataset ${datasetIndex + 1}`"
+                            :title="`데이터셋`"
                           />
                         </details>
                       </div>
@@ -770,14 +770,16 @@
             <RAGAnswerList :answer="fullscreenResult.answer" />
           </div>
         
-        <div v-else-if="isPlotlyGraphType(fullscreenResult?.type)" class="fullscreen-chart">
-          <PlotlyGraph
-            :graph-spec="fullscreenResult.graphSpec"
-            :title="fullscreenResult.title"
-            :file-name="fullscreenResult.fileName"
-            :success-message="fullscreenResult.successMessage"
-            :height="800"
-          />
+        <div v-else-if="isPlotlyGraphType(fullscreenResult?.type)" class="fullscreen-chart fullscreen-plotly-vertical">
+          <div class="fullscreen-plotly-graph">
+            <PlotlyGraph
+              :graph-spec="fullscreenResult.graphSpec"
+              :title="fullscreenResult.title"
+              :file-name="fullscreenResult.fileName"
+              :success-message="''"
+              :height="800"
+            />
+          </div>
           <div
             v-if="fullscreenResult?.realDataSets && fullscreenResult.realDataSets.length"
             class="plotly-real-data fullscreen"
@@ -789,12 +791,12 @@
               open
             >
               <summary>
-                📄 데이터셋 {{ datasetIndex + 1 }}
+                📄 데이터셋
                 <span v-if="dataset && dataset.length">({{ dataset.length }}행)</span>
               </summary>
               <DynamicTable
                 :data="dataset"
-                :title="`Dataset ${datasetIndex + 1}`"
+                :title="`데이터셋`"
               />
             </details>
           </div>
@@ -5113,6 +5115,26 @@ body {
   /* justify-content: center; */
   min-width: 1200px;
   overflow-x: auto;
+}
+
+/* Fullscreen Plotly vertical layout */
+.fullscreen-chart.fullscreen-plotly-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: unset;
+}
+
+.fullscreen-plotly-graph {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.plotly-real-data.fullscreen {
+  width: 100%;
+  margin-top: 0;
 }
 
 @keyframes fadeIn {
