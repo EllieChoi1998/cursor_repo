@@ -661,7 +661,7 @@
 
         </div>
         
-        <div class="fullscreen-body">
+        <div class="fullscreen-body" :class="{ 'fullscreen-body-stretch': isPlotlyGraphType(fullscreenResult?.type) }">
           <!-- PCM Trend Chart -->
           <div v-if="fullscreenResult?.type === 'pcm_trend'" class="fullscreen-chart">
             <PCMTrendChart 
@@ -5107,6 +5107,12 @@ body {
   justify-content: center;
 }
 
+/* Plotly 전용 fullscreen body 스타일 */
+.fullscreen-body.fullscreen-body-stretch {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
 .fullscreen-chart {
   width: 100%;
   height: 100%;
@@ -5121,20 +5127,28 @@ body {
 .fullscreen-chart.fullscreen-plotly-vertical {
   flex-direction: column;
   align-items: stretch;
+  justify-content: flex-start;
   gap: 2rem;
   overflow-y: auto;
   overflow-x: hidden;
   min-width: unset;
+  max-width: 100%;
 }
 
 .fullscreen-plotly-graph {
   width: 100%;
-  flex-shrink: 0;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
+.fullscreen-plotly-graph .plotly-graph-wrapper {
+  width: 100%;
 }
 
 .plotly-real-data.fullscreen {
   width: 100%;
   margin-top: 0;
+  flex: 0 0 auto;
 }
 
 @keyframes fadeIn {
