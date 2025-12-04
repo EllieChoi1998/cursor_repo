@@ -415,7 +415,7 @@
                         <h5>📈 데이터 시각화</h5>
                         
                         <!-- Plotly 그래프 렌더링 -->
-                        <div v-if="result.chartConfig.plotly_spec" class="excel-plotly-graph">
+                        <div v-if="result.chartConfig?.plotly_spec" class="excel-plotly-graph">
                           <PlotlyGraph
                             :graph-spec="result.chartConfig.plotly_spec"
                             :title="result.title"
@@ -427,10 +427,10 @@
                         
                         <!-- 차트 정보 -->
                         <div v-else class="chart-info">
-                          <p><strong>차트 타입:</strong> {{ result.chartConfig.chart_type }}</p>
-                          <p v-if="result.chartConfig.x_column"><strong>X축:</strong> {{ result.chartConfig.x_column }}</p>
-                          <p v-if="result.chartConfig.y_column"><strong>Y축:</strong> {{ result.chartConfig.y_column }}</p>
-                          <p><strong>데이터 포인트:</strong> {{ result.chartConfig.data?.length || 0 }}개</p>
+                          <p><strong>차트 타입:</strong> {{ result.chartConfig?.chart_type || 'N/A' }}</p>
+                          <p v-if="result.chartConfig?.x_column"><strong>X축:</strong> {{ result.chartConfig.x_column }}</p>
+                          <p v-if="result.chartConfig?.y_column"><strong>Y축:</strong> {{ result.chartConfig.y_column }}</p>
+                          <p><strong>데이터 포인트:</strong> {{ result.chartConfig?.data?.length || 0 }}개</p>
                         </div>
                       </div>
                       
@@ -1707,6 +1707,12 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           }
         } else if (responseData.analysis_type === 'excel_analysis' || responseData.analysis_type === 'excel_chart' || responseData.analysis_type === 'excel_summary') {
           // 엑셀 분석 결과 처리
+          console.log('📊 Excel analysis processing:', {
+            analysis_type: responseData.analysis_type,
+            has_chart_config: !!responseData.chart_config,
+            chart_config: responseData.chart_config
+          })
+          
           result = {
             id: `history_${chatId}_${Date.now()}`,
             type: responseData.analysis_type,
@@ -1720,7 +1726,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             resultType: responseData.analysis_type,
             userMessage: userMessage,
             summary: responseData.summary,
-            chartConfig: responseData.chart_config,
+            chartConfig: responseData.chart_config || null,
             fileName: responseData.file_name,
             metadata: responseData,
             successMessage: responseData.success_message || ''

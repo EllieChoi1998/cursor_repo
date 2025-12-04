@@ -61,6 +61,7 @@ class ExcelAnalysisService:
                 'data': analysis_result['data'],
                 'summary': analysis_result['summary'],
                 'chart_config': analysis_result.get('chart_config'),
+                'success_message': analysis_result.get('success_message', '✅ 엑셀 분석이 완료되었습니다.'),
                 'sql': analysis_result.get('sql'),
                 'chatroom_id': chatroom_id,
                 'user_id': user_id,
@@ -127,10 +128,12 @@ class ExcelAnalysisService:
                 
         except Exception as e:
             return {
-                'type': 'error',
+                'type': 'general_text',
                 'data': {},
                 'summary': f'분석 중 오류가 발생했습니다: {str(e)}',
-                'error': str(e)
+                'error': str(e),
+                'chart_config': None,
+                'success_message': f'❌ 분석 중 오류가 발생했습니다: {str(e)}'
             }
     
     def _determine_analysis_type(self, prompt: str) -> str:
@@ -180,7 +183,9 @@ class ExcelAnalysisService:
                 'statistics': stats,
                 'raw_data': df.to_dict('records')
             },
-            'summary': summary
+            'summary': summary,
+            'chart_config': None,
+            'success_message': '✅ 엑셀 데이터 분석이 완료되었습니다.'
         }
     
     async def _create_chart_analysis(self, df: pd.DataFrame, prompt: str, basic_info: Dict) -> Dict[str, Any]:
@@ -230,7 +235,8 @@ class ExcelAnalysisService:
             'chart_config': {
                 'chart_type': chart_type,
                 'plotly_spec': plotly_spec
-            }
+            },
+            'success_message': f'✅ {chart_type} 차트가 생성되었습니다.'
         }
     
     def _create_plotly_spec(self, df: pd.DataFrame, chart_type: str, x_column: str, y_columns: List[str]) -> Dict[str, Any]:
@@ -417,7 +423,9 @@ class ExcelAnalysisService:
                 'insights': insights,
                 'sample_data': df.head(5).to_dict('records')
             },
-            'summary': summary
+            'summary': summary,
+            'chart_config': None,
+            'success_message': '✅ 엑셀 데이터 요약이 완료되었습니다.'
         }
     
     def _format_stats(self, stats: Dict[str, Dict[str, float]]) -> str:
