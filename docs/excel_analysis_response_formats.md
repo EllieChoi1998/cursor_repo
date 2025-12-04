@@ -99,12 +99,14 @@ The `layout` object supports extensive customization for chart appearance. Below
 ```
 
 **Note on Width:**
-- If not specified, width is automatically calculated based on number of data points
-  - Bar Graph: `max(800, xCount × 60)` pixels
-  - Line Graph: `max(800, xCount × 40)` pixels
-  - Box Plot: `max(800, boxCount × 80)` pixels
-- Charts wider than viewport will be scrollable (horizontal scroll enabled)
-- Specify width explicitly to override auto-calculation
+- Width is automatically set to fit container (responsive)
+- Charts adapt to screen width for optimal trend visibility
+- Do NOT specify width unless you have a specific requirement
+
+**Note on Height:**
+- Charts taller than 600px will show vertical scroll
+- Default height: 500px (no scroll needed)
+- Increase height if you need more detail visibility
 
 #### 📊 X-Axis Customization (3)
 

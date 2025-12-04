@@ -149,10 +149,9 @@ export default defineComponent({
           layout.height = props.height
         }
 
-        // Disable responsive mode to enable scrolling for wide charts
         const config = {
           displaylogo: false,
-          responsive: false,
+          responsive: true,
           scrollZoom: true,
           ...parsedSpec.value.config
         }
@@ -227,12 +226,13 @@ export default defineComponent({
   font-size: 0.95rem;
 }
 
-/* Scrollable wrapper for the chart */
+/* Scrollable wrapper for the chart - VERTICAL SCROLL ONLY */
 .plotly-scroll-wrapper {
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
-  overflow-y: auto;
+  max-height: 600px;
+  overflow-x: hidden;      /* 가로 스크롤 비활성화 */
+  overflow-y: auto;        /* 세로 스크롤만 활성화 */
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   background: #fff;
@@ -246,7 +246,6 @@ export default defineComponent({
 /* Webkit scrollbar styling (Chrome, Safari, Edge) */
 .plotly-scroll-wrapper::-webkit-scrollbar {
   width: 10px;
-  height: 10px;
 }
 
 .plotly-scroll-wrapper::-webkit-scrollbar-track {
@@ -264,7 +263,7 @@ export default defineComponent({
 }
 
 .plotly-container {
-  min-width: 100%;
+  width: 100%;
   min-height: 360px;
   background: #fff;
 }

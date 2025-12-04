@@ -1346,18 +1346,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           return trace
         })
 
-        // Calculate dynamic width based on number of x-axis categories
-        const uniqueXValues = new Set()
-        data.forEach(trace => trace.x.forEach(x => uniqueXValues.add(x)))
-        const xCount = uniqueXValues.size
-        const minWidth = 800
-        const widthPerCategory = 60  // pixels per x-axis category
-        const calculatedWidth = Math.max(minWidth, xCount * widthPerCategory)
-
         // Apply default layout customizations
         const defaultLayout = {
           height: 500,
-          width: calculatedWidth,  // Dynamic width based on data
           margin: { l: 80, r: 80, t: 100, b: 100, pad: 4 },
           xaxis: {
             tickangle: -45,
@@ -1407,18 +1398,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           }
         })
 
-        // Calculate dynamic width based on number of x-axis data points
-        const uniqueXValues = new Set()
-        traces.forEach(trace => trace.x.forEach(x => uniqueXValues.add(x)))
-        const xCount = uniqueXValues.size
-        const minWidth = 800
-        const widthPerPoint = 40  // pixels per x-axis point (less than bar chart)
-        const calculatedWidth = Math.max(minWidth, xCount * widthPerPoint)
-
         // Apply default layout customizations
         const defaultLayout = {
           height: 500,
-          width: calculatedWidth,  // Dynamic width based on data
           margin: { l: 80, r: 80, t: 100, b: 120, pad: 4 },
           xaxis: {
             tickangle: -45,
@@ -1473,16 +1455,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           boxpoints: spec.boxpoints || 'outliers'
         }))
 
-        // Calculate dynamic width based on number of box groups
-        const boxCount = data.length
-        const minWidth = 800
-        const widthPerBox = 80  // pixels per box plot
-        const calculatedWidth = Math.max(minWidth, boxCount * widthPerBox)
-
         // Apply default layout customizations
         const defaultLayout = {
           height: 500,
-          width: calculatedWidth,  // Dynamic width based on data
           margin: { l: 80, r: 80, t: 100, b: 100, pad: 4 },
           xaxis: {
             tickangle: -45,
