@@ -144,6 +144,23 @@ export default defineComponent({
           layout.height = props.height
         }
 
+        // 기본 여백 설정 (화면에 꽉 차지 않도록)
+        if (!layout.margin) {
+          layout.margin = {}
+        }
+        layout.margin = {
+          l: layout.margin.l || 80,
+          r: layout.margin.r || 80,
+          t: layout.margin.t || 100,
+          b: layout.margin.b || 120,
+          pad: layout.margin.pad || 10
+        }
+
+        // autosize 활성화
+        if (!('autosize' in layout)) {
+          layout.autosize = true
+        }
+
         const config = {
           displaylogo: false,
           responsive: true,

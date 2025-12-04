@@ -67,7 +67,13 @@ REQUIRED FIELDS (always include every key below)
     - op: one of ["==","!=","in","between",">=","<="," >", " <"]
     - value: string|number|list (for in/between provide list; for between use [min,max])
 - spec_lines: array of strings. MUST include ["USL", "LSL", "TGT", "UCL", "LCL"] (in that order). You MAY add others from fields_meta.spec_candidates.
-- layout_patches: object (NOT an array). Include "xaxis.tickangle" (number) and "margin.t" Default is 90 (vertical labels) and margin 20.
+- layout_patches: object (NOT an array). MUST include proper margins for better visibility:
+    - "margin.l": 80 (left margin for y-axis labels)
+    - "margin.r": 80 (right margin for legend/labels)
+    - "margin.t": 100 (top margin for title)
+    - "margin.b": 120 (bottom margin for x-axis labels)
+    - "xaxis.tickangle": -45 (angle for x-axis labels, default -45 for better readability)
+    - "autosize": true (enable responsive sizing)
 - hover: null OR object (if unnecessary, set null)
 
 INTERPRETATION RULES
@@ -91,7 +97,7 @@ DEFAULTS WHEN UNSPECIFIED
 - box = {{ "showpoints": false, "opacity": 0.7 }}
 - filters = []
 - spec_lines = ["USL", "LSL", "TGT", "UCL", "LCL"]
-- layout_patches = {{ "xaxis.tickangle": 90, "margin.t": 20 }}
+- layout_patches = {{ "margin.l": 80, "margin.r": 80, "margin.t": 100, "margin.b": 120, "xaxis.tickangle": -45, "autosize": true }}
 - hover = null
 
 OUTPUT FORMAT
@@ -119,6 +125,57 @@ def extract_first_json(text: str) -> str:
             if depth == 0:
                 return text[start:i+1]
     raise ValueError("Unbalanced JSON braces in LLM response.")
+
+# -----------------------------------------
+# Helper: spec_lines를 Plotly shapes로 변환
+# -----------------------------------------
+def convert_spec_lines_to_shapes(spec_lines, spec_values):
+    """
+    spec_lines 배열과 실제 spec 값들을 받아서 Plotly shapes 배열로 변환
+    
+    Args:
+        spec_lines: ["USL", "LSL", "TGT", "UCL", "LCL"] 같은 배열
+        spec_values: {"USL": 100, "LSL": 50, "TGT": 75, ...} 같은 딕셔너리
+        
+    Returns:
+        Plotly shapes 배열
+    """
+    shapes = []
+    colors = {
+        "USL": "rgba(255, 0, 0, 0.6)",      # 빨강 (Upper Spec Limit)
+        "LSL": "rgba(255, 0, 0, 0.6)",      # 빨강 (Lower Spec Limit)
+        "TGT": "rgba(0, 128, 0, 0.8)",      # 초록 (Target)
+        "UCL": "rgba(255, 165, 0, 0.5)",    # 주황 (Upper Control Limit)
+        "LCL": "rgba(255, 165, 0, 0.5)",    # 주황 (Lower Control Limit)
+    }
+    
+    line_styles = {
+        "USL": "dash",
+        "LSL": "dash",
+        "TGT": "solid",
+        "UCL": "dot",
+        "LCL": "dot",
+    }
+    
+    for line_name in spec_lines:
+        if line_name in spec_values and spec_values[line_name] is not None:
+            shapes.append({
+                "type": "line",
+                "xref": "paper",
+                "yref": "y",
+                "x0": 0,
+                "x1": 1,
+                "y0": spec_values[line_name],
+                "y1": spec_values[line_name],
+                "line": {
+                    "color": colors.get(line_name, "rgba(128, 128, 128, 0.5)"),
+                    "width": 2,
+                    "dash": line_styles.get(line_name, "dash")
+                },
+                "name": line_name
+            })
+    
+    return shapes
 
 # -----------------------------------------
 # Spec sanitizer (필수키 보강 & 교차검증)
@@ -177,11 +234,16 @@ def sanitize_spec(spec, meta):
     box.setdefault("opacity", 0.7)
     spec["box"] = box
 
-    # layout_patches (dict만 허용)
+    # layout_patches (dict만 허용) - 더 나은 여백과 가독성을 위한 기본값
     lp = spec.get("layout_patches")
     if not isinstance(lp, dict):
         lp = {}
-    lp.setdefault("xaxis.tickangle", 90)
+    lp.setdefault("margin.l", 80)
+    lp.setdefault("margin.r", 80)
+    lp.setdefault("margin.t", 100)
+    lp.setdefault("margin.b", 120)
+    lp.setdefault("xaxis.tickangle", -45)
+    lp.setdefault("autosize", True)
     spec["layout_patches"] = lp
 
     # hover
@@ -229,6 +291,13 @@ def generate_plotly_spec(user_prompt: str, fields_meta: dict = None):
             "box": {"showpoints": False, "opacity": 0.7},
             "filters": [],
             "spec_lines": ["USL", "LSL", "TGT", "UCL", "LCL"],
-            "layout_patches": {"xaxis.tickangle": 90, "margin.t": 20},
+            "layout_patches": {
+                "margin.l": 80,
+                "margin.r": 80,
+                "margin.t": 100,
+                "margin.b": 120,
+                "xaxis.tickangle": -45,
+                "autosize": True
+            },
             "hover": None
         }

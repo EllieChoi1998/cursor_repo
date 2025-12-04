@@ -372,20 +372,72 @@ def build_box_plot_prompt(
                 "title": {"text": "Parameter Distribution by Device"},
                 "yaxis": {"title": {"text": "Measurement"}},
                 "boxmode": "group",
+                "margin": {
+                    "l": 80,
+                    "r": 80,
+                    "t": 100,
+                    "b": 120,
+                    "pad": 10
+                },
+                "autosize": True,
+                "shapes": [
+                    {
+                        "type": "line",
+                        "xref": "paper",
+                        "yref": "y",
+                        "x0": 0,
+                        "x1": 1,
+                        "y0": "EXTERNAL_REF::spec_values::USL",
+                        "y1": "EXTERNAL_REF::spec_values::USL",
+                        "line": {"color": "rgba(255, 0, 0, 0.6)", "width": 2, "dash": "dash"},
+                        "name": "USL"
+                    },
+                    {
+                        "type": "line",
+                        "xref": "paper",
+                        "yref": "y",
+                        "x0": 0,
+                        "x1": 1,
+                        "y0": "EXTERNAL_REF::spec_values::LSL",
+                        "y1": "EXTERNAL_REF::spec_values::LSL",
+                        "line": {"color": "rgba(255, 0, 0, 0.6)", "width": 2, "dash": "dash"},
+                        "name": "LSL"
+                    },
+                    {
+                        "type": "line",
+                        "xref": "paper",
+                        "yref": "y",
+                        "x0": 0,
+                        "x1": 1,
+                        "y0": "EXTERNAL_REF::spec_values::TGT",
+                        "y1": "EXTERNAL_REF::spec_values::TGT",
+                        "line": {"color": "rgba(0, 128, 0, 0.8)", "width": 2, "dash": "solid"},
+                        "name": "TGT"
+                    }
+                ],
                 "annotations": [
                     {
                         "showarrow": False,
-                        "text": "Annotations reference wafer counts",
+                        "text": "Spec lines: USL (red dash), LSL (red dash), TGT (green solid)",
                         "xref": "paper",
                         "yref": "paper",
-                        "x": 1.02,
-                        "y": 1,
+                        "x": 0.5,
+                        "y": -0.15,
+                        "xanchor": "center",
+                        "font": {"size": 10, "color": "#666"}
                     }
                 ],
             },
-            "config": {"displaylogo": False},
+            "config": {"displaylogo": False, "responsive": True},
         },
-        "metadata": {"dataset_key": dataset_key},
+        "metadata": {
+            "dataset_key": dataset_key,
+            "spec_values": {
+                "USL": "EXTERNAL_REF::spec_key::USL",
+                "LSL": "EXTERNAL_REF::spec_key::LSL",
+                "TGT": "EXTERNAL_REF::spec_key::TGT"
+            }
+        },
     }
     return PromptContext(
         chart_type="box_plot",

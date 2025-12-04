@@ -413,13 +413,25 @@
                       <!-- 차트 데이터 (excel_chart인 경우) -->
                       <div v-if="result.type === 'excel_chart' && result.chartConfig" class="excel-chart">
                         <h5>📈 데이터 시각화</h5>
-                        <div class="chart-info">
+                        
+                        <!-- Plotly 그래프 렌더링 -->
+                        <div v-if="result.chartConfig.plotly_spec" class="excel-plotly-graph">
+                          <PlotlyGraph
+                            :graph-spec="result.chartConfig.plotly_spec"
+                            :title="result.title"
+                            :file-name="result.fileName"
+                            :success-message="''"
+                            :height="480"
+                          />
+                        </div>
+                        
+                        <!-- 차트 정보 -->
+                        <div v-else class="chart-info">
                           <p><strong>차트 타입:</strong> {{ result.chartConfig.chart_type }}</p>
                           <p v-if="result.chartConfig.x_column"><strong>X축:</strong> {{ result.chartConfig.x_column }}</p>
                           <p v-if="result.chartConfig.y_column"><strong>Y축:</strong> {{ result.chartConfig.y_column }}</p>
                           <p><strong>데이터 포인트:</strong> {{ result.chartConfig.data?.length || 0 }}개</p>
                         </div>
-                        <!-- 여기에 실제 차트 컴포넌트를 추가할 수 있습니다 -->
                       </div>
                       
                       <!-- 데이터 테이블 (excel_analysis인 경우) -->

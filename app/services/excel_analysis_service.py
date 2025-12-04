@@ -184,32 +184,37 @@ class ExcelAnalysisService:
         }
     
     async def _create_chart_analysis(self, df: pd.DataFrame, prompt: str, basic_info: Dict) -> Dict[str, Any]:
-        """차트 분석 수행"""
+        """차트 분석 수행 - Plotly 스펙 생성"""
         # 차트 생성을 위한 데이터 준비
         numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
         categorical_columns = df.select_dtypes(include=['object', 'category']).columns.tolist()
         
-        chart_config = {
-            'chart_type': 'bar',  # 기본값
-            'x_column': categorical_columns[0] if categorical_columns else None,
-            'y_column': numeric_columns[0] if numeric_columns else None,
-            'data': df.to_dict('records')
-        }
-        
         # 프롬프트에 따른 차트 타입 결정
         prompt_lower = prompt.lower()
-        if any(keyword in prompt_lower for keyword in ['선', 'line', '트렌드']):
-            chart_config['chart_type'] = 'line'
-        elif any(keyword in prompt_lower for keyword in ['산점도', 'scatter', '상관관계']):
-            chart_config['chart_type'] = 'scatter'
+        chart_type = 'bar'  # 기본값
+        
+        if any(keyword in prompt_lower for keyword in ['박스', 'box', '분포', 'distribution']):
+            chart_type = 'box'
+        elif any(keyword in prompt_lower for keyword in ['선', 'line', '트렌드', 'trend']):
+            chart_type = 'line'
+        elif any(keyword in prompt_lower for keyword in ['산점도', 'scatter', '상관관계', 'correlation']):
+            chart_type = 'scatter'
         elif any(keyword in prompt_lower for keyword in ['파이', 'pie', '비율']):
-            chart_config['chart_type'] = 'pie'
+            chart_type = 'pie'
+        
+        # Plotly figure 생성
+        plotly_spec = self._create_plotly_spec(
+            df=df,
+            chart_type=chart_type,
+            x_column=categorical_columns[0] if categorical_columns else None,
+            y_columns=numeric_columns[:5] if numeric_columns else []  # 최대 5개 컬럼
+        )
         
         summary = f"""
 차트 분석 결과:
-- 차트 타입: {chart_config['chart_type']}
-- X축: {chart_config['x_column'] or 'N/A'}
-- Y축: {chart_config['y_column'] or 'N/A'}
+- 차트 타입: {chart_type}
+- X축: {categorical_columns[0] if categorical_columns else 'Index'}
+- Y축: {', '.join(numeric_columns[:5]) if numeric_columns else 'N/A'}
 - 데이터 포인트: {len(df)}
 
 분석 요청: {prompt}
@@ -222,7 +227,142 @@ class ExcelAnalysisService:
                 'chart_data': df.to_dict('records')
             },
             'summary': summary,
-            'chart_config': chart_config
+            'chart_config': {
+                'chart_type': chart_type,
+                'plotly_spec': plotly_spec
+            }
+        }
+    
+    def _create_plotly_spec(self, df: pd.DataFrame, chart_type: str, x_column: str, y_columns: List[str]) -> Dict[str, Any]:
+        """Plotly 스펙 생성"""
+        data = []
+        
+        if chart_type == 'box':
+            # 박스플롯 생성
+            for y_col in y_columns:
+                if x_column:
+                    # 그룹별 박스플롯
+                    data.append({
+                        'type': 'box',
+                        'name': y_col,
+                        'x': df[x_column].tolist(),
+                        'y': df[y_col].tolist(),
+                        'boxmean': 'sd'
+                    })
+                else:
+                    # 단일 박스플롯
+                    data.append({
+                        'type': 'box',
+                        'name': y_col,
+                        'y': df[y_col].tolist(),
+                        'boxmean': 'sd'
+                    })
+            
+            # 규격선 추가 (컬럼 이름에 USL, LSL, TGT가 포함된 경우)
+            shapes = []
+            spec_columns = [col for col in df.columns if any(spec in col.upper() for spec in ['USL', 'LSL', 'TGT', 'UCL', 'LCL'])]
+            
+            for spec_col in spec_columns:
+                spec_value = df[spec_col].iloc[0] if len(df) > 0 else None
+                if spec_value is not None:
+                    color = "rgba(255, 0, 0, 0.6)" if 'USL' in spec_col.upper() or 'LSL' in spec_col.upper() else "rgba(0, 128, 0, 0.8)"
+                    dash_style = "dash" if 'USL' in spec_col.upper() or 'LSL' in spec_col.upper() else "solid"
+                    
+                    shapes.append({
+                        'type': 'line',
+                        'xref': 'paper',
+                        'yref': 'y',
+                        'x0': 0,
+                        'x1': 1,
+                        'y0': spec_value,
+                        'y1': spec_value,
+                        'line': {
+                            'color': color,
+                            'width': 2,
+                            'dash': dash_style
+                        }
+                    })
+            
+            layout = {
+                'title': {'text': '박스플롯 분석'},
+                'boxmode': 'group',
+                'yaxis': {'title': {'text': 'Value'}},
+                'margin': {'l': 80, 'r': 80, 't': 100, 'b': 120, 'pad': 10},
+                'autosize': True,
+                'shapes': shapes
+            }
+            
+            if x_column:
+                layout['xaxis'] = {'title': {'text': x_column}, 'tickangle': -45}
+            
+        elif chart_type == 'line':
+            # 라인 차트 생성
+            for y_col in y_columns:
+                data.append({
+                    'type': 'scatter',
+                    'mode': 'lines+markers',
+                    'name': y_col,
+                    'x': df[x_column].tolist() if x_column else list(range(len(df))),
+                    'y': df[y_col].tolist()
+                })
+            
+            layout = {
+                'title': {'text': '트렌드 차트'},
+                'xaxis': {'title': {'text': x_column or 'Index'}},
+                'yaxis': {'title': {'text': 'Value'}},
+                'margin': {'l': 80, 'r': 80, 't': 100, 'b': 120, 'pad': 10},
+                'autosize': True
+            }
+            
+        elif chart_type == 'scatter':
+            # 산점도 생성
+            if len(y_columns) >= 2:
+                data.append({
+                    'type': 'scatter',
+                    'mode': 'markers',
+                    'x': df[y_columns[0]].tolist(),
+                    'y': df[y_columns[1]].tolist(),
+                    'marker': {'size': 8, 'opacity': 0.7}
+                })
+                
+                layout = {
+                    'title': {'text': '산점도'},
+                    'xaxis': {'title': {'text': y_columns[0]}},
+                    'yaxis': {'title': {'text': y_columns[1]}},
+                    'margin': {'l': 80, 'r': 80, 't': 100, 'b': 120, 'pad': 10},
+                    'autosize': True
+                }
+            else:
+                # 데이터 부족 시 기본 bar 차트로
+                return self._create_plotly_spec(df, 'bar', x_column, y_columns)
+                
+        else:  # bar (기본)
+            # 막대 차트 생성
+            for y_col in y_columns:
+                data.append({
+                    'type': 'bar',
+                    'name': y_col,
+                    'x': df[x_column].tolist() if x_column else list(range(len(df))),
+                    'y': df[y_col].tolist()
+                })
+            
+            layout = {
+                'title': {'text': '막대 차트'},
+                'barmode': 'group',
+                'xaxis': {'title': {'text': x_column or 'Index'}, 'tickangle': -45},
+                'yaxis': {'title': {'text': 'Value'}},
+                'margin': {'l': 80, 'r': 80, 't': 100, 'b': 120, 'pad': 10},
+                'autosize': True
+            }
+        
+        return {
+            'data': data,
+            'layout': layout,
+            'config': {
+                'displaylogo': False,
+                'responsive': True,
+                'scrollZoom': True
+            }
         }
     
     async def _create_summary_analysis(self, df: pd.DataFrame, prompt: str, basic_info: Dict) -> Dict[str, Any]:
