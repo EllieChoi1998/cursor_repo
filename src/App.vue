@@ -766,14 +766,16 @@
             <RAGAnswerList :answer="fullscreenResult.answer" />
           </div>
         
-        <div v-else-if="isPlotlyGraphType(fullscreenResult?.type)" class="fullscreen-chart">
-          <PlotlyGraph
-            :graph-spec="fullscreenResult.graphSpec"
-            :title="fullscreenResult.title"
-            :file-name="fullscreenResult.fileName"
-            :success-message="fullscreenResult.successMessage"
-            :height="800"
-          />
+        <div v-else-if="isPlotlyGraphType(fullscreenResult?.type)" class="fullscreen-chart fullscreen-plotly-vertical">
+          <div class="fullscreen-plotly-graph">
+            <PlotlyGraph
+              :graph-spec="fullscreenResult.graphSpec"
+              :title="fullscreenResult.title"
+              :file-name="fullscreenResult.fileName"
+              :success-message="''"
+              :height="800"
+            />
+          </div>
           <div
             v-if="fullscreenResult?.realDataSets && fullscreenResult.realDataSets.length"
             class="plotly-real-data fullscreen"
