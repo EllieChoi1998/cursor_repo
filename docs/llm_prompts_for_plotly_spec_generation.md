@@ -606,6 +606,16 @@ Generate a JSON object with the following structure:
     }
   },
   "transforms": [],
+  "reference_lines": [
+    {
+      "type": "mean | average | horizontal | regression | linear",
+      "name": "Line Name (optional)",
+      "value": "number (for horizontal line)",
+      "color": "red | blue | green | ...",
+      "width": 2,
+      "dash": "solid | dash | dot | dashdot"
+    }
+  ],
   "layout": {
     "title": "Chart Title in Korean",
     "height": 500,
@@ -643,41 +653,62 @@ Generate a JSON object with the following structure:
    - "lines+markers": Add connecting lines (if temporal or ordered data)
    - "markers+text": Add labels to points (if few points)
 
-3. **Correlation Analysis**
+3. **Reference Lines (NEW!)**
+   - Scatter plots support reference lines (mean, regression, target, etc.)
+   - Use `reference_lines` array to add lines
+   - **Types:**
+     - `"mean"` or `"average"`: Horizontal line at mean of y values
+     - `"horizontal"`: Fixed horizontal line (requires `value`)
+     - `"regression"` or `"linear"`: Linear regression line
+   - **Examples:**
+     ```json
+     "reference_lines": [
+       { "type": "mean", "name": "평균", "color": "red", "dash": "dash" },
+       { "type": "horizontal", "value": 80, "name": "목표", "color": "green" },
+       { "type": "regression", "name": "회귀선", "color": "blue", "dash": "solid" }
+     ]
+     ```
+   - **When to use:**
+     - User mentions: "평균선", "평균", "mean", "average" → type: "mean"
+     - User mentions: "회귀선", "추세선", "regression", "trend" → type: "regression"
+     - User mentions: "목표", "기준", "target", "threshold" + value → type: "horizontal"
+
+4. **Correlation Analysis**
    - Scatter plot is ideal for checking correlation
    - Keywords: "상관관계", "관계", "영향", "correlation"
-   - Consider adding trend line in shapes (future enhancement)
+   - If correlation mentioned, consider adding regression line
 
-4. **Grouping by Series**
+5. **Grouping by Series**
    - Use series field to color-code by category
    - Example: "장비별로 색깔 구분해서" → series: "DEVICE"
    - Creates separate trace for each unique series value
 
-5. **Axis Configuration**
+6. **Axis Configuration**
    - Don't use tickangle for scatter plots (numbers don't need rotation)
    - Both axes should show zeroline for reference
    - Grid lines help read exact values
 
-6. **Layout Customization**
+7. **Layout Customization**
    - Keep margins balanced (scatter plots are usually square-ish)
    - Consider equal aspect ratio if variables have similar scales
-   - Add shapes for threshold lines if mentioned
    - **DO NOT specify width** - charts auto-fit to container
 
-7. **Common Use Cases**
+8. **Common Use Cases**
    - "산점도": Scatter plot
-   - "상관관계": Scatter plot with possible trend line
+   - "상관관계": Scatter plot with regression line
+   - "평균선 추가": Add mean reference line
+   - "회귀선 그려줘": Add regression line
    - "분포도": Could be scatter or box plot (context dependent)
    - "관계 분석": Scatter plot
 
-8. **Constraints**
+9. **Constraints**
    - ⚠️ Do NOT include actual data values in the spec
    - ⚠️ Only reference column names that exist in metadata
    - ⚠️ Return only valid JSON, no extra text
 
 # Example Output
 
-For request: "온도와 수율의 상관관계를 산점도로 보여줘. 장비별로 색깔 구분해줘"
+For request: "온도와 수율의 상관관계를 산점도로 보여줘. 장비별로 색깔 구분하고 회귀선도 추가해줘"
 
 ```json
 {
@@ -690,6 +721,15 @@ For request: "온도와 수율의 상관관계를 산점도로 보여줘. 장비
     "series": { "field": "DEVICE" }
   },
   "transforms": [],
+  "reference_lines": [
+    {
+      "type": "regression",
+      "name": "회귀선",
+      "color": "blue",
+      "width": 2,
+      "dash": "solid"
+    }
+  ],
   "layout": {
     "title": "온도와 수율의 상관관계",
     "height": 500,

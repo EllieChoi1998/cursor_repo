@@ -1398,6 +1398,91 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           }
         })
 
+        // Add reference lines for scatter plots (mean, regression, etc.)
+        if (chartType === 'scatter' && spec.reference_lines) {
+          spec.reference_lines.forEach((refLine) => {
+            if (refLine.type === 'mean' || refLine.type === 'average') {
+              // Calculate mean of y values
+              const allYValues = []
+              traces.forEach(trace => allYValues.push(...trace.y))
+              const mean = allYValues.reduce((sum, val) => sum + val, 0) / allYValues.length
+              
+              // Get x range
+              const allXValues = []
+              traces.forEach(trace => allXValues.push(...trace.x))
+              const xMin = Math.min(...allXValues)
+              const xMax = Math.max(...allXValues)
+              
+              traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                name: refLine.name || 'Mean',
+                x: [xMin, xMax],
+                y: [mean, mean],
+                line: {
+                  color: refLine.color || 'red',
+                  width: refLine.width || 2,
+                  dash: refLine.dash || 'dash'
+                },
+                showlegend: true
+              })
+            } else if (refLine.type === 'horizontal') {
+              // Fixed horizontal line at specified y value
+              const allXValues = []
+              traces.forEach(trace => allXValues.push(...trace.x))
+              const xMin = Math.min(...allXValues)
+              const xMax = Math.max(...allXValues)
+              
+              traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                name: refLine.name || 'Reference',
+                x: [xMin, xMax],
+                y: [refLine.value, refLine.value],
+                line: {
+                  color: refLine.color || 'red',
+                  width: refLine.width || 2,
+                  dash: refLine.dash || 'dash'
+                },
+                showlegend: true
+              })
+            } else if (refLine.type === 'regression' || refLine.type === 'linear') {
+              // Simple linear regression
+              const allPoints = []
+              traces.forEach(trace => {
+                trace.x.forEach((x, i) => allPoints.push({ x: x, y: trace.y[i] }))
+              })
+              
+              // Calculate linear regression
+              const n = allPoints.length
+              const sumX = allPoints.reduce((sum, p) => sum + p.x, 0)
+              const sumY = allPoints.reduce((sum, p) => sum + p.y, 0)
+              const sumXY = allPoints.reduce((sum, p) => sum + p.x * p.y, 0)
+              const sumX2 = allPoints.reduce((sum, p) => sum + p.x * p.x, 0)
+              
+              const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
+              const intercept = (sumY - slope * sumX) / n
+              
+              const xMin = Math.min(...allPoints.map(p => p.x))
+              const xMax = Math.max(...allPoints.map(p => p.x))
+              
+              traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                name: refLine.name || 'Regression',
+                x: [xMin, xMax],
+                y: [slope * xMin + intercept, slope * xMax + intercept],
+                line: {
+                  color: refLine.color || 'blue',
+                  width: refLine.width || 2,
+                  dash: refLine.dash || 'solid'
+                },
+                showlegend: true
+              })
+            }
+          })
+        }
+
         // Apply default layout customizations
         const defaultLayout = {
           height: 500,
