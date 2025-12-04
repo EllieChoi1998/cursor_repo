@@ -226,40 +226,14 @@ export default defineComponent({
   font-size: 0.95rem;
 }
 
-/* Scrollable wrapper for the chart - VERTICAL SCROLL ONLY */
+/* Wrapper for the chart */
 .plotly-scroll-wrapper {
   width: 100%;
   max-width: 100%;
-  max-height: 600px;
-  overflow-x: hidden;      /* 가로 스크롤 비활성화 */
-  overflow-y: auto;        /* 세로 스크롤만 활성화 */
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   background: #fff;
-  /* Smooth scrolling */
-  scroll-behavior: smooth;
-  /* Custom scrollbar styling */
-  scrollbar-width: thin;
-  scrollbar-color: #999 #f1f1f1;
-}
-
-/* Webkit scrollbar styling (Chrome, Safari, Edge) */
-.plotly-scroll-wrapper::-webkit-scrollbar {
-  width: 10px;
-}
-
-.plotly-scroll-wrapper::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.plotly-scroll-wrapper::-webkit-scrollbar-thumb {
-  background: #999;
-  border-radius: 4px;
-}
-
-.plotly-scroll-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #666;
+  overflow: visible;  /* Allow content to be visible */
 }
 
 .plotly-container {

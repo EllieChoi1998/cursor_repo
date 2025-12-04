@@ -1349,7 +1349,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // Apply default layout customizations
         const defaultLayout = {
           height: 500,
-          margin: { l: 80, r: 80, t: 100, b: 100, pad: 4 },
+          margin: { l: 80, r: 80, t: 100, b: 150, pad: 4 },  // b: 150 for long x-axis labels
           xaxis: {
             tickangle: -45,
             tickfont: { size: 10, color: '#666' },
@@ -1401,7 +1401,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // Apply default layout customizations
         const defaultLayout = {
           height: 500,
-          margin: { l: 80, r: 80, t: 100, b: 120, pad: 4 },
+          margin: { l: 80, r: 80, t: 100, b: 150, pad: 4 },  // b: 150 for long x-axis labels
           xaxis: {
             tickangle: -45,
             tickfont: { size: 10, color: '#666' },
@@ -1458,7 +1458,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // Apply default layout customizations
         const defaultLayout = {
           height: 500,
-          margin: { l: 80, r: 80, t: 100, b: 100, pad: 4 },
+          margin: { l: 80, r: 80, t: 100, b: 150, pad: 4 },  // b: 150 for long x-axis labels
           xaxis: {
             tickangle: -45,
             tickfont: { size: 10, color: '#666' },

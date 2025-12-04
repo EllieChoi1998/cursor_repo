@@ -108,7 +108,7 @@ Generate a JSON object with the following structure:
     "title": "Chart Title in Korean",
     "height": 500,
     // NOTE: Do NOT specify width - charts auto-fit to container for best trend visibility
-    "margin": { "l": 80, "r": 80, "t": 100, "b": 100, "pad": 4 },
+    "margin": { "l": 80, "r": 80, "t": 100, "b": 150, "pad": 4 },  // b: 150 for long x-axis labels
     "xaxis": {
       "title": "X Axis Label",
       "tickangle": -45,
@@ -152,7 +152,10 @@ Generate a JSON object with the following structure:
    - Always include the default layout options shown above
    - Adjust title and axis labels based on data context
    - Use Korean for titles and labels
-   - Consider using `tickangle: -90` if x-axis labels are very long
+   - X-axis label handling:
+     - Default: `tickangle: -45` with `margin.b: 150`
+     - If labels are very long: use `tickangle: -90` with `margin.b: 200-250`
+     - If labels are short (<5 chars) and few (<10): can use `tickangle: 0`
    - **DO NOT specify width** - charts automatically fit container width for optimal trend visibility
 
 5. **Bar Mode**
@@ -181,7 +184,7 @@ For request: "장비별 불량 개수를 바차트로 보여줘"
   "layout": {
     "title": "장비별 불량 개수",
     "height": 500,
-    "margin": { "l": 80, "r": 80, "t": 100, "b": 100, "pad": 4 },
+    "margin": { "l": 80, "r": 80, "t": 100, "b": 150, "pad": 4 },
     "xaxis": {
       "title": "장비",
       "tickangle": -45,
@@ -271,7 +274,7 @@ Generate a JSON object with the following structure:
     "title": "Chart Title in Korean",
     "height": 500,
     // NOTE: Do NOT specify width - charts auto-fit to container for best trend visibility
-    "margin": { "l": 80, "r": 80, "t": 100, "b": 120, "pad": 4 },
+    "margin": { "l": 80, "r": 80, "t": 100, "b": 150, "pad": 4 },  // b: 150 for long x-axis labels
     "xaxis": {
       "title": "X Axis Label",
       "tickangle": -45,
@@ -446,7 +449,7 @@ Generate a JSON object with the following structure:
     "title": "Chart Title in Korean",
     "height": 500,
     // NOTE: Do NOT specify width - charts auto-fit to container
-    "margin": { "l": 80, "r": 80, "t": 100, "b": 100, "pad": 4 },
+    "margin": { "l": 80, "r": 80, "t": 100, "b": 150, "pad": 4 },  // b: 150 for long x-axis labels
     "xaxis": {
       "title": "X Axis Label",
       "tickangle": -45,
@@ -523,7 +526,7 @@ For request: "장비별 WIDTH 분포를 박스플롯으로 보여줘. 이상치�
   "layout": {
     "title": "장비별 WIDTH 분포",
     "height": 500,
-    "margin": { "l": 80, "r": 80, "t": 100, "b": 100, "pad": 4 },
+    "margin": { "l": 80, "r": 80, "t": 100, "b": 150, "pad": 4 },
     "xaxis": {
       "title": "장비",
       "tickangle": -45,
@@ -607,7 +610,7 @@ Generate a JSON object with the following structure:
     "title": "Chart Title in Korean",
     "height": 500,
     // NOTE: Do NOT specify width - charts auto-fit to container
-    "margin": { "l": 80, "r": 80, "t": 100, "b": 100, "pad": 4 },
+    "margin": { "l": 80, "r": 80, "t": 100, "b": 150, "pad": 4 },  // b: 150 for consistency
     "xaxis": {
       "title": "X Axis Label",
       "tickfont": { "size": 10, "color": "#666" },
@@ -690,7 +693,7 @@ For request: "온도와 수율의 상관관계를 산점도로 보여줘. 장비
   "layout": {
     "title": "온도와 수율의 상관관계",
     "height": 500,
-    "margin": { "l": 80, "r": 80, "t": 100, "b": 100, "pad": 4 },
+    "margin": { "l": 80, "r": 80, "t": 100, "b": 150, "pad": 4 },
     "xaxis": {
       "title": "온도 (°C)",
       "tickfont": { "size": 10, "color": "#666" },

@@ -103,10 +103,10 @@ The `layout` object supports extensive customization for chart appearance. Below
 - Charts adapt to screen width for optimal trend visibility
 - Do NOT specify width unless you have a specific requirement
 
-**Note on Height:**
-- Charts taller than 600px will show vertical scroll
-- Default height: 500px (no scroll needed)
-- Increase height if you need more detail visibility
+**Note on Height & Margins:**
+- Default height: 500px
+- Bottom margin: 150px (increased to accommodate long x-axis labels)
+- Adjust `margin.b` if labels are very long (200-250px recommended for -90° rotation)
 
 #### 📊 X-Axis Customization (3)
 
@@ -304,7 +304,7 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
       "layout": {
         "title": "WIDTH 분포",
         "height": 500,
-        "margin": { "l": 80, "r": 80, "t": 100, "b": 100 },
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
         "xaxis": {
           "title": "EQ",
           "tickangle": -45,
@@ -359,7 +359,7 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
       "layout": {
         "title": "CPK Trend",
         "height": 500,
-        "margin": { "l": 80, "r": 80, "t": 100, "b": 120 },
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
         "xaxis": {
           "title": "Date",
           "tickangle": -45,
@@ -417,7 +417,7 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
       "layout": {
         "title": "Defect Count by OPER",
         "height": 500,
-        "margin": { "l": 80, "r": 80, "t": 100, "b": 100 },
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
         "xaxis": {
           "title": "OPER",
           "tickangle": -45,
