@@ -72,7 +72,7 @@ REQUIRED FIELDS (always include every key below)
     - "margin.r": 80 (right margin for legend/labels)
     - "margin.t": 100 (top margin for title)
     - "margin.b": 120 (bottom margin for x-axis labels)
-    - "xaxis.tickangle": -45 (angle for x-axis labels, default -45 for better readability)
+    - "xaxis.tickangle": 0 (angle for x-axis labels, default 0 for horizontal display)
     - "autosize": true (enable responsive sizing)
 - hover: null OR object (if unnecessary, set null)
 
@@ -97,7 +97,7 @@ DEFAULTS WHEN UNSPECIFIED
 - box = {{ "showpoints": false, "opacity": 0.7 }}
 - filters = []
 - spec_lines = ["USL", "LSL", "TGT", "UCL", "LCL"]
-- layout_patches = {{ "margin.l": 80, "margin.r": 80, "margin.t": 100, "margin.b": 120, "xaxis.tickangle": -45, "autosize": true }}
+- layout_patches = {{ "margin.l": 80, "margin.r": 80, "margin.t": 100, "margin.b": 120, "xaxis.tickangle": 0, "autosize": true }}
 - hover = null
 
 OUTPUT FORMAT
@@ -242,7 +242,7 @@ def sanitize_spec(spec, meta):
     lp.setdefault("margin.r", 80)
     lp.setdefault("margin.t", 100)
     lp.setdefault("margin.b", 120)
-    lp.setdefault("xaxis.tickangle", -45)
+    lp.setdefault("xaxis.tickangle", 0)
     lp.setdefault("autosize", True)
     spec["layout_patches"] = lp
 
@@ -296,7 +296,7 @@ def generate_plotly_spec(user_prompt: str, fields_meta: dict = None):
                 "margin.r": 80,
                 "margin.t": 100,
                 "margin.b": 120,
-                "xaxis.tickangle": -45,
+                "xaxis.tickangle": 0,
                 "autosize": True
             },
             "hover": None

@@ -22,7 +22,7 @@ All Plotly charts now include enhanced layout settings for better visibility and
   - Top margin: 100px (for title)
   - Bottom margin: 120px (for x-axis labels)
   - Padding: 10px
-- **X-axis Labels**: Default angle set to -45° for better readability
+- **X-axis Labels**: Default angle set to 0° (horizontal) for clear readability
 - **Responsive Sizing**: `autosize: true` enabled for all charts
 - **Spec Lines Support**: Box plots can include specification lines (USL, LSL, TGT, UCL, LCL) rendered as Plotly shapes
 
@@ -147,7 +147,7 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
       "layout": {
         "title": "WIDTH 분포",
         "yaxis": {"title": "Value"},
-        "xaxis": {"title": "EQ", "tickangle": -45},
+        "xaxis": {"title": "EQ", "tickangle": 0},
         "margin": {
           "l": 80,
           "r": 80,
@@ -282,7 +282,7 @@ If your Excel data includes columns named `USL`, `LSL`, `TGT`, `UCL`, or `LCL`, 
       },
       "layout": {
         "title": "Defect Count by OPER",
-        "xaxis": {"title": "OPER", "tickangle": -45},
+        "xaxis": {"title": "OPER", "tickangle": 0},
         "yaxis": {"title": "Count"},
         "margin": {
           "l": 80,
@@ -336,7 +336,7 @@ For Excel analysis results that use the new `excel_chart` type with embedded Plo
           "title": {"text": "장비별 측정값 분포"},
           "boxmode": "group",
           "yaxis": {"title": {"text": "Measurement"}},
-          "xaxis": {"title": {"text": "Device"}, "tickangle": -45},
+          "xaxis": {"title": {"text": "Device"}, "tickangle": 0},
           "margin": {
             "l": 80,
             "r": 80,
@@ -421,13 +421,15 @@ All charts should include proper margin settings to ensure content is not cut of
 
 ### 6.2 X-Axis Label Rotation
 
-For better readability, especially with long labels, use:
+By default, x-axis labels are displayed horizontally (0°):
 
 ```json
 "xaxis": {
-  "tickangle": -45  // Angle labels at -45 degrees
+  "tickangle": 0  // Horizontal labels (default)
 }
 ```
+
+You can adjust this angle if needed for specific cases with long labels.
 
 ### 6.3 Responsive Sizing
 

@@ -293,7 +293,7 @@ class ExcelAnalysisService:
             }
             
             if x_column:
-                layout['xaxis'] = {'title': {'text': x_column}, 'tickangle': -45}
+                layout['xaxis'] = {'title': {'text': x_column}, 'tickangle': 0}
             
         elif chart_type == 'line':
             # 라인 차트 생성
@@ -349,7 +349,7 @@ class ExcelAnalysisService:
             layout = {
                 'title': {'text': '막대 차트'},
                 'barmode': 'group',
-                'xaxis': {'title': {'text': x_column or 'Index'}, 'tickangle': -45},
+                'xaxis': {'title': {'text': x_column or 'Index'}, 'tickangle': 0},
                 'yaxis': {'title': {'text': 'Value'}},
                 'margin': {'l': 80, 'r': 80, 't': 100, 'b': 120, 'pad': 10},
                 'autosize': True
