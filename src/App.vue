@@ -764,6 +764,35 @@
           <div v-else-if="fullscreenResult?.type === 'rag_search'" class="fullscreen-chart">
             <RAGAnswerList :answer="fullscreenResult.answer" />
           </div>
+          
+          <!-- Excel Analysis Results -->
+          <div v-else-if="fullscreenResult?.type === 'excel_analysis' || fullscreenResult?.type === 'excel_chart' || fullscreenResult?.type === 'excel_summary'" class="fullscreen-chart">
+            <div class="excel-analysis-result">
+              <div v-if="fullscreenResult.summary" class="summary-section">
+                <h5>📋 분석 요약</h5>
+                <div class="summary-content">{{ fullscreenResult.summary }}</div>
+              </div>
+              
+              <!-- 차트 정보 -->
+              <div v-if="fullscreenResult.chartConfig" class="excel-chart">
+                <h5>📈 데이터 시각화</h5>
+                <div class="chart-info">
+                  <p><strong>차트 타입:</strong> {{ fullscreenResult.chartConfig.chart_type }}</p>
+                  <p v-if="fullscreenResult.chartConfig.x_column"><strong>X축:</strong> {{ fullscreenResult.chartConfig.x_column }}</p>
+                  <p v-if="fullscreenResult.chartConfig.y_column"><strong>Y축:</strong> {{ fullscreenResult.chartConfig.y_column }}</p>
+                </div>
+              </div>
+              
+              <!-- 데이터 테이블 -->
+              <div v-if="fullscreenResult.realData && fullscreenResult.realData.length" class="excel-data-table">
+                <h5>📊 데이터</h5>
+                <DynamicTable 
+                  :data="fullscreenResult.realData"
+                  :title="'Data'"
+                />
+              </div>
+            </div>
+          </div>
         
         <div v-else-if="isPlotlyGraphType(fullscreenResult?.type)" class="fullscreen-chart fullscreen-plotly-vertical">
           <div class="fullscreen-plotly-graph">
