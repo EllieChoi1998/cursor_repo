@@ -140,7 +140,8 @@ export default defineComponent({
           }
         }
 
-        if (props.height) {
+        // Only apply props.height if layout.height is not already defined
+        if (props.height && !layout.height) {
           layout.height = props.height
         }
 

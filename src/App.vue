@@ -1106,6 +1106,28 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
+      // Deep merge helper: target values take precedence over source
+      const mergeDeep = (source, target) => {
+        if (!target || typeof target !== 'object' || Array.isArray(target)) {
+          return target !== undefined ? target : source
+        }
+        if (!source || typeof source !== 'object' || Array.isArray(source)) {
+          return target
+        }
+        
+        const result = { ...source }
+        for (const key in target) {
+          if (target.hasOwnProperty(key)) {
+            if (target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+              result[key] = mergeDeep(result[key], target[key])
+            } else {
+              result[key] = target[key]
+            }
+          }
+        }
+        return result
+      }
+
       const stripCodeFences = (value) => {
         if (typeof value !== 'string') return value
         const trimmed = value.trim()
@@ -1324,9 +1346,33 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           return trace
         })
 
+        // Apply default layout customizations
+        const defaultLayout = {
+          height: 500,
+          margin: { l: 80, r: 80, t: 100, b: 100, pad: 4 },
+          xaxis: {
+            tickangle: -45,
+            tickfont: { size: 10, color: '#666' },
+            showgrid: true,
+            gridcolor: '#e5e5e5',
+            gridwidth: 1
+          },
+          yaxis: {
+            showgrid: true,
+            gridcolor: '#d3d3d3',
+            gridwidth: 1,
+            zeroline: true,
+            zerolinecolor: '#999',
+            zerolinewidth: 2
+          }
+        }
+
+        // Deep merge: spec.layout takes precedence
+        const mergedLayout = mergeDeep(defaultLayout, spec.layout || {})
+
         return {
           data,
-          layout: { ...(spec.layout || {}) },
+          layout: mergedLayout,
           config: { ...(spec.config || {}) }
         }
       }
@@ -1352,9 +1398,34 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           }
         })
 
+        // Apply default layout customizations
+        const defaultLayout = {
+          height: 500,
+          margin: { l: 80, r: 80, t: 100, b: 120, pad: 4 },
+          xaxis: {
+            tickangle: -45,
+            tickfont: { size: 10, color: '#666' },
+            showgrid: true,
+            gridcolor: '#e5e5e5',
+            gridwidth: 1
+          },
+          yaxis: {
+            showgrid: true,
+            gridcolor: '#d3d3d3',
+            gridwidth: 1,
+            griddash: 'dot',
+            zeroline: true,
+            zerolinecolor: '#999',
+            zerolinewidth: 2
+          }
+        }
+
+        // Deep merge: spec.layout takes precedence
+        const mergedLayout = mergeDeep(defaultLayout, spec.layout || {})
+
         return {
           data: traces,
-          layout: { ...(spec.layout || {}) },
+          layout: mergedLayout,
           config: { ...(spec.config || {}) }
         }
       }
@@ -1384,9 +1455,33 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           boxpoints: spec.boxpoints || 'outliers'
         }))
 
+        // Apply default layout customizations
+        const defaultLayout = {
+          height: 500,
+          margin: { l: 80, r: 80, t: 100, b: 100, pad: 4 },
+          xaxis: {
+            tickangle: -45,
+            tickfont: { size: 10, color: '#666' },
+            showgrid: true,
+            gridcolor: '#e5e5e5',
+            gridwidth: 1
+          },
+          yaxis: {
+            showgrid: true,
+            gridcolor: '#d3d3d3',
+            gridwidth: 1,
+            zeroline: true,
+            zerolinecolor: '#999',
+            zerolinewidth: 2
+          }
+        }
+
+        // Deep merge: spec.layout takes precedence
+        const mergedLayout = mergeDeep(defaultLayout, spec.layout || {})
+
         return {
           data,
-          layout: { ...(spec.layout || {}) },
+          layout: mergedLayout,
           config: { ...(spec.config || {}) }
         }
       }
