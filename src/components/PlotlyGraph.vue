@@ -9,7 +9,11 @@
     <div v-if="errorMessage" class="plotly-error-message">
       ⚠️ {{ errorMessage }}
     </div>
-    <div ref="chartContainer" class="plotly-container"></div>
+    
+    <!-- Scrollable container wrapper -->
+    <div class="plotly-scroll-wrapper">
+      <div ref="chartContainer" class="plotly-container"></div>
+    </div>
   </div>
 </template>
 
@@ -145,9 +149,10 @@ export default defineComponent({
           layout.height = props.height
         }
 
+        // Disable responsive mode to enable scrolling for wide charts
         const config = {
           displaylogo: false,
-          responsive: true,
+          responsive: false,
           scrollZoom: true,
           ...parsedSpec.value.config
         }
@@ -222,11 +227,45 @@ export default defineComponent({
   font-size: 0.95rem;
 }
 
-.plotly-container {
+/* Scrollable wrapper for the chart */
+.plotly-scroll-wrapper {
   width: 100%;
-  min-height: 360px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
+  background: #fff;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+  /* Custom scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: #999 #f1f1f1;
+}
+
+/* Webkit scrollbar styling (Chrome, Safari, Edge) */
+.plotly-scroll-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.plotly-scroll-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.plotly-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: #999;
+  border-radius: 4px;
+}
+
+.plotly-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+.plotly-container {
+  min-width: 100%;
+  min-height: 360px;
   background: #fff;
 }
 </style>

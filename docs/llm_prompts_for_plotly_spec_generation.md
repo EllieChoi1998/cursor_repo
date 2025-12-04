@@ -152,6 +152,8 @@ Generate a JSON object with the following structure:
    - Adjust title and axis labels based on data context
    - Use Korean for titles and labels
    - Consider using `tickangle: -90` if x-axis labels are very long
+   - **Width is auto-calculated** based on data points - DO NOT specify unless explicitly requested
+     - Auto-calculation ensures optimal spacing and enables horizontal scroll when needed
 
 5. **Bar Mode**
    - Use "group" for side-by-side comparison
@@ -268,6 +270,7 @@ Generate a JSON object with the following structure:
   "layout": {
     "title": "Chart Title in Korean",
     "height": 500,
+    // NOTE: Do NOT specify width - it's auto-calculated based on number of data points
     "margin": { "l": 80, "r": 80, "t": 100, "b": 120, "pad": 4 },
     "xaxis": {
       "title": "X Axis Label",
@@ -485,6 +488,7 @@ Generate a JSON object with the following structure:
    - Box plots benefit from grid lines for reading quartiles
    - Consider adding shapes for specification limits (USL/LSL)
    - Adjust x-axis tickangle if many categories
+   - **Width is auto-calculated** based on number of boxes - DO NOT specify unless explicitly requested
 
 5. **Filters**
    - Add filters to focus on specific subsets
@@ -653,6 +657,7 @@ Generate a JSON object with the following structure:
    - Keep margins balanced (scatter plots are usually square-ish)
    - Consider equal aspect ratio if variables have similar scales
    - Add shapes for threshold lines if mentioned
+   - Scatter plots typically don't need width adjustment (default 800px works well)
 
 7. **Common Use Cases**
    - "산점도": Scatter plot

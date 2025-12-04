@@ -85,9 +85,9 @@ The `layout` object supports extensive customization for chart appearance. Below
 
 ```json
 "layout": {
-  "height": 600,           // Chart height in pixels (default: 480)
-  "width": 1000,           // Chart width in pixels (auto by default)
-  "autosize": true,        // Auto-resize to container
+  "height": 600,           // Chart height in pixels (default: 500)
+  "width": 1000,           // Chart width in pixels (default: auto-calculated based on data)
+  "autosize": false,       // Fixed size to enable scrolling (default: false)
   "margin": {
     "l": 80,               // Left margin in pixels
     "r": 80,               // Right margin in pixels  
@@ -97,6 +97,14 @@ The `layout` object supports extensive customization for chart appearance. Below
   }
 }
 ```
+
+**Note on Width:**
+- If not specified, width is automatically calculated based on number of data points
+  - Bar Graph: `max(800, xCount × 60)` pixels
+  - Line Graph: `max(800, xCount × 40)` pixels
+  - Box Plot: `max(800, boxCount × 80)` pixels
+- Charts wider than viewport will be scrollable (horizontal scroll enabled)
+- Specify width explicitly to override auto-calculation
 
 #### 📊 X-Axis Customization (3)
 
