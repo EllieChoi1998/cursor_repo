@@ -653,40 +653,85 @@ Generate a JSON object with the following structure:
    - "lines+markers": Add connecting lines (if temporal or ordered data)
    - "markers+text": Add labels to points (if few points)
 
-3. **Reference Lines (IMPORTANT!)**
-   - ⭐ **Scatter plots AUTOMATICALLY include regression line by default**
-   - You don't need to add regression line unless user wants different options
-   - If user wants ONLY scatter points without regression, use `reference_lines: []`
-   - **Additional lines:**
-     - Use `reference_lines` array to add MORE lines (in addition to default regression)
-   - **Types:**
-     - `"mean"` or `"average"`: Horizontal line at mean of y values
-     - `"horizontal"`: Fixed horizontal line (requires `value`)
-     - `"regression"` or `"linear"`: Linear regression line (already default)
-   - **Examples:**
-     ```json
-     // Default - regression line added automatically
-     "reference_lines": null  // or omit this field
-     
-     // Add mean line (in addition to default regression)
-     "reference_lines": [
-       { "type": "mean", "name": "평균", "color": "red", "dash": "dash" }
-     ]
-     
-     // Multiple additional lines
-     "reference_lines": [
-       { "type": "mean", "name": "평균", "color": "red", "dash": "dash" },
-       { "type": "horizontal", "value": 80, "name": "목표", "color": "green" }
-     ]
-     
-     // NO regression line (only scatter points)
-     "reference_lines": []
-     ```
-   - **When to use:**
-     - Default: Do nothing (regression line auto-added)
-     - User mentions: "평균선", "평균", "mean", "average" → ADD type: "mean"
-     - User mentions: "목표", "기준", "target", "threshold" + value → ADD type: "horizontal"
-     - User mentions: "회귀선 없이", "without regression" → SET reference_lines: []
+3. **⭐ Reference Lines (CRITICAL - DEFAULT BEHAVIOR!)**
+   
+   **기본 동작: 모든 산점도에 회귀선이 자동으로 추가됩니다!**
+   
+   - `reference_lines` 필드를 생략하거나 `null`로 설정하면 → 회귀선 자동 추가
+   - 프론트엔드(App.vue)가 자동으로 기본 회귀선을 추가합니다
+   - LLM은 사용자가 명시적으로 요청하지 않는 한 `reference_lines`를 생략하세요
+   
+   **사용자 요청에 따른 처리:**
+   
+   | 사용자 요청 | reference_lines 값 | 결과 |
+   |-----------|-------------------|------|
+   | 산점도만 요청 (기본) | 생략 또는 `null` | 산점도 + 회귀선 (자동) |
+   | "평균선도 추가해줘" | `[{"type": "mean", ...}]` | 산점도 + 회귀선 + 평균선 |
+   | "목표값 80도 표시해줘" | `[{"type": "horizontal", "value": 80, ...}]` | 산점도 + 회귀선 + 목표선 |
+   | "회귀선 없이" | `[]` (빈 배열) | 산점도만 (회귀선 없음) |
+   | "평균선만" | `[{"type": "mean", ...}]` | 산점도 + 회귀선 + 평균선 |
+   
+   **Available Line Types:**
+   - `"regression"`: Linear regression line (자동 추가, 명시 불필요)
+   - `"mean"` or `"average"`: Horizontal line at mean of y-values
+   - `"horizontal"`: Fixed horizontal line (requires `value` parameter)
+   
+   **Styling Options:**
+   ```json
+   {
+     "type": "mean | regression | horizontal",
+     "name": "선 이름 (범례에 표시)",
+     "value": 80,  // horizontal 타입만 필수
+     "color": "red | blue | green | orange | purple | ...",
+     "width": 2,   // 선 두께 (1-4 권장)
+     "dash": "solid | dash | dot | dashdot"
+   }
+   ```
+   
+   **Examples:**
+   ```json
+   // ✅ RECOMMENDED: 기본 산점도 (회귀선 자동 추가)
+   // reference_lines 필드 생략 또는:
+   "reference_lines": null
+   
+   // ✅ 평균선 추가 (회귀선 + 평균선)
+   "reference_lines": [
+     {
+       "type": "mean",
+       "name": "평균 수율",
+       "color": "red",
+       "width": 2,
+       "dash": "dash"
+     }
+   ]
+   
+   // ✅ 여러 참조선 (회귀선 + 평균선 + 목표선)
+   "reference_lines": [
+     {
+       "type": "mean",
+       "name": "평균",
+       "color": "red",
+       "dash": "dash"
+     },
+     {
+       "type": "horizontal",
+       "value": 80,
+       "name": "목표 수율 (80%)",
+       "color": "green",
+       "width": 2,
+       "dash": "dashdot"
+     }
+   ]
+   
+   // ✅ 회귀선 제외 (산점도만)
+   "reference_lines": []
+   ```
+   
+   **Keywords to Watch:**
+   - "평균", "평균선", "mean", "average" → ADD `type: "mean"`
+   - "목표", "기준", "목표값", "target", "threshold" + 숫자 → ADD `type: "horizontal"`
+   - "회귀선 없이", "선 없이", "점만", "without line" → USE `reference_lines: []`
+   - No mention of lines → OMIT `reference_lines` (default regression)
 
 4. **Correlation Analysis**
    - Scatter plot is ideal for checking correlation
@@ -723,7 +768,8 @@ Generate a JSON object with the following structure:
 
 # Example Output
 
-For request: "온도와 수율의 상관관계를 산점도로 보여줘. 장비별로 색깔 구분해줘"
+## Example 1: Basic Scatter Plot
+**Request:** "온도와 수율의 상관관계를 산점도로 보여줘. 장비별로 색깔 구분해줘"
 
 ```json
 {
@@ -736,7 +782,6 @@ For request: "온도와 수율의 상관관계를 산점도로 보여줘. 장비
     "series": { "field": "DEVICE" }
   },
   "transforms": [],
-  // No reference_lines needed - regression line added automatically!
   "layout": {
     "title": "온도와 수율의 상관관계",
     "height": 500,
@@ -760,6 +805,100 @@ For request: "온도와 수율의 상관관계를 산점도로 보여줘. 장비
   "mode": "markers"
 }
 ```
+**Result:** Scatter points + automatic regression line (blue)
+
+---
+
+## Example 2: Scatter Plot with Additional Reference Lines
+**Request:** "CPK 산점도 그려줘. 평균선이랑 목표값 1.33도 표시해줘"
+
+```json
+{
+  "schema_version": "1.0",
+  "chart_type": "scatter_plot",
+  "dataset_index": 0,
+  "encodings": {
+    "x": { "field": "EQUIPMENT", "type": "categorical" },
+    "y": { "field": "CPK", "type": "quantitative" }
+  },
+  "transforms": [],
+  "reference_lines": [
+    {
+      "type": "mean",
+      "name": "평균 CPK",
+      "color": "red",
+      "width": 2,
+      "dash": "dash"
+    },
+    {
+      "type": "horizontal",
+      "value": 1.33,
+      "name": "목표 (1.33)",
+      "color": "green",
+      "width": 2,
+      "dash": "dashdot"
+    }
+  ],
+  "layout": {
+    "title": "장비별 CPK 분포",
+    "height": 500,
+    "margin": { "l": 80, "r": 80, "t": 100, "b": 150, "pad": 4 },
+    "xaxis": {
+      "title": "장비",
+      "tickangle": -45,
+      "tickfont": { "size": 10, "color": "#666" },
+      "showgrid": true,
+      "gridcolor": "#e5e5e5"
+    },
+    "yaxis": {
+      "title": "CPK",
+      "showgrid": true,
+      "gridcolor": "#d3d3d3",
+      "zeroline": true
+    }
+  },
+  "mode": "markers"
+}
+```
+**Result:** Scatter points + regression line (auto) + mean line (red) + target line (green)
+
+---
+
+## Example 3: Scatter Plot WITHOUT Regression Line
+**Request:** "온도와 압력 산점도만 보여줘. 회귀선은 필요없어"
+
+```json
+{
+  "schema_version": "1.0",
+  "chart_type": "scatter_plot",
+  "dataset_index": 0,
+  "encodings": {
+    "x": { "field": "TEMPERATURE", "type": "quantitative" },
+    "y": { "field": "PRESSURE", "type": "quantitative" }
+  },
+  "transforms": [],
+  "reference_lines": [],
+  "layout": {
+    "title": "온도-압력 산점도",
+    "height": 500,
+    "margin": { "l": 80, "r": 80, "t": 100, "b": 150, "pad": 4 },
+    "xaxis": {
+      "title": "온도 (°C)",
+      "showgrid": true,
+      "gridcolor": "#e5e5e5"
+    },
+    "yaxis": {
+      "title": "압력 (Pa)",
+      "showgrid": true,
+      "gridcolor": "#d3d3d3"
+    }
+  },
+  "mode": "markers"
+}
+```
+**Result:** Scatter points only (no lines)
+
+---
 
 Now generate the graph_spec JSON based on the provided data and user request.
 ```

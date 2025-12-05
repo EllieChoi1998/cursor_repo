@@ -33,7 +33,7 @@ This document summarizes the payload requirements discussed in the last answer s
 The frontend (`src/App.vue`) reads `analysis_type` to decide how to render the result tab:
 
 - `table` → `result.data` becomes the primary table rows.
-- `bar_graph`, `line_graph`, `box_plot` → Plotly charts are rendered from `graph_spec`.
+- `bar_graph`, `line_graph`, `box_plot`, `scatter_plot` → Plotly charts are rendered from `graph_spec`.
 - `general_text` → plain text block.
 - `excel_analysis`, `excel_chart`, `excel_summary` → specialized Excel cards using `data`, `summary`, and `chart_config`.
 
@@ -50,7 +50,7 @@ The frontend (`src/App.vue`) reads `analysis_type` to decide how to render the r
 | Field | Description |
 | --- | --- |
 | `schema_version` | Optional string (`"1.0"`) to track future changes. |
-| `chart_type` | `bar_graph`, `line_graph`, `box_plot`, `scatter`, … |
+| `chart_type` | `bar_graph`, `line_graph`, `box_plot`, `scatter_plot`, … |
 | `dataset_index` | Which dataset inside `real_data` to read (defaults to `0`). |
 | `encodings` | Column mapping definition (see below). |
 | `transforms` | Optional array of `{ type, field, ... }` instructions (filter/sort). |
@@ -438,6 +438,242 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
   }
 }
 ```
+
+
+### 4.5 Scatter Plot Result (산점도)
+
+**⭐ 중요: Scatter plot은 기본적으로 회귀선이 자동으로 추가됩니다!**
+
+#### 4.5.1 기본 산점도 (회귀선 자동 추가)
+
+```json
+{
+  "data": {
+    "analysis_type": "scatter_plot",
+    "file_name": "correlation.xlsx",
+    "summary": "온도와 수율의 상관관계 분석",
+    "success_message": "✅ 산점도 생성 완료",
+    "real_data": [
+      [
+        {"TEMPERATURE": 25.5, "YIELD": 98.2, "DEVICE": "A1"},
+        {"TEMPERATURE": 26.1, "YIELD": 97.5, "DEVICE": "A1"},
+        {"TEMPERATURE": 24.8, "YIELD": 99.0, "DEVICE": "B2"},
+        {"TEMPERATURE": 25.9, "YIELD": 98.1, "DEVICE": "B2"}
+      ]
+    ],
+    "graph_spec": {
+      "schema_version": "1.0",
+      "chart_type": "scatter_plot",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "TEMPERATURE", "type": "quantitative" },
+        "y": { "field": "YIELD", "type": "quantitative" }
+      },
+      "layout": {
+        "title": "온도와 수율의 상관관계",
+        "height": 500,
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
+        "xaxis": {
+          "title": "온도 (°C)",
+          "showgrid": true,
+          "gridcolor": "#e5e5e5",
+          "zeroline": true
+        },
+        "yaxis": {
+          "title": "수율 (%)",
+          "showgrid": true,
+          "gridcolor": "#d3d3d3",
+          "zeroline": true
+        }
+      }
+    },
+    "timestamp": "2025-12-04T10:15:30.123Z"
+  }
+}
+```
+
+**결과:** 산점도 점들 + 파란색 실선 회귀선이 자동으로 표시됨
+
+#### 4.5.2 산점도 + 시리즈별 색상 구분
+
+```json
+{
+  "data": {
+    "analysis_type": "scatter_plot",
+    "file_name": "correlation.xlsx",
+    "summary": "장비별 온도와 수율의 상관관계",
+    "success_message": "✅ 산점도 생성 완료",
+    "real_data": [
+      [
+        {"TEMPERATURE": 25.5, "YIELD": 98.2, "DEVICE": "A1"},
+        {"TEMPERATURE": 26.1, "YIELD": 97.5, "DEVICE": "A1"},
+        {"TEMPERATURE": 24.8, "YIELD": 99.0, "DEVICE": "B2"},
+        {"TEMPERATURE": 25.9, "YIELD": 98.1, "DEVICE": "B2"}
+      ]
+    ],
+    "graph_spec": {
+      "schema_version": "1.0",
+      "chart_type": "scatter_plot",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "TEMPERATURE", "type": "quantitative" },
+        "y": { "field": "YIELD", "type": "quantitative" },
+        "series": { "field": "DEVICE" }
+      },
+      "layout": {
+        "title": "장비별 온도-수율 상관관계",
+        "height": 500,
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 150 }
+      }
+    },
+    "timestamp": "2025-12-04T10:15:30.123Z"
+  }
+}
+```
+
+**결과:** 장비별로 색상이 다른 점들 + 전체 데이터 기반 회귀선
+
+#### 4.5.3 산점도 + 추가 참조선 (평균, 목표값)
+
+```json
+{
+  "data": {
+    "analysis_type": "scatter_plot",
+    "file_name": "cpk_analysis.xlsx",
+    "summary": "CPK 산점도 with 평균 및 목표값",
+    "success_message": "✅ 산점도 생성 완료",
+    "real_data": [
+      [
+        {"EQUIPMENT": "EQ01", "CPK": 1.45, "DEVICE": "A1"},
+        {"EQUIPMENT": "EQ02", "CPK": 1.32, "DEVICE": "A1"},
+        {"EQUIPMENT": "EQ03", "CPK": 1.58, "DEVICE": "B2"}
+      ]
+    ],
+    "graph_spec": {
+      "schema_version": "1.0",
+      "chart_type": "scatter_plot",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "EQUIPMENT", "type": "categorical" },
+        "y": { "field": "CPK", "type": "quantitative" },
+        "series": { "field": "DEVICE" }
+      },
+      "reference_lines": [
+        {
+          "type": "regression",
+          "name": "회귀선",
+          "color": "blue",
+          "width": 2,
+          "dash": "solid"
+        },
+        {
+          "type": "mean",
+          "name": "평균 CPK",
+          "color": "red",
+          "width": 2,
+          "dash": "dash"
+        },
+        {
+          "type": "horizontal",
+          "value": 1.33,
+          "name": "목표 (1.33)",
+          "color": "green",
+          "width": 2,
+          "dash": "dashdot"
+        }
+      ],
+      "layout": {
+        "title": "장비별 CPK 분포",
+        "height": 500,
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 150 }
+      }
+    },
+    "timestamp": "2025-12-04T10:15:30.123Z"
+  }
+}
+```
+
+**결과:** 산점도 + 회귀선 + 평균선 + 목표값 선
+
+#### 4.5.4 산점도만 (회귀선 없이)
+
+```json
+{
+  "data": {
+    "analysis_type": "scatter_plot",
+    "file_name": "data.xlsx",
+    "summary": "순수 산점도 (회귀선 없음)",
+    "success_message": "✅ 산점도 생성 완료",
+    "real_data": [
+      [
+        {"X": 1, "Y": 10},
+        {"X": 2, "Y": 15}
+      ]
+    ],
+    "graph_spec": {
+      "schema_version": "1.0",
+      "chart_type": "scatter_plot",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "X", "type": "quantitative" },
+        "y": { "field": "Y", "type": "quantitative" }
+      },
+      "reference_lines": [],
+      "layout": {
+        "title": "산점도",
+        "height": 500
+      }
+    },
+    "timestamp": "2025-12-04T10:15:30.123Z"
+  }
+}
+```
+
+**결과:** 산점도 점들만 표시 (회귀선 없음)
+
+### 4.6 Reference Lines 상세 스펙
+
+산점도에서 사용 가능한 `reference_lines` 옵션:
+
+#### Mean Line (평균선)
+```json
+{
+  "type": "mean",
+  "name": "평균",
+  "color": "red",
+  "width": 2,
+  "dash": "dash"
+}
+```
+
+#### Regression Line (회귀선)
+```json
+{
+  "type": "regression",
+  "name": "회귀선",
+  "color": "blue",
+  "width": 2,
+  "dash": "solid"
+}
+```
+
+#### Horizontal Line (수평 기준선)
+```json
+{
+  "type": "horizontal",
+  "value": 80,
+  "name": "목표값",
+  "color": "green",
+  "width": 2,
+  "dash": "dashdot"
+}
+```
+
+**Dash 스타일:**
+- `"solid"` - 실선 ────────
+- `"dash"` - 점선 ─ ─ ─ ─ ─
+- `"dot"` - 짧은 점선 ∙∙∙∙∙∙∙∙
+- `"dashdot"` - 점-대시 ─∙─∙─∙─
 
 
 ## 5. Sending Order
