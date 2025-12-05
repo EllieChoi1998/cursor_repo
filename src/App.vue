@@ -1412,87 +1412,141 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           ]
 
           // Add reference lines for scatter plots (mean, regression, etc.)
-          referenceLines.forEach((refLine) => {
-            if (refLine.type === 'mean' || refLine.type === 'average') {
-              // Calculate mean of y values
-              const allYValues = []
-              traces.forEach(trace => allYValues.push(...trace.y))
-              const mean = allYValues.reduce((sum, val) => sum + val, 0) / allYValues.length
-              
-              // Get x range
-              const allXValues = []
-              traces.forEach(trace => allXValues.push(...trace.x))
-              const xMin = Math.min(...allXValues)
-              const xMax = Math.max(...allXValues)
-              
-              traces.push({
-                type: 'scatter',
-                mode: 'lines',
-                name: refLine.name || 'Mean',
-                x: [xMin, xMax],
-                y: [mean, mean],
-                line: {
-                  color: refLine.color || 'red',
-                  width: refLine.width || 2,
-                  dash: refLine.dash || 'dash'
-                },
-                showlegend: true
-              })
-            } else if (refLine.type === 'horizontal') {
-              // Fixed horizontal line at specified y value
-              const allXValues = []
-              traces.forEach(trace => allXValues.push(...trace.x))
-              const xMin = Math.min(...allXValues)
-              const xMax = Math.max(...allXValues)
-              
-              traces.push({
-                type: 'scatter',
-                mode: 'lines',
-                name: refLine.name || 'Reference',
-                x: [xMin, xMax],
-                y: [refLine.value, refLine.value],
-                line: {
-                  color: refLine.color || 'red',
-                  width: refLine.width || 2,
-                  dash: refLine.dash || 'dash'
-                },
-                showlegend: true
-              })
-            } else if (refLine.type === 'regression' || refLine.type === 'linear') {
-              // Simple linear regression
-              const allPoints = []
-              traces.forEach(trace => {
-                trace.x.forEach((x, i) => allPoints.push({ x: x, y: trace.y[i] }))
-              })
-              
-              // Calculate linear regression
-              const n = allPoints.length
-              const sumX = allPoints.reduce((sum, p) => sum + p.x, 0)
-              const sumY = allPoints.reduce((sum, p) => sum + p.y, 0)
-              const sumXY = allPoints.reduce((sum, p) => sum + p.x * p.y, 0)
-              const sumX2 = allPoints.reduce((sum, p) => sum + p.x * p.x, 0)
-              
-              const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
-              const intercept = (sumY - slope * sumX) / n
-              
-              const xMin = Math.min(...allPoints.map(p => p.x))
-              const xMax = Math.max(...allPoints.map(p => p.x))
-              
-              traces.push({
-                type: 'scatter',
-                mode: 'lines',
-                name: refLine.name || 'Regression',
-                x: [xMin, xMax],
-                y: [slope * xMin + intercept, slope * xMax + intercept],
-                line: {
-                  color: refLine.color || 'blue',
-                  width: refLine.width || 2,
-                  dash: refLine.dash || 'solid'
-                },
-                showlegend: true
-              })
-            }
-          })
+          try {
+            referenceLines.forEach((refLine) => {
+              if (refLine.type === 'mean' || refLine.type === 'average') {
+                // Calculate mean of y values
+                const allYValues = []
+                traces.forEach(trace => {
+                  if (trace.y && Array.isArray(trace.y)) {
+                    allYValues.push(...trace.y.filter(v => typeof v === 'number' && !isNaN(v)))
+                  }
+                })
+                
+                if (allYValues.length === 0) return
+                
+                const mean = allYValues.reduce((sum, val) => sum + val, 0) / allYValues.length
+                
+                // Get x range
+                const allXValues = []
+                traces.forEach(trace => {
+                  if (trace.x && Array.isArray(trace.x)) {
+                    allXValues.push(...trace.x.filter(v => typeof v === 'number' && !isNaN(v)))
+                  }
+                })
+                
+                if (allXValues.length === 0) return
+                
+                const xMin = Math.min(...allXValues)
+                const xMax = Math.max(...allXValues)
+                
+                traces.push({
+                  type: 'scatter',
+                  mode: 'lines',
+                  name: refLine.name || 'Mean',
+                  x: [xMin, xMax],
+                  y: [mean, mean],
+                  line: {
+                    color: refLine.color || 'red',
+                    width: refLine.width || 2,
+                    dash: refLine.dash || 'dash'
+                  },
+                  showlegend: true
+                })
+              } else if (refLine.type === 'horizontal') {
+                // Fixed horizontal line at specified y value
+                if (typeof refLine.value !== 'number' || isNaN(refLine.value)) return
+                
+                const allXValues = []
+                traces.forEach(trace => {
+                  if (trace.x && Array.isArray(trace.x)) {
+                    allXValues.push(...trace.x.filter(v => typeof v === 'number' && !isNaN(v)))
+                  }
+                })
+                
+                if (allXValues.length === 0) return
+                
+                const xMin = Math.min(...allXValues)
+                const xMax = Math.max(...allXValues)
+                
+                traces.push({
+                  type: 'scatter',
+                  mode: 'lines',
+                  name: refLine.name || 'Reference',
+                  x: [xMin, xMax],
+                  y: [refLine.value, refLine.value],
+                  line: {
+                    color: refLine.color || 'red',
+                    width: refLine.width || 2,
+                    dash: refLine.dash || 'dash'
+                  },
+                  showlegend: true
+                })
+              } else if (refLine.type === 'regression' || refLine.type === 'linear') {
+                // Simple linear regression
+                const allPoints = []
+                traces.forEach(trace => {
+                  if (trace.x && trace.y && Array.isArray(trace.x) && Array.isArray(trace.y)) {
+                    trace.x.forEach((x, i) => {
+                      const xVal = typeof x === 'number' ? x : parseFloat(x)
+                      const yVal = typeof trace.y[i] === 'number' ? trace.y[i] : parseFloat(trace.y[i])
+                      
+                      if (!isNaN(xVal) && !isNaN(yVal) && isFinite(xVal) && isFinite(yVal)) {
+                        allPoints.push({ x: xVal, y: yVal })
+                      }
+                    })
+                  }
+                })
+                
+                if (allPoints.length < 2) {
+                  console.warn('[buildLineFigure] Not enough valid points for regression line:', allPoints.length)
+                  return
+                }
+                
+                // Calculate linear regression
+                const n = allPoints.length
+                const sumX = allPoints.reduce((sum, p) => sum + p.x, 0)
+                const sumY = allPoints.reduce((sum, p) => sum + p.y, 0)
+                const sumXY = allPoints.reduce((sum, p) => sum + p.x * p.y, 0)
+                const sumX2 = allPoints.reduce((sum, p) => sum + p.x * p.x, 0)
+                
+                const denominator = (n * sumX2 - sumX * sumX)
+                
+                if (denominator === 0) {
+                  console.warn('[buildLineFigure] Cannot calculate regression: denominator is 0')
+                  return
+                }
+                
+                const slope = (n * sumXY - sumX * sumY) / denominator
+                const intercept = (sumY - slope * sumX) / n
+                
+                if (!isFinite(slope) || !isFinite(intercept)) {
+                  console.warn('[buildLineFigure] Invalid regression values:', { slope, intercept })
+                  return
+                }
+                
+                const xMin = Math.min(...allPoints.map(p => p.x))
+                const xMax = Math.max(...allPoints.map(p => p.x))
+                
+                traces.push({
+                  type: 'scatter',
+                  mode: 'lines',
+                  name: refLine.name || 'Regression',
+                  x: [xMin, xMax],
+                  y: [slope * xMin + intercept, slope * xMax + intercept],
+                  line: {
+                    color: refLine.color || 'blue',
+                    width: refLine.width || 2,
+                    dash: refLine.dash || 'solid'
+                  },
+                  showlegend: true
+                })
+              }
+            })
+          } catch (error) {
+            console.error('[buildLineFigure] Error adding reference lines:', error)
+            // Continue without reference lines if there's an error
+          }
         }
         // End of scatter plot reference lines processing
 
