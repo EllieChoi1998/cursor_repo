@@ -492,6 +492,7 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
 }
 ```
 
+**중요:** `reference_lines` 필드가 없음 (또는 `null`, `""`) → 회귀선 자동 추가!
 **결과:** 산점도 점들 + 파란색 실선 회귀선이 자동으로 표시됨
 
 #### 4.5.2 산점도 + 시리즈별 색상 구분
@@ -593,6 +594,7 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
 }
 ```
 
+**중요:** 추가 선을 요청했으므로 `reference_lines` 배열에 **회귀선도 명시적으로 포함**해야 함!
 **결과:** 산점도 + 회귀선 + 평균선 + 목표값 선
 
 #### 4.5.4 산점도만 (회귀선 없이)

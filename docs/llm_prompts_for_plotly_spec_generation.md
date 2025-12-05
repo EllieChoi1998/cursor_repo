@@ -657,19 +657,19 @@ Generate a JSON object with the following structure:
    
    **기본 동작: 모든 산점도에 회귀선이 자동으로 추가됩니다!**
    
-   - `reference_lines` 필드를 생략하거나 `null`로 설정하면 → 회귀선 자동 추가
    - 프론트엔드(App.vue)가 자동으로 기본 회귀선을 추가합니다
-   - LLM은 사용자가 명시적으로 요청하지 않는 한 `reference_lines`를 생략하세요
+   - ⚠️ **IMPORTANT: LLM은 기본적으로 `reference_lines` 필드를 생략해야 합니다!**
+   - 사용자가 명시적으로 추가 선을 요청한 경우에만 `reference_lines`를 포함하세요
    
    **사용자 요청에 따른 처리:**
    
    | 사용자 요청 | reference_lines 값 | 결과 |
    |-----------|-------------------|------|
-   | 산점도만 요청 (기본) | 생략 또는 `null` | 산점도 + 회귀선 (자동) |
-   | "평균선도 추가해줘" | `[{"type": "mean", ...}]` | 산점도 + 회귀선 + 평균선 |
-   | "목표값 80도 표시해줘" | `[{"type": "horizontal", "value": 80, ...}]` | 산점도 + 회귀선 + 목표선 |
+   | 산점도만 요청 (기본) | **필드 생략** (추천) | 산점도 + 회귀선 (자동) ✅ |
+   | "평균선도 추가해줘" | `[{"type": "mean", ...}]` | 산점도 + 평균선 (회귀선은 자동 추가 안 됨) |
+   | "목표값 80도 표시해줘" | `[{"type": "horizontal", "value": 80, ...}]` | 산점도 + 목표선 (회귀선은 자동 추가 안 됨) |
    | "회귀선 없이" | `[]` (빈 배열) | 산점도만 (회귀선 없음) |
-   | "평균선만" | `[{"type": "mean", ...}]` | 산점도 + 회귀선 + 평균선 |
+   | "회귀선과 평균선" | `[{"type": "regression", ...}, {"type": "mean", ...}]` | 산점도 + 회귀선 + 평균선 |
    
    **Available Line Types:**
    - `"regression"`: Linear regression line (자동 추가, 명시 불필요)
@@ -691,10 +691,14 @@ Generate a JSON object with the following structure:
    **Examples:**
    ```json
    // ✅ RECOMMENDED: 기본 산점도 (회귀선 자동 추가)
-   // reference_lines 필드 생략 또는:
-   "reference_lines": null
+   // reference_lines 필드를 아예 생략하세요!
+   {
+     "chart_type": "scatter_plot",
+     "encodings": { ... }
+     // reference_lines 필드 없음
+   }
    
-   // ✅ 평균선 추가 (회귀선 + 평균선)
+   // ✅ 평균선만 추가 (회귀선 없이)
    "reference_lines": [
      {
        "type": "mean",
@@ -705,8 +709,32 @@ Generate a JSON object with the following structure:
      }
    ]
    
+   // ✅ 회귀선 + 평균선 (명시적으로 둘 다)
+   "reference_lines": [
+     {
+       "type": "regression",
+       "name": "회귀선",
+       "color": "blue",
+       "width": 2,
+       "dash": "solid"
+     },
+     {
+       "type": "mean",
+       "name": "평균",
+       "color": "red",
+       "dash": "dash"
+     }
+   ]
+   
    // ✅ 여러 참조선 (회귀선 + 평균선 + 목표선)
    "reference_lines": [
+     {
+       "type": "regression",
+       "name": "회귀선",
+       "color": "blue",
+       "width": 2,
+       "dash": "solid"
+     },
      {
        "type": "mean",
        "name": "평균",
@@ -728,10 +756,11 @@ Generate a JSON object with the following structure:
    ```
    
    **Keywords to Watch:**
-   - "평균", "평균선", "mean", "average" → ADD `type: "mean"`
-   - "목표", "기준", "목표값", "target", "threshold" + 숫자 → ADD `type: "horizontal"`
+   - No mention of lines → **OMIT `reference_lines` field entirely** (회귀선 자동 추가)
+   - "평균", "평균선", "mean", "average" → ADD `type: "mean"` in array
+   - "회귀선", "regression" 언급 → ADD `type: "regression"` in array
+   - "목표", "기준", "목표값", "target", "threshold" + 숫자 → ADD `type: "horizontal"` in array
    - "회귀선 없이", "선 없이", "점만", "without line" → USE `reference_lines: []`
-   - No mention of lines → OMIT `reference_lines` (default regression)
 
 4. **Correlation Analysis**
    - Scatter plot is ideal for checking correlation
@@ -768,7 +797,7 @@ Generate a JSON object with the following structure:
 
 # Example Output
 
-## Example 1: Basic Scatter Plot
+## Example 1: Basic Scatter Plot (회귀선 자동 추가)
 **Request:** "온도와 수율의 상관관계를 산점도로 보여줘. 장비별로 색깔 구분해줘"
 
 ```json
@@ -805,7 +834,8 @@ Generate a JSON object with the following structure:
   "mode": "markers"
 }
 ```
-**Result:** Scatter points + automatic regression line (blue)
+**NOTE:** `reference_lines` 필드가 없음 → 프론트엔드에서 회귀선 자동 추가!
+**Result:** Scatter points (by DEVICE) + automatic blue regression line
 
 ---
 
@@ -823,6 +853,13 @@ Generate a JSON object with the following structure:
   },
   "transforms": [],
   "reference_lines": [
+    {
+      "type": "regression",
+      "name": "회귀선",
+      "color": "blue",
+      "width": 2,
+      "dash": "solid"
+    },
     {
       "type": "mean",
       "name": "평균 CPK",
@@ -860,7 +897,8 @@ Generate a JSON object with the following structure:
   "mode": "markers"
 }
 ```
-**Result:** Scatter points + regression line (auto) + mean line (red) + target line (green)
+**NOTE:** 추가 선을 요청했으므로 `reference_lines` 배열에 **회귀선도 명시적으로 포함**!
+**Result:** Scatter points + regression line (blue) + mean line (red) + target line (green)
 
 ---
 
