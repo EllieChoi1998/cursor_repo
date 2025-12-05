@@ -665,11 +665,11 @@ Generate a JSON object with the following structure:
    
    | 사용자 요청 | reference_lines 값 | 결과 |
    |-----------|-------------------|------|
-   | 산점도만 요청 (기본) | **필드 생략** (추천) | 산점도 + 회귀선 (자동) ✅ |
-   | "평균선도 추가해줘" | `[{"type": "mean", ...}]` | 산점도 + 평균선 (회귀선은 자동 추가 안 됨) |
-   | "목표값 80도 표시해줘" | `[{"type": "horizontal", "value": 80, ...}]` | 산점도 + 목표선 (회귀선은 자동 추가 안 됨) |
-   | "회귀선 없이" | `[]` (빈 배열) | 산점도만 (회귀선 없음) |
+   | 산점도만 요청 (기본) | **필드 생략** or `[]` | 산점도 + 회귀선 (자동) ✅ |
+   | "평균선도 추가해줘" | `[{"type": "mean", ...}]` | 산점도 + 평균선만 (회귀선 없음) |
    | "회귀선과 평균선" | `[{"type": "regression", ...}, {"type": "mean", ...}]` | 산점도 + 회귀선 + 평균선 |
+   | "목표값 80도 표시해줘" | `[{"type": "horizontal", "value": 80, ...}]` | 산점도 + 목표선만 (회귀선 없음) |
+   | "회귀선과 목표값" | `[{"type": "regression", ...}, {"type": "horizontal", ...}]` | 산점도 + 회귀선 + 목표선 |
    
    **Available Line Types:**
    - `"regression"`: Linear regression line (자동 추가, 명시 불필요)
@@ -691,11 +691,11 @@ Generate a JSON object with the following structure:
    **Examples:**
    ```json
    // ✅ RECOMMENDED: 기본 산점도 (회귀선 자동 추가)
-   // reference_lines 필드를 아예 생략하세요!
+   // reference_lines 필드를 아예 생략하거나 빈 배열로 보내세요!
    {
      "chart_type": "scatter_plot",
      "encodings": { ... }
-     // reference_lines 필드 없음
+     // reference_lines 필드 없음 or "reference_lines": []
    }
    
    // ✅ 평균선만 추가 (회귀선 없이)
@@ -750,17 +750,14 @@ Generate a JSON object with the following structure:
        "dash": "dashdot"
      }
    ]
-   
-   // ✅ 회귀선 제외 (산점도만)
-   "reference_lines": []
    ```
    
    **Keywords to Watch:**
-   - No mention of lines → **OMIT `reference_lines` field entirely** (회귀선 자동 추가)
-   - "평균", "평균선", "mean", "average" → ADD `type: "mean"` in array
-   - "회귀선", "regression" 언급 → ADD `type: "regression"` in array
-   - "목표", "기준", "목표값", "target", "threshold" + 숫자 → ADD `type: "horizontal"` in array
-   - "회귀선 없이", "선 없이", "점만", "without line" → USE `reference_lines: []`
+   - No mention of lines → **OMIT `reference_lines` field** or USE `[]` (회귀선 자동 추가)
+   - "평균", "평균선", "mean", "average" 만 언급 → ADD only `type: "mean"` in array (회귀선 없음)
+   - "회귀선", "regression" 명시적 언급 → ADD `type: "regression"` in array
+   - "목표", "기준", "목표값", "target", "threshold" 만 언급 → ADD only `type: "horizontal"` in array (회귀선 없음)
+   - "회귀선과 평균선", "회귀선도" → ADD both `type: "regression"` and others in array
 
 4. **Correlation Analysis**
    - Scatter plot is ideal for checking correlation
@@ -902,8 +899,8 @@ Generate a JSON object with the following structure:
 
 ---
 
-## Example 3: Scatter Plot WITHOUT Regression Line
-**Request:** "온도와 압력 산점도만 보여줘. 회귀선은 필요없어"
+## Example 3: Scatter Plot with Mean Line Only (회귀선 없이)
+**Request:** "온도와 압력 산점도 그려줘. 평균선만 표시해줘"
 
 ```json
 {
@@ -915,7 +912,15 @@ Generate a JSON object with the following structure:
     "y": { "field": "PRESSURE", "type": "quantitative" }
   },
   "transforms": [],
-  "reference_lines": [],
+  "reference_lines": [
+    {
+      "type": "mean",
+      "name": "평균 압력",
+      "color": "red",
+      "width": 2,
+      "dash": "dash"
+    }
+  ],
   "layout": {
     "title": "온도-압력 산점도",
     "height": 500,
@@ -934,7 +939,7 @@ Generate a JSON object with the following structure:
   "mode": "markers"
 }
 ```
-**Result:** Scatter points only (no lines)
+**Result:** Scatter points + mean line only (no regression line)
 
 ---
 

@@ -1434,21 +1434,21 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
         // For scatter plots, add regression line by default
         if (chartType === 'scatter') {
-          // If no reference_lines specified, add default regression line
-          // undefined, null, empty string → add default regression
-          // empty array [] → no lines (explicit exclusion)
-          // array with items → use those items + default regression
+          // ALWAYS add default regression line unless explicitly provided in array
+          // undefined, null, empty string, empty array [] → add default regression
+          // array with items → use those items (if no regression in array, won't add)
           let referenceLines = spec.reference_lines
           
           console.log('[buildLineFigure] Original reference_lines:', referenceLines)
           console.log('[buildLineFigure] reference_lines type:', typeof referenceLines)
           
-          // Check if reference_lines is undefined, null, or empty string
+          // Check if reference_lines is undefined, null, empty string, or empty array
           if (referenceLines === undefined || 
               referenceLines === null || 
               referenceLines === '' ||
-              (typeof referenceLines === 'string' && referenceLines.trim() === '')) {
-            console.log('[buildLineFigure] Using default regression line')
+              (typeof referenceLines === 'string' && referenceLines.trim() === '') ||
+              (Array.isArray(referenceLines) && referenceLines.length === 0)) {
+            console.log('[buildLineFigure] No reference lines provided - using default regression line')
             referenceLines = [
               {
                 type: 'regression',
@@ -1458,9 +1458,6 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 dash: 'solid'
               }
             ]
-          } else if (Array.isArray(referenceLines) && referenceLines.length === 0) {
-            console.log('[buildLineFigure] Empty array - no reference lines')
-            // Empty array means user explicitly wants no lines
           } else if (Array.isArray(referenceLines) && referenceLines.length > 0) {
             console.log('[buildLineFigure] Using user-defined reference lines:', referenceLines.length)
             // User provided specific reference lines - use them as-is

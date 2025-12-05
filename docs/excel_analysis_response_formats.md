@@ -492,7 +492,7 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
 }
 ```
 
-**중요:** `reference_lines` 필드가 없음 (또는 `null`, `""`) → 회귀선 자동 추가!
+**중요:** `reference_lines` 필드가 없음 (또는 `null`, `""`, `[]`) → 회귀선 자동 추가!
 **결과:** 산점도 점들 + 파란색 실선 회귀선이 자동으로 표시됨
 
 #### 4.5.2 산점도 + 시리즈별 색상 구분
@@ -597,14 +597,14 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
 **중요:** 추가 선을 요청했으므로 `reference_lines` 배열에 **회귀선도 명시적으로 포함**해야 함!
 **결과:** 산점도 + 회귀선 + 평균선 + 목표값 선
 
-#### 4.5.4 산점도만 (회귀선 없이)
+#### 4.5.4 평균선만 있는 산점도 (회귀선 없이)
 
 ```json
 {
   "data": {
     "analysis_type": "scatter_plot",
     "file_name": "data.xlsx",
-    "summary": "순수 산점도 (회귀선 없음)",
+    "summary": "산점도 with 평균선 (회귀선 없음)",
     "success_message": "✅ 산점도 생성 완료",
     "real_data": [
       [
@@ -620,7 +620,15 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
         "x": { "field": "X", "type": "quantitative" },
         "y": { "field": "Y", "type": "quantitative" }
       },
-      "reference_lines": [],
+      "reference_lines": [
+        {
+          "type": "mean",
+          "name": "평균",
+          "color": "red",
+          "width": 2,
+          "dash": "dash"
+        }
+      ],
       "layout": {
         "title": "산점도",
         "height": 500
@@ -631,7 +639,8 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
 }
 ```
 
-**결과:** 산점도 점들만 표시 (회귀선 없음)
+**중요:** 배열에 값이 있으면 그 내용만 표시됩니다 (회귀선 포함 안 됨)
+**결과:** 산점도 점들 + 평균선 (회귀선 없음)
 
 ### 4.6 Reference Lines 상세 스펙
 

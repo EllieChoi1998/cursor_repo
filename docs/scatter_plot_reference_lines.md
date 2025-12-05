@@ -45,9 +45,8 @@
 - 사용자가 매번 요청하지 않아도 자동으로 제공
 
 **프론트엔드 처리 로직:**
-- `reference_lines` 필드가 **undefined, null, "" (빈 문자열)** → 회귀선 자동 추가 ✅
-- `reference_lines: []` (빈 배열) → 회귀선 없음 (명시적 제외) ❌
-- `reference_lines: [...]` (배열에 값 있음) → 배열 내용대로 표시 (회귀선 포함 여부는 배열에 달림)
+- `reference_lines` 필드가 **undefined, null, "" (빈 문자열), [] (빈 배열)** → 회귀선 자동 추가 ✅
+- `reference_lines: [...]` (배열에 값 있음) → 배열 내용대로만 표시 (회귀선 포함 여부는 배열에 달림)
 
 ## 🔧 사용 방법
 
@@ -66,6 +65,19 @@
 }
 ```
 
+**빈 배열을 보내도 자동으로 추가됩니다:**
+
+```json
+{
+  "chart_type": "scatter_plot",
+  "encodings": {
+    "x": { "field": "TEMPERATURE" },
+    "y": { "field": "YIELD" }
+  },
+  "reference_lines": []  // 빈 배열이어도 회귀선 자동 추가!
+}
+```
+
 **자동 추가되는 회귀선:**
 - 타입: regression (선형 회귀)
 - 이름: "회귀선"
@@ -74,10 +86,17 @@
 - 스타일: solid (실선)
 
 **회귀선을 원하지 않는 경우:**
+- 다른 참조선만 명시적으로 배열에 넣으면 회귀선 없이 그 선들만 표시됩니다
 ```json
 {
   "chart_type": "scatter_plot",
-  "reference_lines": []  // 빈 배열로 설정하면 회귀선 없음
+  "reference_lines": [
+    {
+      "type": "mean",  // 평균선만 표시 (회귀선 없음)
+      "name": "평균",
+      "color": "red"
+    }
+  ]
 }
 ```
 
@@ -419,7 +438,7 @@ return { data: traces, layout, config }
 **A:** 이제 해결되었습니다! 산점도와 회귀선이 함께 표시됩니다.
 
 ### Q: 회귀선이 자동으로 추가되는데, 원하지 않아요
-**A:** `reference_lines: []` (빈 배열)로 설정하면 회귀선 없이 순수 산점도만 표시됩니다.
+**A:** `reference_lines` 배열에 다른 참조선만 명시적으로 넣으면 회귀선 없이 그 선들만 표시됩니다. 예: `reference_lines: [{"type": "mean", ...}]`
 
 ### Q: 회귀선이 이상해요
 **A:** 데이터에 이상치(outlier)가 있거나 데이터가 너무 적을 수 있습니다. 데이터 전처리 또는 필터링을 권장합니다.
