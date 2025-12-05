@@ -237,10 +237,11 @@ intercept (b) = (Σy - m*Σx) / n
     "title": "온도와 수율의 상관관계",
     "xaxis": { "title": "온도 (°C)" },
     "yaxis": { "title": "수율 (%)" }
-  },
-  "mode": "markers"
+  }
 }
 ```
+
+**주의:** `mode` 필드를 명시하지 마세요. 프론트엔드가 자동으로 `"markers"`로 설정합니다.
 
 **결과:**
 - 각 데이터 포인트가 점으로 표시
@@ -291,10 +292,11 @@ intercept (b) = (Σy - m*Σx) / n
     "title": "장비별 CPK 분포",
     "xaxis": { "title": "장비" },
     "yaxis": { "title": "CPK" }
-  },
-  "mode": "markers"
+  }
 }
 ```
+
+**주의:** `mode` 필드를 명시하지 마세요. 프론트엔드가 자동으로 `"markers"`로 설정합니다.
 
 **결과:**
 - 각 장비의 CPK 값이 점으로 표시
@@ -340,10 +342,11 @@ intercept (b) = (Σy - m*Σx) / n
     "title": "시간별 측정값 분포",
     "xaxis": { "title": "시간" },
     "yaxis": { "title": "측정값" }
-  },
-  "mode": "markers"
+  }
 }
 ```
+
+**주의:** `mode` 필드를 명시하지 마세요. 프론트엔드가 자동으로 `"markers"`로 설정합니다.
 
 ## 🎨 색상 및 스타일 가이드
 

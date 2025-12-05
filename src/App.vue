@@ -1406,7 +1406,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           console.log('[buildLineFigure] First 3 points:', points.slice(0, 3))
         })
 
-        const baseMode = spec.mode || (chartType === 'scatter' ? 'markers' : 'lines+markers')
+        // For scatter plots, ALWAYS use 'markers' mode (ignore spec.mode)
+        // For line graphs, use spec.mode or default to 'lines+markers'
+        const baseMode = chartType === 'scatter' 
+          ? 'markers'  // FORCE markers-only for scatter plots
+          : (spec.mode || 'lines+markers')
+        
+        console.log('[buildLineFigure] baseMode:', baseMode, 'chartType:', chartType)
+        
         const traces = Array.from(seriesMap.entries()).map(([seriesKey, points]) => {
           const aggregated = aggregatePoints(points, aggregator)
           console.log(`[buildLineFigure] Aggregated "${seriesKey}":`, aggregated.length, 'points')

@@ -649,9 +649,9 @@ Generate a JSON object with the following structure:
    - Series: Optional categorical variable for color-coding points
 
 2. **Mode**
-   - "markers": Points only (default for scatter)
-   - "lines+markers": Add connecting lines (if temporal or ordered data)
-   - "markers+text": Add labels to points (if few points)
+   - ⚠️ **DO NOT specify `mode` field for scatter plots!** Frontend automatically uses `"markers"`
+   - If you specify `mode`, it will be ignored for scatter plots
+   - Scatter plots ALWAYS use `"markers"` mode (points only, no lines)
 
 3. **⭐ Reference Lines (CRITICAL - DEFAULT BEHAVIOR!)**
    
@@ -827,11 +827,12 @@ Generate a JSON object with the following structure:
       "zeroline": true,
       "zerolinecolor": "#999"
     }
-  },
-  "mode": "markers"
+  }
 }
 ```
-**NOTE:** `reference_lines` 필드가 없음 → 프론트엔드에서 회귀선 자동 추가!
+**NOTE:** 
+- `reference_lines` 필드가 없음 → 프론트엔드에서 회귀선 자동 추가!
+- `mode` 필드 없음 → 프론트엔드에서 자동으로 `"markers"` 설정 (산점도는 점만 표시)
 **Result:** Scatter points (by DEVICE) + automatic blue regression line
 
 ---
@@ -890,11 +891,12 @@ Generate a JSON object with the following structure:
       "gridcolor": "#d3d3d3",
       "zeroline": true
     }
-  },
-  "mode": "markers"
+  }
 }
 ```
-**NOTE:** 추가 선을 요청했으므로 `reference_lines` 배열에 **회귀선도 명시적으로 포함**!
+**NOTE:** 
+- 추가 선을 요청했으므로 `reference_lines` 배열에 **회귀선도 명시적으로 포함**!
+- `mode` 필드를 명시하지 마세요 (프론트엔드가 자동 처리)
 **Result:** Scatter points + regression line (blue) + mean line (red) + target line (green)
 
 ---
@@ -935,10 +937,10 @@ Generate a JSON object with the following structure:
       "showgrid": true,
       "gridcolor": "#d3d3d3"
     }
-  },
-  "mode": "markers"
+  }
 }
 ```
+**NOTE:** `mode` 필드를 명시하지 마세요 (프론트엔드가 자동 처리)
 **Result:** Scatter points + mean line only (no regression line)
 
 ---
