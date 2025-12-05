@@ -339,7 +339,8 @@ export default defineComponent({
 
     const formatNumber = (value) => {
       if (typeof value !== 'number') return value
-      return value.toFixed(2)
+      // 원본 데이터를 그대로 표시 - 데이터 조작 금지
+      return value
     }
 
     // G/B 값에 따른 색상 클래스 반환
