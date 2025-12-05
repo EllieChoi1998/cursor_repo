@@ -1413,7 +1413,6 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
           // Add reference lines for scatter plots (mean, regression, etc.)
           referenceLines.forEach((refLine) => {
-          spec.reference_lines.forEach((refLine) => {
             if (refLine.type === 'mean' || refLine.type === 'average') {
               // Calculate mean of y values
               const allYValues = []
