@@ -5,8 +5,26 @@
 엑셀 데이터 분석 시 사용자 프롬프트에 따라 **같은 그래프 유형에 대해 여러 개의 그래프를 생성**할 수 있도록 프론트엔드를 수정했습니다.
 
 ### 예시 사용 케이스
-- **사용자 요청:** "각 Tech별로 A컬럼에 대한 트렌드를 분리해서 라인그래프 보여줘"
-- **결과:** Tech 종류별로 별도의 라인그래프가 생성됨 (Tech_A, Tech_B, Tech_C 등)
+
+#### Case 1: 카테고리 값별 분리
+- **요청:** "각 Tech별로 CPK 트렌드를 분리해서 라인그래프 보여줘"
+- **결과:** Tech 종류별로 별도의 라인그래프가 생성됨 (Tech_A, Tech_B, Tech_C)
+
+#### Case 2: 여러 컬럼별 분리
+- **요청:** "WIDTH, THICKNESS, DEPTH 각각에 대해 장비별 트렌드를 라인그래프로 보여줘"
+- **결과:** 3개의 그래프 (WIDTH 트렌드, THICKNESS 트렌드, DEPTH 트렌드)
+
+#### Case 3: 특정 값들만 선택
+- **요청:** "EQ01, EQ02, EQ03 각각에 대해 WIDTH 분포를 박스플롯으로 보여줘"
+- **결과:** 선택된 3개 장비에 대한 박스플롯만 생성
+
+#### Case 4: 조합 패턴
+- **요청:** "Tech_A와 B 각각에 대해 CPK와 YIELD 트렌드를 각각 보여줘"
+- **결과:** 4개의 그래프 (Tech_A CPK, Tech_A YIELD, Tech_B CPK, Tech_B YIELD)
+
+#### Case 5: 혼합 그래프 타입
+- **요청:** "장비별 WIDTH를 박스플롯과 바차트로 각각 보여줘"
+- **결과:** 2개의 그래프 (박스플롯, 바차트)
 
 ---
 
@@ -19,9 +37,15 @@
 
 ### 2. real_data는 변경 없음
 - 모든 데이터는 하나의 `real_data` 배열에 포함
-- 각 그래프는 **필터(transforms)**를 사용하여 데이터를 분리
+- 각 그래프는 **필터(transforms)** 또는 **다른 encodings**를 사용하여 데이터를 분리/변환
 
-### 3. 모든 그래프 유형 지원
+### 3. 유연한 그래프 생성
+- ✅ **필터 기반**: 같은 encodings, 다른 filter
+- ✅ **Encoding 기반**: 다른 y.field (컬럼별)
+- ✅ **조합**: 필터 + 다른 encodings
+- ✅ **타입 혼합**: 같은 데이터, 다른 chart_type
+
+### 4. 모든 그래프 유형 지원
 - ✅ `bar_graph` - 바차트
 - ✅ `line_graph` - 라인차트
 - ✅ `box_plot` - 박스플롯
@@ -224,12 +248,13 @@ response_data = {
 }
 ```
 
-### 2. 여러 그래프 응답 (새 방식)
+### 2. 여러 그래프 응답 - 방법별 가이드
+
+#### 방법 A: 카테고리 값별 분리 (Filter-based)
 ```python
-# 1. 데이터에서 고유 카테고리 추출
+# "각 Tech별로 CPK 트렌드를 분리해서"
 unique_techs = df["TECH"].unique()
 
-# 2. 각 카테고리별로 graph_spec 생성
 graph_specs = []
 for tech in unique_techs:
     spec = {
@@ -246,19 +271,125 @@ for tech in unique_techs:
         ],
         "layout": {
             "title": f"{tech} CPK Trend",
-            "height": 400,
-            "margin": {"l": 80, "r": 80, "t": 100, "b": 150},
-            # ... 기타 레이아웃 설정
+            "height": 400
         }
     }
     graph_specs.append(spec)
 
-# 3. 응답 데이터 구성
 response_data = {
     "analysis_type": "line_graph",
-    "real_data": [df.to_dict("records")],  # 모든 데이터 포함
-    "graph_specs": graph_specs,             # graph_spec이 아닌 graph_specs!
+    "real_data": [df.to_dict("records")],
+    "graph_specs": graph_specs,
     "success_message": f"✅ {len(unique_techs)}개의 라인차트 생성 완료"
+}
+```
+
+#### 방법 B: 여러 Y축 컬럼별 분리 (Encoding-based)
+```python
+# "WIDTH, THICKNESS, DEPTH 각각에 대해 장비별 트렌드"
+y_columns = ["WIDTH", "THICKNESS", "DEPTH"]
+
+graph_specs = []
+for col in y_columns:
+    spec = {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+            "x": {"field": "DATE", "type": "temporal"},
+            "y": {"field": col, "type": "quantitative"},
+            "series": {"field": "EQ"}  # 장비별로 색상 구분
+        },
+        "transforms": [
+            {"type": "sort", "field": "DATE", "direction": "asc"}
+        ],
+        "layout": {
+            "title": f"{col} Trend by Equipment",
+            "height": 400,
+            "yaxis": {"title": f"{col} (μm)"}
+        }
+    }
+    graph_specs.append(spec)
+
+response_data = {
+    "analysis_type": "line_graph",
+    "real_data": [df.to_dict("records")],
+    "graph_specs": graph_specs,
+    "success_message": f"✅ {len(y_columns)}개의 파라미터 트렌드 차트 생성 완료"
+}
+```
+
+#### 방법 C: 특정 값들만 선택 (Selective Filter)
+```python
+# "EQ01, EQ02, EQ03 각각에 대해 WIDTH 분포"
+selected_equipments = ["EQ01", "EQ02", "EQ03"]
+
+graph_specs = []
+for eq in selected_equipments:
+    spec = {
+        "schema_version": "1.0",
+        "chart_type": "box_plot",
+        "dataset_index": 0,
+        "encodings": {
+            "category": {"field": "EQ"},
+            "value": {"field": "WIDTH"}
+        },
+        "transforms": [
+            {"type": "filter", "field": "EQ", "op": "==", "value": eq}
+        ],
+        "layout": {
+            "title": f"{eq} WIDTH Distribution",
+            "height": 400
+        },
+        "boxpoints": "outliers"
+    }
+    graph_specs.append(spec)
+
+response_data = {
+    "analysis_type": "box_plot",
+    "real_data": [df.to_dict("records")],
+    "graph_specs": graph_specs,
+    "success_message": "✅ 3개 장비 박스플롯 생성 완료"
+}
+```
+
+#### 방법 D: 조합 패턴 (Filter + Different Encodings)
+```python
+# "Tech_A와 B 각각에 대해 CPK와 YIELD 트렌드를 각각"
+techs = ["Tech_A", "Tech_B"]
+metrics = ["CPK", "YIELD"]
+
+graph_specs = []
+for tech in techs:
+    for metric in metrics:
+        spec = {
+            "schema_version": "1.0",
+            "chart_type": "line_graph",
+            "dataset_index": 0,
+            "encodings": {
+                "x": {"field": "DATE", "type": "temporal"},
+                "y": {"field": metric, "type": "quantitative"}
+            },
+            "transforms": [
+                {"type": "filter", "field": "TECH", "op": "==", "value": tech},
+                {"type": "sort", "field": "DATE", "direction": "asc"}
+            ],
+            "layout": {
+                "title": f"{tech} {metric} Trend",
+                "height": 400,
+                "yaxis": {
+                    "title": metric,
+                    "range": [0.8, 2.0] if metric == "CPK" else [95, 100]
+                }
+            }
+        }
+        graph_specs.append(spec)
+
+response_data = {
+    "analysis_type": "line_graph",
+    "real_data": [df.to_dict("records")],
+    "graph_specs": graph_specs,
+    "success_message": f"✅ {len(techs)}개 Tech × {len(metrics)}개 지표 = {len(graph_specs)}개 차트 생성 완료"
 }
 ```
 
@@ -303,22 +434,38 @@ def generate_graph_specs(df, user_request, column_metadata):
 ### 시나리오 1: 단일 그래프 (기존 방식)
 **요청:** "날짜별 CPK 트렌드를 라인차트로 보여줘"
 **응답:** `graph_spec` 사용
-**결과:** 1개의 라인차트 표시
+**방식:** 단일 그래프, series로 구분
+**결과:** 1개의 라인차트 (모든 데이터 포함)
 
-### 시나리오 2: 여러 그래프 (새 방식)
+### 시나리오 2: 카테고리 값별 분리
 **요청:** "각 Tech별로 CPK 트렌드를 분리해서 라인그래프 보여줘"
-**응답:** `graph_specs` 배열 사용 (3개 스펙)
-**결과:** 3개의 라인차트 표시 (Tech_A, Tech_B, Tech_C)
+**응답:** `graph_specs` 배열 (3개 스펙)
+**방식:** Filter-based (각 Tech 값으로 필터)
+**결과:** 3개의 라인차트 (Tech_A, Tech_B, Tech_C)
 
-### 시나리오 3: 여러 그래프 - 바차트
-**요청:** "장비별로 불량 개수를 개별 바차트로 보여줘"
-**응답:** `graph_specs` 배열 사용
-**결과:** 장비 수만큼 바차트 표시
+### 시나리오 3: 여러 Y축 컬럼별
+**요청:** "WIDTH, THICKNESS, DEPTH 각각에 대해 장비별 트렌드"
+**응답:** `graph_specs` 배열 (3개 스펙)
+**방식:** Encoding-based (다른 y.field)
+**결과:** 3개의 라인차트 (각각 다른 측정값)
 
-### 시나리오 4: 여러 그래프 - 박스플롯
-**요청:** "각 DEVICE마다 WIDTH 분포를 별도 박스플롯으로"
-**응답:** `graph_specs` 배열 사용
-**결과:** DEVICE 수만큼 박스플롯 표시
+### 시나리오 4: 특정 값 선택
+**요청:** "EQ01, EQ02, EQ03 각각에 대해 WIDTH 분포를 박스플롯으로"
+**응답:** `graph_specs` 배열 (3개 스펙)
+**방식:** Selective Filter (명시된 값들만)
+**결과:** 3개의 박스플롯 (선택된 장비만)
+
+### 시나리오 5: 조합 패턴
+**요청:** "Tech_A와 B 각각에 대해 CPK와 YIELD 트렌드를 각각"
+**응답:** `graph_specs` 배열 (4개 스펙)
+**방식:** Filter + Different Encodings (2 techs × 2 metrics)
+**결과:** 4개의 라인차트 (Tech_A CPK, Tech_A YIELD, Tech_B CPK, Tech_B YIELD)
+
+### 시나리오 6: 혼합 그래프 타입
+**요청:** "장비별 WIDTH를 박스플롯과 바차트로 각각"
+**응답:** `graph_specs` 배열 (2개 스펙, 다른 chart_type)
+**방식:** Different chart_type
+**결과:** 2개의 그래프 (박스플롯 1개, 바차트 1개)
 
 ---
 

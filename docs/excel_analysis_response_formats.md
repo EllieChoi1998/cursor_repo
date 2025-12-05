@@ -657,9 +657,13 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
 **중요:** 배열에 값이 있으면 그 내용만 표시됩니다 (회귀선 포함 안 됨)
 **결과:** 산점도 점들 + 평균선 (회귀선 없음)
 
-### 4.6 Multiple Graphs Example (여러 그래프 생성)
+### 4.6 Multiple Graphs Examples (여러 그래프 생성)
 
-**Use Case:** User requests separate graphs for each category
+## 📊 다중 그래프 생성 케이스
+
+### Case 1: 특정 컬럼 값별로 분리 (Filter-based)
+
+**Use Case:** 하나의 카테고리 컬럼의 각 값별로 별도 그래프 생성
 
 **Request:** "각 Tech별로 CPK 트렌드를 분리해서 라인그래프 보여줘"
 
@@ -802,8 +806,379 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
 - ✅ `real_data` contains all data (no changes)
 - ✅ `graph_specs` is an array of complete graph specifications
 - ✅ Each spec applies its own filter (`TECH == "Tech_A"`, etc.)
-- ✅ Each spec has its own title and styling
+- ✅ **Same encodings** for all graphs (only filter differs)
+- ✅ Each spec has its own title
 - ✅ Frontend renders multiple graphs vertically stacked
+
+---
+
+### Case 2: 여러 Y축 컬럼별로 분리 (Encoding-based)
+
+**Use Case:** 각기 다른 Y축 컬럼에 대해 별도 그래프 생성
+
+**Request:** "WIDTH, THICKNESS, DEPTH 각각에 대해 장비별 트렌드를 라인그래프로 보여줘"
+
+```json
+{
+  "data": {
+    "analysis_type": "line_graph",
+    "file_name": "params.xlsx",
+    "summary": "파라미터별 장비 트렌드 분석",
+    "success_message": "✅ 3개의 파라미터 트렌드 차트 생성 완료",
+    "real_data": [
+      [
+        {"DATE": "2025-11-01", "EQ": "EQ01", "WIDTH": 1.12, "THICKNESS": 0.85, "DEPTH": 2.34},
+        {"DATE": "2025-11-02", "EQ": "EQ01", "WIDTH": 1.15, "THICKNESS": 0.87, "DEPTH": 2.36},
+        {"DATE": "2025-11-01", "EQ": "EQ02", "WIDTH": 1.10, "THICKNESS": 0.83, "DEPTH": 2.30}
+      ]
+    ],
+    "graph_specs": [
+      {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "DATE", "type": "temporal" },
+          "y": { "field": "WIDTH", "type": "quantitative" },
+          "series": { "field": "EQ" }
+        },
+        "transforms": [
+          { "type": "sort", "field": "DATE", "direction": "asc" }
+        ],
+        "layout": {
+          "title": "WIDTH Trend by Equipment",
+          "height": 400,
+          "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
+          "yaxis": { "title": "WIDTH (μm)" }
+        }
+      },
+      {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "DATE", "type": "temporal" },
+          "y": { "field": "THICKNESS", "type": "quantitative" },
+          "series": { "field": "EQ" }
+        },
+        "transforms": [
+          { "type": "sort", "field": "DATE", "direction": "asc" }
+        ],
+        "layout": {
+          "title": "THICKNESS Trend by Equipment",
+          "height": 400,
+          "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
+          "yaxis": { "title": "THICKNESS (μm)" }
+        }
+      },
+      {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "DATE", "type": "temporal" },
+          "y": { "field": "DEPTH", "type": "quantitative" },
+          "series": { "field": "EQ" }
+        },
+        "transforms": [
+          { "type": "sort", "field": "DATE", "direction": "asc" }
+        ],
+        "layout": {
+          "title": "DEPTH Trend by Equipment",
+          "height": 400,
+          "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
+          "yaxis": { "title": "DEPTH (μm)" }
+        }
+      }
+    ],
+    "timestamp": "2025-12-05T10:00:00.000Z"
+  }
+}
+```
+
+**Key Points:**
+- ✅ `real_data` contains all columns (WIDTH, THICKNESS, DEPTH)
+- ✅ **Different encodings** for each graph (different y.field)
+- ✅ Same series field (EQ) for all graphs
+- ✅ No filters needed (using all data)
+- ✅ Each graph shows different measurement
+
+---
+
+### Case 3: 특정 값들만 선택적으로 분리 (Selective Filter)
+
+**Use Case:** 전체가 아닌 특정 값들만 골라서 그래프 생성
+
+**Request:** "EQ01, EQ02, EQ03 각각에 대해 WIDTH 분포를 박스플롯으로 보여줘. 다른 장비는 제외"
+
+```json
+{
+  "data": {
+    "analysis_type": "box_plot",
+    "file_name": "equipment.xlsx",
+    "summary": "주요 3개 장비 WIDTH 분포 분석",
+    "success_message": "✅ 3개 장비 박스플롯 생성 완료",
+    "real_data": [
+      [
+        {"EQ": "EQ01", "WIDTH": 1.12},
+        {"EQ": "EQ02", "WIDTH": 1.10},
+        {"EQ": "EQ03", "WIDTH": 1.15},
+        {"EQ": "EQ04", "WIDTH": 1.08},
+        {"EQ": "EQ05", "WIDTH": 1.20}
+      ]
+    ],
+    "graph_specs": [
+      {
+        "schema_version": "1.0",
+        "chart_type": "box_plot",
+        "dataset_index": 0,
+        "encodings": {
+          "category": { "field": "EQ" },
+          "value": { "field": "WIDTH" }
+        },
+        "transforms": [
+          { "type": "filter", "field": "EQ", "op": "==", "value": "EQ01" }
+        ],
+        "layout": {
+          "title": "EQ01 WIDTH Distribution",
+          "height": 400
+        },
+        "boxpoints": "outliers"
+      },
+      {
+        "schema_version": "1.0",
+        "chart_type": "box_plot",
+        "dataset_index": 0,
+        "encodings": {
+          "category": { "field": "EQ" },
+          "value": { "field": "WIDTH" }
+        },
+        "transforms": [
+          { "type": "filter", "field": "EQ", "op": "==", "value": "EQ02" }
+        ],
+        "layout": {
+          "title": "EQ02 WIDTH Distribution",
+          "height": 400
+        },
+        "boxpoints": "outliers"
+      },
+      {
+        "schema_version": "1.0",
+        "chart_type": "box_plot",
+        "dataset_index": 0,
+        "encodings": {
+          "category": { "field": "EQ" },
+          "value": { "field": "WIDTH" }
+        },
+        "transforms": [
+          { "type": "filter", "field": "EQ", "op": "==", "value": "EQ03" }
+        ],
+        "layout": {
+          "title": "EQ03 WIDTH Distribution",
+          "height": 400
+        },
+        "boxpoints": "outliers"
+      }
+    ],
+    "timestamp": "2025-12-05T10:00:00.000Z"
+  }
+}
+```
+
+**Key Points:**
+- ✅ `real_data` contains all equipment (including EQ04, EQ05)
+- ✅ Only EQ01, EQ02, EQ03 graphs are created
+- ✅ Selective filtering based on user specification
+- ✅ Other values (EQ04, EQ05) are ignored
+
+---
+
+### Case 4: 조합 케이스 (Filter + Different Encodings)
+
+**Use Case:** 특정 조건별로 필터링하면서 동시에 다른 측정값들을 비교
+
+**Request:** "Tech_A와 Tech_B 각각에 대해 CPK와 YIELD 트렌드를 각각 보여줘 (총 4개 그래프)"
+
+```json
+{
+  "data": {
+    "analysis_type": "line_graph",
+    "file_name": "tech_comparison.xlsx",
+    "summary": "Tech별 CPK/YIELD 트렌드 비교",
+    "success_message": "✅ 4개의 트렌드 차트 생성 완료",
+    "real_data": [
+      [
+        {"DATE": "2025-11-01", "TECH": "Tech_A", "CPK": 1.4, "YIELD": 98.2},
+        {"DATE": "2025-11-02", "TECH": "Tech_A", "CPK": 1.5, "YIELD": 98.5},
+        {"DATE": "2025-11-01", "TECH": "Tech_B", "CPK": 1.2, "YIELD": 97.5},
+        {"DATE": "2025-11-02", "TECH": "Tech_B", "CPK": 1.3, "YIELD": 97.8}
+      ]
+    ],
+    "graph_specs": [
+      {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "DATE", "type": "temporal" },
+          "y": { "field": "CPK", "type": "quantitative" }
+        },
+        "transforms": [
+          { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_A" },
+          { "type": "sort", "field": "DATE", "direction": "asc" }
+        ],
+        "layout": {
+          "title": "Tech_A CPK Trend",
+          "height": 400,
+          "yaxis": { "title": "CPK", "range": [0.8, 2.0] }
+        }
+      },
+      {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "DATE", "type": "temporal" },
+          "y": { "field": "YIELD", "type": "quantitative" }
+        },
+        "transforms": [
+          { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_A" },
+          { "type": "sort", "field": "DATE", "direction": "asc" }
+        ],
+        "layout": {
+          "title": "Tech_A YIELD Trend",
+          "height": 400,
+          "yaxis": { "title": "YIELD (%)", "range": [95, 100] }
+        }
+      },
+      {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "DATE", "type": "temporal" },
+          "y": { "field": "CPK", "type": "quantitative" }
+        },
+        "transforms": [
+          { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_B" },
+          { "type": "sort", "field": "DATE", "direction": "asc" }
+        ],
+        "layout": {
+          "title": "Tech_B CPK Trend",
+          "height": 400,
+          "yaxis": { "title": "CPK", "range": [0.8, 2.0] }
+        }
+      },
+      {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "DATE", "type": "temporal" },
+          "y": { "field": "YIELD", "type": "quantitative" }
+        },
+        "transforms": [
+          { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_B" },
+          { "type": "sort", "field": "DATE", "direction": "asc" }
+        ],
+        "layout": {
+          "title": "Tech_B YIELD Trend",
+          "height": 400,
+          "yaxis": { "title": "YIELD (%)", "range": [95, 100] }
+        }
+      }
+    ],
+    "timestamp": "2025-12-05T10:00:00.000Z"
+  }
+}
+```
+
+**Key Points:**
+- ✅ Combines filter (TECH) + different encodings (CPK vs YIELD)
+- ✅ Matrix-style generation: 2 techs × 2 metrics = 4 graphs
+- ✅ Each graph has unique filter + encoding combination
+- ✅ Different y-axis ranges for different metrics
+
+---
+
+### Case 5: 혼합 그래프 타입 (Advanced)
+
+**Use Case:** 같은 데이터에 대해 다른 그래프 타입으로 여러 뷰 생성
+
+**Request:** "장비별 WIDTH를 박스플롯과 바차트로 각각 보여줘"
+
+```json
+{
+  "data": {
+    "analysis_type": "box_plot",
+    "file_name": "width_analysis.xlsx",
+    "summary": "장비별 WIDTH 다각도 분석",
+    "success_message": "✅ 박스플롯 및 바차트 생성 완료",
+    "real_data": [
+      [
+        {"EQ": "EQ01", "WIDTH": 1.12},
+        {"EQ": "EQ01", "WIDTH": 1.15},
+        {"EQ": "EQ02", "WIDTH": 1.10},
+        {"EQ": "EQ02", "WIDTH": 1.08}
+      ]
+    ],
+    "graph_specs": [
+      {
+        "schema_version": "1.0",
+        "chart_type": "box_plot",
+        "dataset_index": 0,
+        "encodings": {
+          "category": { "field": "EQ" },
+          "value": { "field": "WIDTH" }
+        },
+        "layout": {
+          "title": "WIDTH Distribution by Equipment (Box Plot)",
+          "height": 400
+        },
+        "boxpoints": "outliers"
+      },
+      {
+        "schema_version": "1.0",
+        "chart_type": "bar_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "EQ", "type": "categorical" },
+          "y": { "field": "WIDTH", "type": "quantitative", "agg": "avg" }
+        },
+        "layout": {
+          "title": "Average WIDTH by Equipment (Bar Chart)",
+          "height": 400
+        }
+      }
+    ],
+    "timestamp": "2025-12-05T10:00:00.000Z"
+  }
+}
+```
+
+**Key Points:**
+- ✅ Different chart_type for each spec
+- ✅ Same data, different visualization perspectives
+- ✅ Box plot shows distribution, bar chart shows average
+- ✅ `analysis_type` can be the primary type or generic
+
+---
+
+## 📋 다중 그래프 생성 패턴 요약
+
+| 케이스 | 변경 요소 | 사용 예시 |
+|--------|----------|----------|
+| **Case 1** | Filter only | "각 Tech별로 트렌드" |
+| **Case 2** | Encoding (y-axis) | "WIDTH, THICKNESS 각각 트렌드" |
+| **Case 3** | Selective filter | "EQ01, EQ02만 분리해서" |
+| **Case 4** | Filter + Encoding | "Tech_A와 B 각각의 CPK/YIELD" |
+| **Case 5** | Chart type | "박스플롯과 바차트로 각각" |
+
+**공통 원칙:**
+- ✅ `real_data`는 항상 모든 데이터 포함
+- ✅ 각 `graph_spec`은 완전히 독립적
+- ✅ `transforms`, `encodings`, `layout`, `chart_type` 모두 다를 수 있음
+- ✅ Frontend는 각 spec을 개별적으로 빌드 및 렌더링
 - ✅ Works with all graph types: `bar_graph`, `line_graph`, `box_plot`, `scatter_plot`
 
 ### 4.7 Reference Lines 상세 스펙
