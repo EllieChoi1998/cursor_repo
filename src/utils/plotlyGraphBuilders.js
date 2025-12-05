@@ -233,30 +233,54 @@ export const buildLineFigure = (rows, encodings = {}, spec = {}, chartType = 'li
             showlegend: true
           })
         } else if (refLine.type === 'regression' || refLine.type === 'linear') {
-          const allPoints = []
-          const xIsNumeric = []
+          // Step 1: Collect all unique X values and build a consistent mapping
+          const allXValues = new Set()
+          traces.forEach(trace => {
+            if (trace.x && Array.isArray(trace.x)) {
+              trace.x.forEach(x => allXValues.add(x))
+            }
+          })
           
+          // Check if X is numeric
+          const xValuesArray = Array.from(allXValues)
+          const isNumericX = xValuesArray.every(x => {
+            if (typeof x === 'number') return true
+            const parsed = parseFloat(x)
+            return !isNaN(parsed)
+          })
+          
+          console.log('[buildLineFigure] X values analysis:', {
+            uniqueCount: xValuesArray.length,
+            isNumeric: isNumericX,
+            sample: xValuesArray.slice(0, 5)
+          })
+          
+          // Step 2: Create consistent X mapping
+          let xMapping = new Map()
+          if (isNumericX) {
+            // For numeric X, sort and use actual values
+            const sortedX = xValuesArray
+              .map(x => typeof x === 'number' ? x : parseFloat(x))
+              .sort((a, b) => a - b)
+            sortedX.forEach((x, idx) => {
+              xMapping.set(xValuesArray[idx], x)
+            })
+          } else {
+            // For categorical X, use index based on order of appearance
+            xValuesArray.forEach((x, idx) => {
+              xMapping.set(x, idx)
+            })
+          }
+          
+          // Step 3: Collect all points with consistent X mapping
+          const allPoints = []
           traces.forEach(trace => {
             if (trace.x && trace.y && Array.isArray(trace.x) && Array.isArray(trace.y)) {
               trace.x.forEach((x, i) => {
-                let xVal
+                const xVal = xMapping.get(x)
                 const yVal = typeof trace.y[i] === 'number' ? trace.y[i] : parseFloat(trace.y[i])
                 
-                if (typeof x === 'number') {
-                  xVal = x
-                  xIsNumeric.push(true)
-                } else {
-                  const parsed = parseFloat(x)
-                  if (!isNaN(parsed)) {
-                    xVal = parsed
-                    xIsNumeric.push(true)
-                  } else {
-                    xVal = i
-                    xIsNumeric.push(false)
-                  }
-                }
-                
-                if (!isNaN(xVal) && !isNaN(yVal) && isFinite(xVal) && isFinite(yVal)) {
+                if (xVal !== undefined && !isNaN(yVal) && isFinite(yVal)) {
                   allPoints.push({ x: xVal, y: yVal, originalX: x })
                 }
               })
@@ -268,8 +292,9 @@ export const buildLineFigure = (rows, encodings = {}, spec = {}, chartType = 'li
             return
           }
           
-          console.log('[buildLineFigure] Regression points:', allPoints.length, 'first 3:', allPoints.slice(0, 3))
+          console.log('[buildLineFigure] Regression points:', allPoints.length, 'first 5:', allPoints.slice(0, 5))
           
+          // Step 4: Calculate linear regression
           const n = allPoints.length
           const sumX = allPoints.reduce((sum, p) => sum + p.x, 0)
           const sumY = allPoints.reduce((sum, p) => sum + p.y, 0)
@@ -279,39 +304,69 @@ export const buildLineFigure = (rows, encodings = {}, spec = {}, chartType = 'li
           const denominator = (n * sumX2 - sumX * sumX)
           
           if (Math.abs(denominator) < 1e-10) {
-            console.warn('[buildLineFigure] Cannot calculate regression: denominator is too small:', denominator)
+            console.warn('[buildLineFigure] Cannot calculate regression: denominator near zero:', denominator)
             return
           }
           
           const slope = (n * sumXY - sumX * sumY) / denominator
           const intercept = (sumY - slope * sumX) / n
           
-          console.log('[buildLineFigure] Regression:', { slope, intercept, n, sumX, sumY, sumXY, sumX2, denominator })
+          console.log('[buildLineFigure] Regression calculated:', {
+            slope,
+            intercept,
+            n,
+            sumX: sumX.toFixed(2),
+            sumY: sumY.toFixed(2),
+            sumXY: sumXY.toFixed(2),
+            sumX2: sumX2.toFixed(2),
+            denominator: denominator.toFixed(2)
+          })
           
           if (!isFinite(slope) || !isFinite(intercept)) {
             console.warn('[buildLineFigure] Invalid regression values:', { slope, intercept })
             return
           }
           
+          // Step 5: Create regression line trace
           const xMin = Math.min(...allPoints.map(p => p.x))
           const xMax = Math.max(...allPoints.map(p => p.x))
+          const yMin = slope * xMin + intercept
+          const yMax = slope * xMax + intercept
           
-          const useCategorical = xIsNumeric.filter(v => !v).length > xIsNumeric.length / 2
+          console.log('[buildLineFigure] Regression line:', {
+            xMin,
+            xMax,
+            yMin: yMin.toFixed(2),
+            yMax: yMax.toFixed(2),
+            isNumericX
+          })
+          
+          // For categorical X, we need to find the original X values at min/max indices
+          let regressionX, regressionY
+          if (isNumericX) {
+            regressionX = [xMin, xMax]
+            regressionY = [yMin, yMax]
+          } else {
+            // Find original X values for min and max indices
+            const minPoint = allPoints.find(p => p.x === xMin)
+            const maxPoint = allPoints.find(p => p.x === xMax)
+            regressionX = [minPoint?.originalX || xMin, maxPoint?.originalX || xMax]
+            regressionY = [yMin, yMax]
+          }
           
           traces.push({
             type: 'scatter',
             mode: 'lines',
             name: refLine.name || 'Regression',
-            x: useCategorical ? 
-              [allPoints[0].originalX, allPoints[allPoints.length - 1].originalX] : 
-              [xMin, xMax],
-            y: [slope * xMin + intercept, slope * xMax + intercept],
+            x: regressionX,
+            y: regressionY,
             line: {
               color: refLine.color || 'blue',
               width: refLine.width || 2,
               dash: refLine.dash || 'solid'
             },
-            showlegend: true
+            showlegend: true,
+            hoverinfo: 'skip'
           })
         }
       })
