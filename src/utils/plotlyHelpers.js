@@ -46,7 +46,8 @@ export const aggregatePoints = (points, agg) => {
     if (!grouped.has(key)) {
       grouped.set(key, { values: [], order: grouped.size })
     }
-    if (y !== null && y !== undefined) {
+    // Only include valid numeric Y values (not null, undefined, NaN, or Infinity)
+    if (y !== null && y !== undefined && typeof y === 'number' && isFinite(y)) {
       grouped.get(key).values.push(y)
     }
   })
@@ -85,6 +86,22 @@ export const splitSeriesPoints = (rows, { xField, yField, seriesField }) => {
     const yRaw = safeField(yField) ? getValueByPath(row, yField) : null
     const yValue = coerceNumber(yRaw)
     const seriesKey = safeField(seriesField) ? getValueByPath(row, seriesField) : 'Series'
+    
+    // Skip rows with invalid data
+    // 1. Y value must be a valid number (not null/NaN)
+    if (yValue === null || yValue === undefined || (typeof yValue === 'number' && !isFinite(yValue))) {
+      return
+    }
+    
+    // 2. X value must exist (not null/undefined)
+    // For numeric X, also check for NaN
+    if (xValue === null || xValue === undefined) {
+      return
+    }
+    if (typeof xValue === 'number' && !isFinite(xValue)) {
+      return
+    }
+    
     if (!seriesMap.has(seriesKey)) {
       seriesMap.set(seriesKey, [])
     }

@@ -421,7 +421,8 @@ export const buildBoxFigure = (rows, encodings = {}, spec = {}) => {
       groups.set(bucketKey, [])
     }
     const value = coerceNumber(getValueByPath(row, valueField))
-    if (value !== null) {
+    // Skip null, undefined, NaN, and Infinity values
+    if (value !== null && value !== undefined && typeof value === 'number' && isFinite(value)) {
       groups.get(bucketKey).push(value)
     }
   })
