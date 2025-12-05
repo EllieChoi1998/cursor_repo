@@ -9,7 +9,11 @@
     <div v-if="errorMessage" class="plotly-error-message">
       ⚠️ {{ errorMessage }}
     </div>
-    <div ref="chartContainer" class="plotly-container"></div>
+    
+    <!-- Scrollable container wrapper -->
+    <div class="plotly-scroll-wrapper">
+      <div ref="chartContainer" class="plotly-container"></div>
+    </div>
   </div>
 </template>
 
@@ -140,7 +144,8 @@ export default defineComponent({
           }
         }
 
-        if (props.height) {
+        // Only apply props.height if layout.height is not already defined
+        if (props.height && !layout.height) {
           layout.height = props.height
         }
 
@@ -221,11 +226,19 @@ export default defineComponent({
   font-size: 0.95rem;
 }
 
+/* Wrapper for the chart */
+.plotly-scroll-wrapper {
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+  overflow: visible;  /* Allow content to be visible */
+}
+
 .plotly-container {
   width: 100%;
   min-height: 360px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
   background: #fff;
 }
 </style>

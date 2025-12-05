@@ -1106,6 +1106,28 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
+      // Deep merge helper: target values take precedence over source
+      const mergeDeep = (source, target) => {
+        if (!target || typeof target !== 'object' || Array.isArray(target)) {
+          return target !== undefined ? target : source
+        }
+        if (!source || typeof source !== 'object' || Array.isArray(source)) {
+          return target
+        }
+        
+        const result = { ...source }
+        for (const key in target) {
+          if (target.hasOwnProperty(key)) {
+            if (target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+              result[key] = mergeDeep(result[key], target[key])
+            } else {
+              result[key] = target[key]
+            }
+          }
+        }
+        return result
+      }
+
       const stripCodeFences = (value) => {
         if (typeof value !== 'string') return value
         const trimmed = value.trim()
@@ -1324,37 +1346,308 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           return trace
         })
 
+        // Apply default layout customizations
+        const defaultLayout = {
+          height: 500,
+          margin: { l: 80, r: 80, t: 100, b: 150, pad: 4 },  // b: 150 for long x-axis labels
+          xaxis: {
+            tickangle: -45,
+            tickfont: { size: 10, color: '#666' },
+            showgrid: true,
+            gridcolor: '#e5e5e5',
+            gridwidth: 1
+          },
+          yaxis: {
+            showgrid: true,
+            gridcolor: '#d3d3d3',
+            gridwidth: 1,
+            zeroline: true,
+            zerolinecolor: '#999',
+            zerolinewidth: 2
+          }
+        }
+
+        // Deep merge: spec.layout takes precedence
+        const mergedLayout = mergeDeep(defaultLayout, spec.layout || {})
+
         return {
           data,
-          layout: { ...(spec.layout || {}) },
+          layout: mergedLayout,
           config: { ...(spec.config || {}) }
         }
       }
 
       const buildLineFigure = (rows, encodings = {}, spec = {}, chartType = 'line') => {
+        console.log('[buildLineFigure] START', {
+          chartType,
+          rowsCount: rows?.length,
+          encodings,
+          spec,
+          firstRow: rows?.[0]
+        })
+        
         const xField = encodings.x?.field || encodings.category?.field
         const yField = encodings.y?.field || encodings.value?.field
-        if (!xField || !yField) return null
+        
+        console.log('[buildLineFigure] Fields:', { xField, yField })
+        
+        if (!xField || !yField) {
+          console.error('[buildLineFigure] Missing xField or yField!')
+          return null
+        }
 
         const seriesField = encodings.series?.field || encodings.group?.field || encodings.color?.field
         const aggregator = encodings.y?.agg || encodings.y?.aggregate || 'identity'
         const seriesMap = splitSeriesPoints(rows, { xField, yField, seriesField })
 
-        const baseMode = spec.mode || (chartType === 'scatter' ? 'markers' : 'lines+markers')
+        console.log('[buildLineFigure] SeriesMap size:', seriesMap.size)
+        seriesMap.forEach((points, key) => {
+          console.log(`[buildLineFigure] Series "${key}":`, points.length, 'points')
+          console.log('[buildLineFigure] First 3 points:', points.slice(0, 3))
+        })
+
+        // For scatter plots, ALWAYS use 'markers' mode (ignore spec.mode)
+        // For line graphs, use spec.mode or default to 'lines+markers'
+        const baseMode = chartType === 'scatter' 
+          ? 'markers'  // FORCE markers-only for scatter plots
+          : (spec.mode || 'lines+markers')
+        
+        console.log('[buildLineFigure] baseMode:', baseMode, 'chartType:', chartType)
+        
         const traces = Array.from(seriesMap.entries()).map(([seriesKey, points]) => {
           const aggregated = aggregatePoints(points, aggregator)
-          return {
+          console.log(`[buildLineFigure] Aggregated "${seriesKey}":`, aggregated.length, 'points')
+          console.log('[buildLineFigure] Aggregated first 3:', aggregated.slice(0, 3))
+          
+          const trace = {
             type: chartType === 'scatter' ? 'scatter' : 'scatter',
             mode: baseMode,
             name: seriesKey,
             x: aggregated.map((point) => point.x),
             y: aggregated.map((point) => point.y)
           }
+          
+          console.log(`[buildLineFigure] Trace "${seriesKey}":`, {
+            xLength: trace.x.length,
+            yLength: trace.y.length,
+            xSample: trace.x.slice(0, 3),
+            ySample: trace.y.slice(0, 3)
+          })
+          
+          return trace
         })
+        
+        console.log('[buildLineFigure] Total traces:', traces.length)
+
+        // For scatter plots, add regression line by default
+        if (chartType === 'scatter') {
+          // ALWAYS add default regression line unless explicitly provided in array
+          // undefined, null, empty string, empty array [] → add default regression
+          // array with items → use those items (if no regression in array, won't add)
+          let referenceLines = spec.reference_lines
+          
+          console.log('[buildLineFigure] Original reference_lines:', referenceLines)
+          console.log('[buildLineFigure] reference_lines type:', typeof referenceLines)
+          
+          // Check if reference_lines is undefined, null, empty string, or empty array
+          if (referenceLines === undefined || 
+              referenceLines === null || 
+              referenceLines === '' ||
+              (typeof referenceLines === 'string' && referenceLines.trim() === '') ||
+              (Array.isArray(referenceLines) && referenceLines.length === 0)) {
+            console.log('[buildLineFigure] No reference lines provided - using default regression line')
+            referenceLines = [
+              {
+                type: 'regression',
+                name: '회귀선',
+                color: 'blue',
+                width: 2,
+                dash: 'solid'
+              }
+            ]
+          } else if (Array.isArray(referenceLines) && referenceLines.length > 0) {
+            console.log('[buildLineFigure] Using user-defined reference lines:', referenceLines.length)
+            // User provided specific reference lines - use them as-is
+          } else {
+            console.warn('[buildLineFigure] Unexpected reference_lines format:', referenceLines, '- using default')
+            referenceLines = [
+              {
+                type: 'regression',
+                name: '회귀선',
+                color: 'blue',
+                width: 2,
+                dash: 'solid'
+              }
+            ]
+          }
+
+          // Add reference lines for scatter plots (mean, regression, etc.)
+          try {
+            referenceLines.forEach((refLine) => {
+              if (refLine.type === 'mean' || refLine.type === 'average') {
+                // Calculate mean of y values
+                const allYValues = []
+                traces.forEach(trace => {
+                  if (trace.y && Array.isArray(trace.y)) {
+                    allYValues.push(...trace.y.filter(v => typeof v === 'number' && !isNaN(v)))
+                  }
+                })
+                
+                if (allYValues.length === 0) return
+                
+                const mean = allYValues.reduce((sum, val) => sum + val, 0) / allYValues.length
+                
+                // Get x range
+                const allXValues = []
+                traces.forEach(trace => {
+                  if (trace.x && Array.isArray(trace.x)) {
+                    allXValues.push(...trace.x.filter(v => typeof v === 'number' && !isNaN(v)))
+                  }
+                })
+                
+                if (allXValues.length === 0) return
+                
+                const xMin = Math.min(...allXValues)
+                const xMax = Math.max(...allXValues)
+                
+                traces.push({
+                  type: 'scatter',
+                  mode: 'lines',
+                  name: refLine.name || 'Mean',
+                  x: [xMin, xMax],
+                  y: [mean, mean],
+                  line: {
+                    color: refLine.color || 'red',
+                    width: refLine.width || 2,
+                    dash: refLine.dash || 'dash'
+                  },
+                  showlegend: true
+                })
+              } else if (refLine.type === 'horizontal') {
+                // Fixed horizontal line at specified y value
+                if (typeof refLine.value !== 'number' || isNaN(refLine.value)) return
+                
+                const allXValues = []
+                traces.forEach(trace => {
+                  if (trace.x && Array.isArray(trace.x)) {
+                    allXValues.push(...trace.x.filter(v => typeof v === 'number' && !isNaN(v)))
+                  }
+                })
+                
+                if (allXValues.length === 0) return
+                
+                const xMin = Math.min(...allXValues)
+                const xMax = Math.max(...allXValues)
+                
+                traces.push({
+                  type: 'scatter',
+                  mode: 'lines',
+                  name: refLine.name || 'Reference',
+                  x: [xMin, xMax],
+                  y: [refLine.value, refLine.value],
+                  line: {
+                    color: refLine.color || 'red',
+                    width: refLine.width || 2,
+                    dash: refLine.dash || 'dash'
+                  },
+                  showlegend: true
+                })
+              } else if (refLine.type === 'regression' || refLine.type === 'linear') {
+                // Simple linear regression
+                const allPoints = []
+                traces.forEach(trace => {
+                  if (trace.x && trace.y && Array.isArray(trace.x) && Array.isArray(trace.y)) {
+                    trace.x.forEach((x, i) => {
+                      const xVal = typeof x === 'number' ? x : parseFloat(x)
+                      const yVal = typeof trace.y[i] === 'number' ? trace.y[i] : parseFloat(trace.y[i])
+                      
+                      if (!isNaN(xVal) && !isNaN(yVal) && isFinite(xVal) && isFinite(yVal)) {
+                        allPoints.push({ x: xVal, y: yVal })
+                      }
+                    })
+                  }
+                })
+                
+                if (allPoints.length < 2) {
+                  console.warn('[buildLineFigure] Not enough valid points for regression line:', allPoints.length)
+                  return
+                }
+                
+                // Calculate linear regression
+                const n = allPoints.length
+                const sumX = allPoints.reduce((sum, p) => sum + p.x, 0)
+                const sumY = allPoints.reduce((sum, p) => sum + p.y, 0)
+                const sumXY = allPoints.reduce((sum, p) => sum + p.x * p.y, 0)
+                const sumX2 = allPoints.reduce((sum, p) => sum + p.x * p.x, 0)
+                
+                const denominator = (n * sumX2 - sumX * sumX)
+                
+                if (denominator === 0) {
+                  console.warn('[buildLineFigure] Cannot calculate regression: denominator is 0')
+                  return
+                }
+                
+                const slope = (n * sumXY - sumX * sumY) / denominator
+                const intercept = (sumY - slope * sumX) / n
+                
+                if (!isFinite(slope) || !isFinite(intercept)) {
+                  console.warn('[buildLineFigure] Invalid regression values:', { slope, intercept })
+                  return
+                }
+                
+                const xMin = Math.min(...allPoints.map(p => p.x))
+                const xMax = Math.max(...allPoints.map(p => p.x))
+                
+                traces.push({
+                  type: 'scatter',
+                  mode: 'lines',
+                  name: refLine.name || 'Regression',
+                  x: [xMin, xMax],
+                  y: [slope * xMin + intercept, slope * xMax + intercept],
+                  line: {
+                    color: refLine.color || 'blue',
+                    width: refLine.width || 2,
+                    dash: refLine.dash || 'solid'
+                  },
+                  showlegend: true
+                })
+              }
+            })
+          } catch (error) {
+            console.error('[buildLineFigure] Error adding reference lines:', error)
+            // Continue without reference lines if there's an error
+          }
+        }
+        // End of scatter plot reference lines processing
+
+        // Apply default layout customizations
+        const defaultLayout = {
+          height: 500,
+          margin: { l: 80, r: 80, t: 100, b: 150, pad: 4 },  // b: 150 for long x-axis labels
+          xaxis: {
+            tickangle: -45,
+            tickfont: { size: 10, color: '#666' },
+            showgrid: true,
+            gridcolor: '#e5e5e5',
+            gridwidth: 1
+          },
+          yaxis: {
+            showgrid: true,
+            gridcolor: '#d3d3d3',
+            gridwidth: 1,
+            griddash: 'dot',
+            zeroline: true,
+            zerolinecolor: '#999',
+            zerolinewidth: 2
+          }
+        }
+
+        // Deep merge: spec.layout takes precedence
+        const mergedLayout = mergeDeep(defaultLayout, spec.layout || {})
 
         return {
           data: traces,
-          layout: { ...(spec.layout || {}) },
+          layout: mergedLayout,
           config: { ...(spec.config || {}) }
         }
       }
@@ -1384,9 +1677,33 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           boxpoints: spec.boxpoints || 'outliers'
         }))
 
+        // Apply default layout customizations
+        const defaultLayout = {
+          height: 500,
+          margin: { l: 80, r: 80, t: 100, b: 150, pad: 4 },  // b: 150 for long x-axis labels
+          xaxis: {
+            tickangle: -45,
+            tickfont: { size: 10, color: '#666' },
+            showgrid: true,
+            gridcolor: '#e5e5e5',
+            gridwidth: 1
+          },
+          yaxis: {
+            showgrid: true,
+            gridcolor: '#d3d3d3',
+            gridwidth: 1,
+            zeroline: true,
+            zerolinecolor: '#999',
+            zerolinewidth: 2
+          }
+        }
+
+        // Deep merge: spec.layout takes precedence
+        const mergedLayout = mergeDeep(defaultLayout, spec.layout || {})
+
         return {
           data,
-          layout: { ...(spec.layout || {}) },
+          layout: mergedLayout,
           config: { ...(spec.config || {}) }
         }
       }
@@ -1462,38 +1779,67 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
 
       const normalizeRealDataSets = (payload) => {
-        if (payload === null || payload === undefined) return []
+        console.log('[normalizeRealDataSets] Input payload:', payload)
+        console.log('[normalizeRealDataSets] Payload type:', typeof payload)
+        console.log('[normalizeRealDataSets] Payload is array:', Array.isArray(payload))
+        
+        if (payload === null || payload === undefined) {
+          console.warn('[normalizeRealDataSets] Payload is null or undefined')
+          return []
+        }
+        
         const items = Array.isArray(payload) ? payload : [payload]
+        console.log('[normalizeRealDataSets] Items array length:', items.length)
+        
         const datasets = []
 
-        items.forEach((entry) => {
-          if (entry === null || entry === undefined) return
+        items.forEach((entry, index) => {
+          console.log(`[normalizeRealDataSets] Processing entry ${index}:`, entry)
+          
+          if (entry === null || entry === undefined) {
+            console.warn(`[normalizeRealDataSets] Entry ${index} is null or undefined`)
+            return
+          }
+          
           let parsed = entry
 
           if (typeof parsed === 'string') {
+            console.log(`[normalizeRealDataSets] Entry ${index} is string, parsing...`)
             parsed = parseJsonLoose(parsed) ?? parsed
           }
 
           if (typeof parsed === 'string') {
+            console.log(`[normalizeRealDataSets] Entry ${index} still string, parsing again...`)
             parsed = parseJsonLoose(parsed)
           }
 
           if (Array.isArray(parsed)) {
+            console.log(`[normalizeRealDataSets] Entry ${index} is array, length:`, parsed.length)
+            console.log(`[normalizeRealDataSets] Entry ${index} first 3 rows:`, parsed.slice(0, 3))
             datasets.push(parsed)
             return
           }
 
           if (parsed && typeof parsed === 'object') {
             if (Array.isArray(parsed.records)) {
+              console.log(`[normalizeRealDataSets] Entry ${index} has records array, length:`, parsed.records.length)
               datasets.push(parsed.records)
               return
             }
             if (Array.isArray(parsed.data)) {
+              console.log(`[normalizeRealDataSets] Entry ${index} has data array, length:`, parsed.data.length)
               datasets.push(parsed.data)
               return
             }
+            console.log(`[normalizeRealDataSets] Entry ${index} is object, wrapping in array`)
             datasets.push([parsed])
           }
+        })
+
+        console.log('[normalizeRealDataSets] Result datasets count:', datasets.length)
+        datasets.forEach((ds, i) => {
+          console.log(`[normalizeRealDataSets] Dataset ${i} length:`, ds?.length)
+          console.log(`[normalizeRealDataSets] Dataset ${i} first row:`, ds?.[0])
         })
 
         return datasets
@@ -1721,13 +2067,39 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           console.log('📊 Processing Plotly/Table/Text type:', responseData.analysis_type)
           console.log('📊 responseData.graph_spec:', responseData.graph_spec)
           console.log('📊 responseData.real_data:', responseData.real_data)
+          console.log('📊 responseData.real_data type:', typeof responseData.real_data)
+          console.log('📊 responseData.real_data is array:', Array.isArray(responseData.real_data))
+          if (Array.isArray(responseData.real_data)) {
+            console.log('📊 responseData.real_data length:', responseData.real_data.length)
+            console.log('📊 responseData.real_data first 3 rows:', responseData.real_data.slice(0, 3))
+          }
           
           const analysisType = responseData.analysis_type
           const realDataSets = normalizeRealDataSets(responseData.real_data)
+          console.log('📊 realDataSets after normalize:', realDataSets)
+          console.log('📊 realDataSets length:', realDataSets?.length)
+          console.log('📊 realDataSets[0] length:', realDataSets?.[0]?.length)
+          console.log('📊 realDataSets[0] first 3 rows:', realDataSets?.[0]?.slice(0, 3))
+          
           const primaryRealData = realDataSets[0] || []
           const hasGraphSpec = plotlyGraphTypes.includes(analysisType)
           console.log('📊 hasGraphSpec:', hasGraphSpec, 'analysisType:', analysisType)
           const graphSpec = hasGraphSpec ? buildGraphSpec(responseData.graph_spec, realDataSets) : null
+          console.log('📊 graphSpec after build:', graphSpec)
+          if (graphSpec?.data) {
+            console.log('📊 graphSpec.data traces:', graphSpec.data.length)
+            graphSpec.data.forEach((trace, i) => {
+              console.log(`📊 Trace ${i}:`, {
+                type: trace.type,
+                mode: trace.mode,
+                name: trace.name,
+                xLength: trace.x?.length,
+                yLength: trace.y?.length,
+                xSample: trace.x?.slice(0, 3),
+                ySample: trace.y?.slice(0, 3)
+              })
+            })
+          }
           const successMessage = responseData.success_message || responseData.summary || ''
           const baseTitle = plotlyTitleMap[analysisType] || 'Excel Analysis'
           const fileSuffix = responseData.file_name ? ` - ${responseData.file_name}` : ''
