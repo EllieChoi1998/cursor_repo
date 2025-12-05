@@ -1,95 +1,95 @@
-# Graph Specs Patterns - 간단 정리
+# Graph Spec Pattern - 단일 필드 사용
 
-## 패턴 1: 값별 분리 (split_by 사용)
+Backend는 항상 `graph_spec` 하나만 보냄. Frontend가 자동 판단.
 
-**요청:** "각 Tech별로 CPK 트렌드를 분리해서 라인그래프"
+---
+
+## 패턴 1: 템플릿 (split_by 있음)
+
+**요청:** "각 Tech별로 CPK 트렌드를 분리해서"
 
 **Backend 응답:**
 ```json
 {
-  "analysis_type": "line_graph",
-  "real_data": [...],
-  "graph_spec_template": {
+  "graph_spec": {
     "split_by": "TECH",
     "chart_type": "line_graph",
     "encodings": {
-      "x": {"field": "DATE", "type": "temporal"},
-      "y": {"field": "CPK", "type": "quantitative"}
+      "y": {"field": "CPK"}
     },
     "transforms": [
-      {"type": "filter", "field": "TECH", "op": "==", "value": "{{SPLIT_VALUE}}"}
+      {"type": "filter", "field": "TECH", "value": "{{SPLIT_VALUE}}"}
     ],
     "layout": {
-      "title": "{{SPLIT_VALUE}} CPK Trend"
+      "title": "{{SPLIT_VALUE}} CPK"
     }
   }
 }
 ```
 
-**Frontend 처리:**
-```javascript
-// 1. real_data에서 TECH 컬럼의 고유값 추출: ["Tech_A", "Tech_B", "Tech_C"]
-// 2. 각 값마다 템플릿 복사 & {{SPLIT_VALUE}} 치환
-// 3. graphSpecs 배열 생성 → 3개 그래프 렌더링
-```
-
-**모든 그래프 타입 지원:** `bar_graph`, `line_graph`, `box_plot`, `scatter_plot`
+**Frontend 자동 처리:** TECH 고유값 추출 → 템플릿 확장 → 여러 그래프
 
 ---
 
-## 패턴 2: 컬럼별 분리 (graph_specs 배열 직접)
+## 패턴 2: 배열 (여러 개)
 
-**요청:** "WIDTH, THICKNESS, DEPTH 각각에 대해 트렌드"
+**요청:** "WIDTH, THICKNESS 각각 트렌드"
 
 **Backend 응답:**
 ```json
 {
-  "analysis_type": "line_graph",
-  "real_data": [...],
-  "graph_specs": [
+  "graph_spec": [
     {
       "chart_type": "line_graph",
-      "encodings": {
-        "x": {"field": "DATE", "type": "temporal"},
-        "y": {"field": "WIDTH", "type": "quantitative"}
-      },
-      "layout": {"title": "WIDTH Trend"}
+      "encodings": {"y": {"field": "WIDTH"}},
+      "layout": {"title": "WIDTH"}
     },
     {
       "chart_type": "line_graph",
-      "encodings": {
-        "x": {"field": "DATE", "type": "temporal"},
-        "y": {"field": "THICKNESS", "type": "quantitative"}
-      },
-      "layout": {"title": "THICKNESS Trend"}
-    },
-    {
-      "chart_type": "line_graph",
-      "encodings": {
-        "x": {"field": "DATE", "type": "temporal"},
-        "y": {"field": "DEPTH", "type": "quantitative"}
-      },
-      "layout": {"title": "DEPTH Trend"}
+      "encodings": {"y": {"field": "THICKNESS"}},
+      "layout": {"title": "THICKNESS"}
     }
   ]
 }
 ```
 
-**Frontend 처리:**
-```javascript
-// 그대로 렌더링 (변환 불필요)
-```
+**Frontend 자동 처리:** 배열 길이 > 1 → 여러 그래프
 
 ---
 
-## 요약
+## 패턴 3: 단일 객체
 
-| 케이스 | Backend 응답 | Frontend 처리 |
-|--------|-------------|---------------|
-| **값별 분리** | `graph_spec_template` + `split_by` | 고유값 추출 → 템플릿 확장 |
-| **컬럼별 분리** | `graph_specs` 배열 | 그대로 렌더링 |
+**요청:** "CPK 트렌드"
 
-**핵심:**
-- Backend는 템플릿만 전송 (고유값 추출 불필요)
-- Frontend가 real_data 기반으로 동적 확장
-- 모든 그래프 타입에 동일하게 적용
+**Backend 응답:**
+```json
+{
+  "graph_spec": {
+    "chart_type": "line_graph",
+    "encodings": {"y": {"field": "CPK"}},
+    "layout": {"title": "CPK Trend"}
+  }
+}
+```
+
+**Frontend 자동 처리:** 단일 그래프
+
+---
+
+## Frontend 자동 판단 로직
+
+```javascript
+if (graph_spec.split_by) {
+  // → 템플릿 확장
+} else if (Array.isArray(graph_spec)) {
+  if (graph_spec.length === 1) {
+    // → 단일 그래프
+  } else {
+    // → 여러 그래프
+  }
+} else {
+  // → 단일 그래프
+}
+```
+
+**모든 그래프 타입 지원:** `bar_graph`, `line_graph`, `box_plot`, `scatter_plot`

@@ -2124,18 +2124,19 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           const hasGraphSpec = plotlyGraphTypes.includes(analysisType)
           console.log('📊 hasGraphSpec:', hasGraphSpec, 'analysisType:', analysisType)
           
-          // Check if multiple graph specs are provided (graph_specs array or template)
+          // Process graph_spec (auto-detect type)
           let graphSpec = null
           let graphSpecs = null
           
-          if (hasGraphSpec) {
-            // Option 1: Template approach (Frontend expands)
-            if (responseData.graph_spec_template && typeof responseData.graph_spec_template === 'object') {
-              console.log('📊 Processing graph_spec_template')
-              const template = responseData.graph_spec_template
-              const splitBy = template.split_by
+          if (hasGraphSpec && responseData.graph_spec) {
+            const rawSpec = responseData.graph_spec
+            
+            // Case 1: Template (has split_by field)
+            if (rawSpec.split_by && typeof rawSpec.split_by === 'string' && rawSpec.split_by.trim()) {
+              console.log('📊 Detected template (split_by found):', rawSpec.split_by)
+              const splitBy = rawSpec.split_by
               
-              if (splitBy && primaryRealData.length > 0) {
+              if (primaryRealData.length > 0) {
                 console.log(`📊 Expanding template by column: ${splitBy}`)
                 
                 // Extract unique values from split_by column
@@ -2148,7 +2149,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 // Create spec for each unique value
                 graphSpecs = uniqueValues.map(value => {
                   // Deep copy template
-                  const spec = JSON.parse(JSON.stringify(template))
+                  const spec = JSON.parse(JSON.stringify(rawSpec))
                   delete spec.split_by // Remove split_by from spec
                   
                   // Replace {{SPLIT_VALUE}} placeholder
@@ -2162,26 +2163,33 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 
                 console.log('📊 graphSpecs after template expansion:', graphSpecs.length, 'specs')
               } else {
-                console.warn('⚠️ graph_spec_template missing split_by or no data')
+                console.warn('⚠️ Template found but no data to expand')
               }
             }
-            // Option 2: Direct array
-            else if (responseData.graph_specs && Array.isArray(responseData.graph_specs) && responseData.graph_specs.length > 0) {
-              // Multiple graphs: build each spec in the array
-              console.log('📊 Processing multiple graph_specs:', responseData.graph_specs.length)
-              graphSpecs = responseData.graph_specs.map((spec, index) => {
-                const built = buildGraphSpec(spec, realDataSets)
-                console.log(`📊 Built graphSpec ${index}:`, built)
-                return built
-              }).filter(spec => spec !== null) // Remove any null specs
+            // Case 2: Array (multiple specs)
+            else if (Array.isArray(rawSpec)) {
+              console.log('📊 Detected array:', rawSpec.length, 'specs')
               
-              console.log('📊 graphSpecs after build:', graphSpecs.length, 'specs')
+              if (rawSpec.length === 1) {
+                // Single spec in array
+                console.log('📊 Processing single spec from array')
+                graphSpec = buildGraphSpec(rawSpec[0], realDataSets)
+              } else if (rawSpec.length > 1) {
+                // Multiple specs
+                console.log('📊 Processing multiple specs from array')
+                graphSpecs = rawSpec.map((spec, index) => {
+                  const built = buildGraphSpec(spec, realDataSets)
+                  console.log(`📊 Built graphSpec ${index}:`, built)
+                  return built
+                }).filter(spec => spec !== null)
+                
+                console.log('📊 graphSpecs after build:', graphSpecs.length, 'specs')
+              }
             }
-            // Option 3: Single graph
-            else if (responseData.graph_spec) {
-              // Single graph: use legacy graph_spec
-              console.log('📊 Processing single graph_spec')
-              graphSpec = buildGraphSpec(responseData.graph_spec, realDataSets)
+            // Case 3: Single spec object
+            else if (typeof rawSpec === 'object') {
+              console.log('📊 Detected single spec object')
+              graphSpec = buildGraphSpec(rawSpec, realDataSets)
               console.log('📊 graphSpec after build:', graphSpec)
               if (graphSpec?.data) {
                 console.log('📊 graphSpec.data traces:', graphSpec.data.length)
