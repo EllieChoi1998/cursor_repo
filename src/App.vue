@@ -1398,8 +1398,21 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           }
         })
 
-        // Add reference lines for scatter plots (mean, regression, etc.)
-        if (chartType === 'scatter' && spec.reference_lines) {
+        // For scatter plots, add regression line by default
+        if (chartType === 'scatter') {
+          // If no reference_lines specified, add default regression line
+          const referenceLines = spec.reference_lines || [
+            {
+              type: 'regression',
+              name: '회귀선',
+              color: 'blue',
+              width: 2,
+              dash: 'solid'
+            }
+          ]
+
+          // Add reference lines for scatter plots (mean, regression, etc.)
+          referenceLines.forEach((refLine) => {
           spec.reference_lines.forEach((refLine) => {
             if (refLine.type === 'mean' || refLine.type === 'average') {
               // Calculate mean of y values
@@ -1482,6 +1495,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             }
           })
         }
+        // End of scatter plot reference lines processing
 
         // Apply default layout customizations
         const defaultLayout = {

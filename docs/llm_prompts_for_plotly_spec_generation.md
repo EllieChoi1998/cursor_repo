@@ -653,25 +653,40 @@ Generate a JSON object with the following structure:
    - "lines+markers": Add connecting lines (if temporal or ordered data)
    - "markers+text": Add labels to points (if few points)
 
-3. **Reference Lines (NEW!)**
-   - Scatter plots support reference lines (mean, regression, target, etc.)
-   - Use `reference_lines` array to add lines
+3. **Reference Lines (IMPORTANT!)**
+   - ⭐ **Scatter plots AUTOMATICALLY include regression line by default**
+   - You don't need to add regression line unless user wants different options
+   - If user wants ONLY scatter points without regression, use `reference_lines: []`
+   - **Additional lines:**
+     - Use `reference_lines` array to add MORE lines (in addition to default regression)
    - **Types:**
      - `"mean"` or `"average"`: Horizontal line at mean of y values
      - `"horizontal"`: Fixed horizontal line (requires `value`)
-     - `"regression"` or `"linear"`: Linear regression line
+     - `"regression"` or `"linear"`: Linear regression line (already default)
    - **Examples:**
      ```json
+     // Default - regression line added automatically
+     "reference_lines": null  // or omit this field
+     
+     // Add mean line (in addition to default regression)
+     "reference_lines": [
+       { "type": "mean", "name": "평균", "color": "red", "dash": "dash" }
+     ]
+     
+     // Multiple additional lines
      "reference_lines": [
        { "type": "mean", "name": "평균", "color": "red", "dash": "dash" },
-       { "type": "horizontal", "value": 80, "name": "목표", "color": "green" },
-       { "type": "regression", "name": "회귀선", "color": "blue", "dash": "solid" }
+       { "type": "horizontal", "value": 80, "name": "목표", "color": "green" }
      ]
+     
+     // NO regression line (only scatter points)
+     "reference_lines": []
      ```
    - **When to use:**
-     - User mentions: "평균선", "평균", "mean", "average" → type: "mean"
-     - User mentions: "회귀선", "추세선", "regression", "trend" → type: "regression"
-     - User mentions: "목표", "기준", "target", "threshold" + value → type: "horizontal"
+     - Default: Do nothing (regression line auto-added)
+     - User mentions: "평균선", "평균", "mean", "average" → ADD type: "mean"
+     - User mentions: "목표", "기준", "target", "threshold" + value → ADD type: "horizontal"
+     - User mentions: "회귀선 없이", "without regression" → SET reference_lines: []
 
 4. **Correlation Analysis**
    - Scatter plot is ideal for checking correlation
@@ -708,7 +723,7 @@ Generate a JSON object with the following structure:
 
 # Example Output
 
-For request: "온도와 수율의 상관관계를 산점도로 보여줘. 장비별로 색깔 구분하고 회귀선도 추가해줘"
+For request: "온도와 수율의 상관관계를 산점도로 보여줘. 장비별로 색깔 구분해줘"
 
 ```json
 {
@@ -721,15 +736,7 @@ For request: "온도와 수율의 상관관계를 산점도로 보여줘. 장비
     "series": { "field": "DEVICE" }
   },
   "transforms": [],
-  "reference_lines": [
-    {
-      "type": "regression",
-      "name": "회귀선",
-      "color": "blue",
-      "width": 2,
-      "dash": "solid"
-    }
-  ],
+  // No reference_lines needed - regression line added automatically!
   "layout": {
     "title": "온도와 수율의 상관관계",
     "height": 500,
