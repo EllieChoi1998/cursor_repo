@@ -1636,12 +1636,38 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 graphSpecs = uniqueValues.map(value => {
                   // Deep copy template
                   const spec = JSON.parse(JSON.stringify(template))
+                  const splitByColumn = spec.split_by
                   delete spec.split_by // Remove split_by from spec
                   
                   // Replace {{SPLIT_VALUE}} placeholder
                   let specStr = JSON.stringify(spec)
                   specStr = specStr.replace(/\{\{SPLIT_VALUE\}\}/g, String(value))
                   const expandedSpec = JSON.parse(specStr)
+                  
+                  // Add filter transform for this split value
+                  if (!expandedSpec.transforms) {
+                    expandedSpec.transforms = []
+                  }
+                  // Add filter at the beginning to filter data by split value
+                  expandedSpec.transforms.unshift({
+                    type: 'filter',
+                    field: splitByColumn,
+                    op: '==',
+                    value: value
+                  })
+                  
+                  // Add title to layout showing the split value
+                  if (!expandedSpec.layout) {
+                    expandedSpec.layout = {}
+                  }
+                  if (!expandedSpec.layout.title) {
+                    expandedSpec.layout.title = {
+                      text: `${splitByColumn} = ${value}`,
+                      font: { size: 16 }
+                    }
+                  }
+                  
+                  console.log(`📊 Creating graph for ${splitByColumn}=${value}`)
                   
                   // Build graph spec
                   return buildGraphSpec(expandedSpec, realDataSets)
