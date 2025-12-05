@@ -1378,25 +1378,59 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
 
       const buildLineFigure = (rows, encodings = {}, spec = {}, chartType = 'line') => {
+        console.log('[buildLineFigure] START', {
+          chartType,
+          rowsCount: rows?.length,
+          encodings,
+          spec,
+          firstRow: rows?.[0]
+        })
+        
         const xField = encodings.x?.field || encodings.category?.field
         const yField = encodings.y?.field || encodings.value?.field
-        if (!xField || !yField) return null
+        
+        console.log('[buildLineFigure] Fields:', { xField, yField })
+        
+        if (!xField || !yField) {
+          console.error('[buildLineFigure] Missing xField or yField!')
+          return null
+        }
 
         const seriesField = encodings.series?.field || encodings.group?.field || encodings.color?.field
         const aggregator = encodings.y?.agg || encodings.y?.aggregate || 'identity'
         const seriesMap = splitSeriesPoints(rows, { xField, yField, seriesField })
 
+        console.log('[buildLineFigure] SeriesMap size:', seriesMap.size)
+        seriesMap.forEach((points, key) => {
+          console.log(`[buildLineFigure] Series "${key}":`, points.length, 'points')
+          console.log('[buildLineFigure] First 3 points:', points.slice(0, 3))
+        })
+
         const baseMode = spec.mode || (chartType === 'scatter' ? 'markers' : 'lines+markers')
         const traces = Array.from(seriesMap.entries()).map(([seriesKey, points]) => {
           const aggregated = aggregatePoints(points, aggregator)
-          return {
+          console.log(`[buildLineFigure] Aggregated "${seriesKey}":`, aggregated.length, 'points')
+          console.log('[buildLineFigure] Aggregated first 3:', aggregated.slice(0, 3))
+          
+          const trace = {
             type: chartType === 'scatter' ? 'scatter' : 'scatter',
             mode: baseMode,
             name: seriesKey,
             x: aggregated.map((point) => point.x),
             y: aggregated.map((point) => point.y)
           }
+          
+          console.log(`[buildLineFigure] Trace "${seriesKey}":`, {
+            xLength: trace.x.length,
+            yLength: trace.y.length,
+            xSample: trace.x.slice(0, 3),
+            ySample: trace.y.slice(0, 3)
+          })
+          
+          return trace
         })
+        
+        console.log('[buildLineFigure] Total traces:', traces.length)
 
         // For scatter plots, add regression line by default
         if (chartType === 'scatter') {
@@ -1709,38 +1743,67 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
 
       const normalizeRealDataSets = (payload) => {
-        if (payload === null || payload === undefined) return []
+        console.log('[normalizeRealDataSets] Input payload:', payload)
+        console.log('[normalizeRealDataSets] Payload type:', typeof payload)
+        console.log('[normalizeRealDataSets] Payload is array:', Array.isArray(payload))
+        
+        if (payload === null || payload === undefined) {
+          console.warn('[normalizeRealDataSets] Payload is null or undefined')
+          return []
+        }
+        
         const items = Array.isArray(payload) ? payload : [payload]
+        console.log('[normalizeRealDataSets] Items array length:', items.length)
+        
         const datasets = []
 
-        items.forEach((entry) => {
-          if (entry === null || entry === undefined) return
+        items.forEach((entry, index) => {
+          console.log(`[normalizeRealDataSets] Processing entry ${index}:`, entry)
+          
+          if (entry === null || entry === undefined) {
+            console.warn(`[normalizeRealDataSets] Entry ${index} is null or undefined`)
+            return
+          }
+          
           let parsed = entry
 
           if (typeof parsed === 'string') {
+            console.log(`[normalizeRealDataSets] Entry ${index} is string, parsing...`)
             parsed = parseJsonLoose(parsed) ?? parsed
           }
 
           if (typeof parsed === 'string') {
+            console.log(`[normalizeRealDataSets] Entry ${index} still string, parsing again...`)
             parsed = parseJsonLoose(parsed)
           }
 
           if (Array.isArray(parsed)) {
+            console.log(`[normalizeRealDataSets] Entry ${index} is array, length:`, parsed.length)
+            console.log(`[normalizeRealDataSets] Entry ${index} first 3 rows:`, parsed.slice(0, 3))
             datasets.push(parsed)
             return
           }
 
           if (parsed && typeof parsed === 'object') {
             if (Array.isArray(parsed.records)) {
+              console.log(`[normalizeRealDataSets] Entry ${index} has records array, length:`, parsed.records.length)
               datasets.push(parsed.records)
               return
             }
             if (Array.isArray(parsed.data)) {
+              console.log(`[normalizeRealDataSets] Entry ${index} has data array, length:`, parsed.data.length)
               datasets.push(parsed.data)
               return
             }
+            console.log(`[normalizeRealDataSets] Entry ${index} is object, wrapping in array`)
             datasets.push([parsed])
           }
+        })
+
+        console.log('[normalizeRealDataSets] Result datasets count:', datasets.length)
+        datasets.forEach((ds, i) => {
+          console.log(`[normalizeRealDataSets] Dataset ${i} length:`, ds?.length)
+          console.log(`[normalizeRealDataSets] Dataset ${i} first row:`, ds?.[0])
         })
 
         return datasets
@@ -1968,13 +2031,39 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           console.log('📊 Processing Plotly/Table/Text type:', responseData.analysis_type)
           console.log('📊 responseData.graph_spec:', responseData.graph_spec)
           console.log('📊 responseData.real_data:', responseData.real_data)
+          console.log('📊 responseData.real_data type:', typeof responseData.real_data)
+          console.log('📊 responseData.real_data is array:', Array.isArray(responseData.real_data))
+          if (Array.isArray(responseData.real_data)) {
+            console.log('📊 responseData.real_data length:', responseData.real_data.length)
+            console.log('📊 responseData.real_data first 3 rows:', responseData.real_data.slice(0, 3))
+          }
           
           const analysisType = responseData.analysis_type
           const realDataSets = normalizeRealDataSets(responseData.real_data)
+          console.log('📊 realDataSets after normalize:', realDataSets)
+          console.log('📊 realDataSets length:', realDataSets?.length)
+          console.log('📊 realDataSets[0] length:', realDataSets?.[0]?.length)
+          console.log('📊 realDataSets[0] first 3 rows:', realDataSets?.[0]?.slice(0, 3))
+          
           const primaryRealData = realDataSets[0] || []
           const hasGraphSpec = plotlyGraphTypes.includes(analysisType)
           console.log('📊 hasGraphSpec:', hasGraphSpec, 'analysisType:', analysisType)
           const graphSpec = hasGraphSpec ? buildGraphSpec(responseData.graph_spec, realDataSets) : null
+          console.log('📊 graphSpec after build:', graphSpec)
+          if (graphSpec?.data) {
+            console.log('📊 graphSpec.data traces:', graphSpec.data.length)
+            graphSpec.data.forEach((trace, i) => {
+              console.log(`📊 Trace ${i}:`, {
+                type: trace.type,
+                mode: trace.mode,
+                name: trace.name,
+                xLength: trace.x?.length,
+                yLength: trace.y?.length,
+                xSample: trace.x?.slice(0, 3),
+                ySample: trace.y?.slice(0, 3)
+              })
+            })
+          }
           const successMessage = responseData.success_message || responseData.summary || ''
           const baseTitle = plotlyTitleMap[analysisType] || 'Excel Analysis'
           const fileSuffix = responseData.file_name ? ` - ${responseData.file_name}` : ''
