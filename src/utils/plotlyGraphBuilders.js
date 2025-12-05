@@ -258,12 +258,10 @@ export const buildLineFigure = (rows, encodings = {}, spec = {}, chartType = 'li
           // Step 2: Create consistent X mapping
           let xMapping = new Map()
           if (isNumericX) {
-            // For numeric X, sort and use actual values
-            const sortedX = xValuesArray
-              .map(x => typeof x === 'number' ? x : parseFloat(x))
-              .sort((a, b) => a - b)
-            sortedX.forEach((x, idx) => {
-              xMapping.set(xValuesArray[idx], x)
+            // For numeric X, map each X value to its numeric representation
+            xValuesArray.forEach(x => {
+              const numericX = typeof x === 'number' ? x : parseFloat(x)
+              xMapping.set(x, numericX)
             })
           } else {
             // For categorical X, use index based on order of appearance
