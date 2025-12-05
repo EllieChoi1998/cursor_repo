@@ -437,140 +437,88 @@ For request: "날짜별 CPK 트렌드를 라인차트로 보여줘. 목표값 1.
 }
 ```
 
-## Example 2: Multiple Line Graphs (각 Tech별로 분리)
+## Example 2: Multiple Line Graphs - Template Approach (각 Tech별로 분리) ⭐ RECOMMENDED
 
 For request: "각 Tech별로 CPK 트렌드를 분리해서 라인그래프 보여줘"
 
-Given metadata shows TECH column has unique values: ["Tech_A", "Tech_B", "Tech_C"]
+**❌ Problem:** Metadata may not include all unique values (could be 100+), or values are unknown to LLM
+**✅ Solution:** Generate a template with `split_by` field and `{{SPLIT_VALUE}}` placeholder
 
 ```json
 {
-  "graph_specs": [
-    {
-      "schema_version": "1.0",
-      "chart_type": "line_graph",
-      "dataset_index": 0,
-      "encodings": {
-        "x": { "field": "DATE", "type": "temporal" },
-        "y": { "field": "CPK", "type": "quantitative", "agg": "identity" }
-      },
-      "transforms": [
-        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_A" },
-        { "type": "sort", "field": "DATE", "direction": "asc" }
-      ],
-      "layout": {
-        "title": "Tech_A CPK 트렌드",
-        "height": 400,
-        "margin": { "l": 80, "r": 80, "t": 100, "b": 120, "pad": 4 },
-        "xaxis": {
-          "title": "날짜",
-          "tickangle": -45,
-          "tickfont": { "size": 10 },
-          "showgrid": true
-        },
-        "yaxis": {
-          "title": "CPK",
-          "range": [0.8, 2.0],
-          "showgrid": true,
-          "griddash": "dot"
-        },
-        "shapes": [
-          {
-            "type": "line",
-            "x0": 0, "x1": 1, "xref": "paper",
-            "y0": 1.33, "y1": 1.33,
-            "line": { "color": "red", "width": 2, "dash": "dash" }
-          }
-        ]
-      }
+  "graph_spec_template": {
+    "schema_version": "1.0",
+    "chart_type": "line_graph",
+    "split_by": "TECH",
+    "dataset_index": 0,
+    "encodings": {
+      "x": { "field": "DATE", "type": "temporal" },
+      "y": { "field": "CPK", "type": "quantitative", "agg": "identity" }
     },
-    {
-      "schema_version": "1.0",
-      "chart_type": "line_graph",
-      "dataset_index": 0,
-      "encodings": {
-        "x": { "field": "DATE", "type": "temporal" },
-        "y": { "field": "CPK", "type": "quantitative", "agg": "identity" }
+    "transforms": [
+      { "type": "filter", "field": "TECH", "op": "==", "value": "{{SPLIT_VALUE}}" },
+      { "type": "sort", "field": "DATE", "direction": "asc" }
+    ],
+    "layout": {
+      "title": "{{SPLIT_VALUE}} CPK 트렌드",
+      "height": 400,
+      "margin": { "l": 80, "r": 80, "t": 100, "b": 120, "pad": 4 },
+      "xaxis": {
+        "title": "날짜",
+        "tickangle": -45,
+        "tickfont": { "size": 10 },
+        "showgrid": true
       },
-      "transforms": [
-        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_B" },
-        { "type": "sort", "field": "DATE", "direction": "asc" }
-      ],
-      "layout": {
-        "title": "Tech_B CPK 트렌드",
-        "height": 400,
-        "margin": { "l": 80, "r": 80, "t": 100, "b": 120, "pad": 4 },
-        "xaxis": {
-          "title": "날짜",
-          "tickangle": -45,
-          "tickfont": { "size": 10 },
-          "showgrid": true
-        },
-        "yaxis": {
-          "title": "CPK",
-          "range": [0.8, 2.0],
-          "showgrid": true,
-          "griddash": "dot"
-        },
-        "shapes": [
-          {
-            "type": "line",
-            "x0": 0, "x1": 1, "xref": "paper",
-            "y0": 1.33, "y1": 1.33,
-            "line": { "color": "red", "width": 2, "dash": "dash" }
-          }
-        ]
-      }
-    },
-    {
-      "schema_version": "1.0",
-      "chart_type": "line_graph",
-      "dataset_index": 0,
-      "encodings": {
-        "x": { "field": "DATE", "type": "temporal" },
-        "y": { "field": "CPK", "type": "quantitative", "agg": "identity" }
+      "yaxis": {
+        "title": "CPK",
+        "range": [0.8, 2.0],
+        "showgrid": true,
+        "griddash": "dot"
       },
-      "transforms": [
-        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_C" },
-        { "type": "sort", "field": "DATE", "direction": "asc" }
-      ],
-      "layout": {
-        "title": "Tech_C CPK 트렌드",
-        "height": 400,
-        "margin": { "l": 80, "r": 80, "t": 100, "b": 120, "pad": 4 },
-        "xaxis": {
-          "title": "날짜",
-          "tickangle": -45,
-          "tickfont": { "size": 10 },
-          "showgrid": true
-        },
-        "yaxis": {
-          "title": "CPK",
-          "range": [0.8, 2.0],
-          "showgrid": true,
-          "griddash": "dot"
-        },
-        "shapes": [
-          {
-            "type": "line",
-            "x0": 0, "x1": 1, "xref": "paper",
-            "y0": 1.33, "y1": 1.33,
-            "line": { "color": "red", "width": 2, "dash": "dash" }
-          }
-        ]
-      }
+      "shapes": [
+        {
+          "type": "line",
+          "x0": 0, "x1": 1, "xref": "paper",
+          "y0": 1.33, "y1": 1.33,
+          "line": { "color": "red", "width": 2, "dash": "dash" }
+        }
+      ]
     }
-  ]
+  }
 }
 ```
 
-**Important for Multiple Graphs:**
-- ✅ Return `graph_specs` array (not single `graph_spec`)
-- ✅ Check metadata for unique values in the grouping column (TECH)
-- ✅ Create one spec per unique value
-- ✅ Each spec uses same encodings but different filter
-- ✅ Each spec has unique title with category name
-- ✅ Use consistent layout/styling across all specs
+**Key fields for template approach:**
+- ✅ `graph_spec_template`: Template object (not `graph_specs` array)
+- ✅ `split_by`: Column name to split by (e.g., "TECH")
+- ✅ `{{SPLIT_VALUE}}`: Placeholder replaced by backend with actual values
+- ✅ LLM doesn't need to know unique values (could be 100+)
+- ✅ Backend extracts unique values and creates `graph_specs` array
+
+**Backend processing:**
+```python
+# 1. Extract template and split column
+template = llm_response["graph_spec_template"]
+split_col = template.pop("split_by")  # "TECH"
+
+# 2. Get unique values
+unique_values = df[split_col].unique()[:10]  # Limit to 10
+
+# 3. Create specs for each value
+graph_specs = []
+for value in unique_values:
+    spec = copy.deepcopy(template)
+    spec_str = json.dumps(spec)
+    spec_str = spec_str.replace("{{SPLIT_VALUE}}", str(value))
+    graph_specs.append(json.loads(spec_str))
+
+# 4. Send to frontend
+response["graph_specs"] = graph_specs
+```
+
+**When to use template vs array:**
+- ✅ Use `graph_spec_template` when splitting by category values (unknown count)
+- ✅ Use `graph_specs` array when splitting by column names (known list)
 
 ## Example 3: Multiple Graphs - Different Y-axis Columns
 

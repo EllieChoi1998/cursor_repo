@@ -42,15 +42,75 @@ The frontend (`src/App.vue`) reads `analysis_type` to decide how to render the r
 
 When generating multiple graphs of the same type (e.g., separate line graphs for each category):
 
-- Use `graph_specs` (array) instead of `graph_spec` (single object)
-- Each graph spec in the array should be a complete declarative spec
-- The `real_data` remains the same (single dataset shared by all graphs)
-- Each graph can apply different filters or transformations on the same dataset
-- Frontend will render multiple graph components side by side or stacked
+#### Option A: LLM generates complete `graph_specs` array (컬럼별 분리)
+- **Use case:** 여러 Y축 컬럼별 그래프 ("WIDTH, THICKNESS, DEPTH 각각")
+- **LLM 역할:** 모든 graph_specs 직접 생성 (컬럼명은 미리 알고 있음)
+- **Backend 역할:** LLM 응답 그대로 사용
+
+```json
+{
+  "graph_specs": [
+    { "encodings": { "y": { "field": "WIDTH" } }, ... },
+    { "encodings": { "y": { "field": "THICKNESS" } }, ... }
+  ]
+}
+```
+
+#### Option B: LLM generates `graph_spec_template` (값별 분리) ⭐ RECOMMENDED
+- **Use case:** 카테고리 값별 그래프 ("각 Tech별로", "각 장비별로")
+- **LLM 역할:** 템플릿 1개 생성 + 분리 기준 컬럼 지정
+- **Backend 역할:** 고유값 추출 → 템플릿을 각 값에 적용 → graph_specs 배열 생성
+
+```json
+{
+  "graph_spec_template": {
+    "schema_version": "1.0",
+    "chart_type": "line_graph",
+    "split_by": "TECH",  // 이 컬럼의 고유값별로 분리
+    "encodings": {
+      "x": { "field": "DATE", "type": "temporal" },
+      "y": { "field": "CPK", "type": "quantitative" }
+    },
+    "transforms": [
+      { "type": "filter", "field": "TECH", "op": "==", "value": "{{SPLIT_VALUE}}" },
+      { "type": "sort", "field": "DATE", "direction": "asc" }
+    ],
+    "layout": {
+      "title": "{{SPLIT_VALUE}} CPK Trend",
+      "height": 400,
+      "margin": { "l": 80, "r": 80, "t": 100, "b": 150 }
+    }
+  }
+}
+```
+
+**Template 처리 (Backend):**
+```python
+# 1. 고유값 추출
+unique_values = df[template["split_by"]].unique()[:10]  # 최대 10개
+
+# 2. 각 값에 대해 템플릿 확장
+graph_specs = []
+for value in unique_values:
+    spec = deep_copy(template)
+    # {{SPLIT_VALUE}} 플레이스홀더 치환
+    spec = replace_placeholders(spec, {"SPLIT_VALUE": value})
+    graph_specs.append(spec)
+
+# 3. 최종 응답
+response["graph_specs"] = graph_specs
+```
+
+**장점:**
+- ✅ LLM은 고유값을 몰라도 됨 (토큰 절약)
+- ✅ 고유값이 100개여도 문제없음
+- ✅ Backend에서 개수 제한 가능 (성능 관리)
+- ✅ LLM은 "어떤 컬럼으로 분리할지"만 판단
 
 **Example use case:** "Show line graph for each Tech category separately"
-- `real_data`: Contains all data with Tech column
-- `graph_specs`: Array of specs, each filtering different Tech value
+- LLM: `split_by: "TECH"` + 템플릿 1개 생성
+- Backend: TECH 컬럼 고유값 추출 → 각 값마다 graph_spec 생성
+- Frontend: graph_specs 배열 렌더링
 
 
 ## 3. `real_data` & Declarative Graph Specs
@@ -661,11 +721,14 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
 
 ## 📊 다중 그래프 생성 케이스
 
-### Case 1: 특정 컬럼 값별로 분리 (Filter-based)
+### Case 1: 특정 컬럼 값별로 분리 (Filter-based with Template) ⭐ RECOMMENDED
 
 **Use Case:** 하나의 카테고리 컬럼의 각 값별로 별도 그래프 생성
 
 **Request:** "각 Tech별로 CPK 트렌드를 분리해서 라인그래프 보여줘"
+
+**❌ 문제:** LLM이 Tech 컬럼에 어떤 값들이 있는지 모름 (Tech_A, Tech_B, Tech_C...)
+**✅ 해결:** LLM은 템플릿만 생성, Backend가 고유값 추출 후 확장
 
 ```json
 {
@@ -673,7 +736,7 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
     "analysis_type": "line_graph",
     "file_name": "trend_data.xlsx",
     "summary": "Tech별 CPK 트렌드 분리 분석",
-    "success_message": "✅ Tech별 라인차트 생성 완료 (3개)",
+    "success_message": "✅ Tech별 라인차트 생성 완료",
     "real_data": [
       [
         {"DATE": "2025-11-01", "TECH": "Tech_A", "CPK": 1.4},
@@ -684,6 +747,83 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
         {"DATE": "2025-11-02", "TECH": "Tech_C", "CPK": 1.7}
       ]
     ],
+    "graph_spec_template": {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "split_by": "TECH",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "CPK", "type": "quantitative" }
+      },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "{{SPLIT_VALUE}}" },
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "{{SPLIT_VALUE}} CPK Trend",
+        "height": 400,
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
+        "xaxis": {
+          "title": "Date",
+          "tickangle": -45,
+          "tickfont": { "size": 10 },
+          "showgrid": true
+        },
+        "yaxis": {
+          "title": "CPK",
+          "range": [0.8, 2.0],
+          "showgrid": true
+        },
+        "shapes": [
+          {
+            "type": "line",
+            "x0": 0, "x1": 1, "xref": "paper",
+            "y0": 1.33, "y1": 1.33,
+            "line": { "color": "red", "width": 2, "dash": "dash" }
+          }
+        ]
+      }
+    },
+    "timestamp": "2025-12-05T10:00:00.000Z"
+  }
+}
+```
+
+**Backend Processing:**
+```python
+# 1. 템플릿과 split_by 추출
+template = response_data["graph_spec_template"]
+split_column = template["split_by"]
+
+# 2. 고유값 추출 (최대 10개로 제한)
+unique_values = df[split_column].unique()[:10]
+
+# 3. 각 값에 대해 graph_spec 생성
+graph_specs = []
+for value in unique_values:
+    spec = copy.deepcopy(template)
+    del spec["split_by"]  # 이 필드는 제거
+    
+    # {{SPLIT_VALUE}} 플레이스홀더 치환
+    spec_str = json.dumps(spec)
+    spec_str = spec_str.replace("{{SPLIT_VALUE}}", str(value))
+    spec = json.loads(spec_str)
+    
+    graph_specs.append(spec)
+
+# 4. 응답 데이터 수정
+response_data["graph_specs"] = graph_specs
+del response_data["graph_spec_template"]
+response_data["success_message"] = f"✅ Tech별 라인차트 생성 완료 ({len(graph_specs)}개)"
+```
+
+**Frontend receives (after backend processing):**
+```json
+{
+  "data": {
+    "analysis_type": "line_graph",
+    "real_data": [ ... ],
     "graph_specs": [
       {
         "schema_version": "1.0",
@@ -802,13 +942,13 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
 }
 ```
 
-**Key Points:**
-- ✅ `real_data` contains all data (no changes)
-- ✅ `graph_specs` is an array of complete graph specifications
-- ✅ Each spec applies its own filter (`TECH == "Tech_A"`, etc.)
-- ✅ **Same encodings** for all graphs (only filter differs)
-- ✅ Each spec has its own title
-- ✅ Frontend renders multiple graphs vertically stacked
+**Key Points (Template Approach):**
+- ✅ LLM은 고유값을 몰라도 됨 (토큰 절약)
+- ✅ `graph_spec_template` + `split_by` 필드 사용
+- ✅ `{{SPLIT_VALUE}}` 플레이스홀더 사용
+- ✅ Backend가 고유값 추출 후 템플릿 확장
+- ✅ Backend가 `graph_specs` 배열 생성 후 프론트엔드 전달
+- ✅ 고유값이 100개여도 문제없음 (Backend에서 제한 가능)
 
 ---
 

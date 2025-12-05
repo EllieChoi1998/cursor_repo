@@ -234,6 +234,18 @@ result = {
 
 ## 🔧 백엔드 적용 가이드
 
+### 핵심 개념: Template vs Direct Array
+
+#### ⭐ Template Approach (권장 - 카테고리 값별 분리)
+**문제:** LLM이 고유값을 모름 (Tech 컬럼에 몇 개의 값이 있는지, 값이 무엇인지)
+**해결:** LLM은 템플릿만 생성, Backend가 실제 값 추출 후 확장
+
+#### Direct Array Approach (컬럼별 분리)
+**문제 없음:** 컬럼명은 메타데이터로 제공됨
+**방식:** LLM이 직접 graph_specs 배열 생성
+
+---
+
 ### 1. 단일 그래프 응답 (기존 방식, 변경 없음)
 ```python
 response_data = {
@@ -250,38 +262,75 @@ response_data = {
 
 ### 2. 여러 그래프 응답 - 방법별 가이드
 
-#### 방법 A: 카테고리 값별 분리 (Filter-based)
+#### 방법 A: 카테고리 값별 분리 (Template-based) ⭐ RECOMMENDED
+
+**문제:** LLM은 Tech 컬럼에 어떤 값들이 있는지 모름 (값이 100개일 수도 있음)
+**해결:** LLM은 템플릿만 생성, Backend가 고유값 추출 후 확장
+
 ```python
 # "각 Tech별로 CPK 트렌드를 분리해서"
-unique_techs = df["TECH"].unique()
 
-graph_specs = []
-for tech in unique_techs:
-    spec = {
+# Step 1: LLM이 템플릿 생성 (값을 몰라도 됨)
+llm_response = {
+    "graph_spec_template": {
         "schema_version": "1.0",
         "chart_type": "line_graph",
+        "split_by": "TECH",  # 이 컬럼으로 분리
         "dataset_index": 0,
         "encodings": {
             "x": {"field": "DATE", "type": "temporal"},
             "y": {"field": "CPK", "type": "quantitative"}
         },
         "transforms": [
-            {"type": "filter", "field": "TECH", "op": "==", "value": tech},
+            {"type": "filter", "field": "TECH", "op": "==", "value": "{{SPLIT_VALUE}}"},
             {"type": "sort", "field": "DATE", "direction": "asc"}
         ],
         "layout": {
-            "title": f"{tech} CPK Trend",
+            "title": "{{SPLIT_VALUE}} CPK Trend",
             "height": 400
         }
     }
-    graph_specs.append(spec)
-
-response_data = {
-    "analysis_type": "line_graph",
-    "real_data": [df.to_dict("records")],
-    "graph_specs": graph_specs,
-    "success_message": f"✅ {len(unique_techs)}개의 라인차트 생성 완료"
 }
+
+# Step 2: Backend가 템플릿 확장
+def expand_graph_spec_template(template, df):
+    """템플릿을 고유값별로 확장"""
+    split_column = template.pop("split_by")  # "TECH"
+    unique_values = df[split_column].unique()[:10]  # 최대 10개 제한
+    
+    graph_specs = []
+    for value in unique_values:
+        # 템플릿 복사
+        spec = copy.deepcopy(template)
+        
+        # {{SPLIT_VALUE}} 플레이스홀더 치환
+        spec_str = json.dumps(spec)
+        spec_str = spec_str.replace("{{SPLIT_VALUE}}", str(value))
+        spec = json.loads(spec_str)
+        
+        graph_specs.append(spec)
+    
+    return graph_specs
+
+# Step 3: 최종 응답
+if "graph_spec_template" in llm_response:
+    graph_specs = expand_graph_spec_template(
+        llm_response["graph_spec_template"], 
+        df
+    )
+    response_data = {
+        "analysis_type": "line_graph",
+        "real_data": [df.to_dict("records")],
+        "graph_specs": graph_specs,  # 확장된 배열
+        "success_message": f"✅ {len(graph_specs)}개의 라인차트 생성 완료"
+    }
+```
+
+**장점:**
+- ✅ LLM은 고유값을 몰라도 됨 (프롬프트 토큰 절약)
+- ✅ 고유값이 100개여도 문제없음
+- ✅ Backend에서 개수 제한 가능 (성능 관리)
+- ✅ LLM 프롬프트 심플화
 ```
 
 #### 방법 B: 여러 Y축 컬럼별 분리 (Encoding-based)
