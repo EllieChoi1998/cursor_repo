@@ -1594,14 +1594,33 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               } else if (refLine.type === 'regression' || refLine.type === 'linear') {
                 // Simple linear regression
                 const allPoints = []
+                const xIsNumeric = []
+                
+                // Collect all points and check if X is numeric
                 traces.forEach(trace => {
                   if (trace.x && trace.y && Array.isArray(trace.x) && Array.isArray(trace.y)) {
                     trace.x.forEach((x, i) => {
-                      const xVal = typeof x === 'number' ? x : parseFloat(x)
+                      let xVal
                       const yVal = typeof trace.y[i] === 'number' ? trace.y[i] : parseFloat(trace.y[i])
                       
+                      // Try to parse X as number
+                      if (typeof x === 'number') {
+                        xVal = x
+                        xIsNumeric.push(true)
+                      } else {
+                        const parsed = parseFloat(x)
+                        if (!isNaN(parsed)) {
+                          xVal = parsed
+                          xIsNumeric.push(true)
+                        } else {
+                          // X is categorical, use index
+                          xVal = i
+                          xIsNumeric.push(false)
+                        }
+                      }
+                      
                       if (!isNaN(xVal) && !isNaN(yVal) && isFinite(xVal) && isFinite(yVal)) {
-                        allPoints.push({ x: xVal, y: yVal })
+                        allPoints.push({ x: xVal, y: yVal, originalX: x })
                       }
                     })
                   }
@@ -1612,6 +1631,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                   return
                 }
                 
+                console.log('[buildLineFigure] Regression points:', allPoints.length, 'first 3:', allPoints.slice(0, 3))
+                
                 // Calculate linear regression
                 const n = allPoints.length
                 const sumX = allPoints.reduce((sum, p) => sum + p.x, 0)
@@ -1621,13 +1642,15 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 
                 const denominator = (n * sumX2 - sumX * sumX)
                 
-                if (denominator === 0) {
-                  console.warn('[buildLineFigure] Cannot calculate regression: denominator is 0')
+                if (Math.abs(denominator) < 1e-10) {
+                  console.warn('[buildLineFigure] Cannot calculate regression: denominator is too small:', denominator)
                   return
                 }
                 
                 const slope = (n * sumXY - sumX * sumY) / denominator
                 const intercept = (sumY - slope * sumX) / n
+                
+                console.log('[buildLineFigure] Regression:', { slope, intercept, n, sumX, sumY, sumXY, sumX2, denominator })
                 
                 if (!isFinite(slope) || !isFinite(intercept)) {
                   console.warn('[buildLineFigure] Invalid regression values:', { slope, intercept })
@@ -1637,11 +1660,16 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 const xMin = Math.min(...allPoints.map(p => p.x))
                 const xMax = Math.max(...allPoints.map(p => p.x))
                 
+                // Use original X values if categorical
+                const useCategorical = xIsNumeric.filter(v => !v).length > xIsNumeric.length / 2
+                
                 traces.push({
                   type: 'scatter',
                   mode: 'lines',
                   name: refLine.name || 'Regression',
-                  x: [xMin, xMax],
+                  x: useCategorical ? 
+                    [allPoints[0].originalX, allPoints[allPoints.length - 1].originalX] : 
+                    [xMin, xMax],
                   y: [slope * xMin + intercept, slope * xMax + intercept],
                   line: {
                     color: refLine.color || 'blue',
