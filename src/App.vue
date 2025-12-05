@@ -2124,17 +2124,22 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           const hasGraphSpec = plotlyGraphTypes.includes(analysisType)
           console.log('📊 hasGraphSpec:', hasGraphSpec, 'analysisType:', analysisType)
           
-          // Process graph_spec (auto-detect type)
+          // Process graph_spec (always array)
           let graphSpec = null
           let graphSpecs = null
           
-          if (hasGraphSpec && responseData.graph_spec) {
-            const rawSpec = responseData.graph_spec
+          if (hasGraphSpec && responseData.graph_spec && Array.isArray(responseData.graph_spec)) {
+            const specArray = responseData.graph_spec
+            console.log('📊 Processing graph_spec array, length:', specArray.length)
             
-            // Case 1: Template (has split_by field)
-            if (rawSpec.split_by && typeof rawSpec.split_by === 'string' && rawSpec.split_by.trim()) {
-              console.log('📊 Detected template (split_by found):', rawSpec.split_by)
-              const splitBy = rawSpec.split_by
+            if (specArray.length === 0) {
+              console.warn('⚠️ Empty graph_spec array')
+            }
+            // Case 1: Template (first item has split_by)
+            else if (specArray[0]?.split_by && typeof specArray[0].split_by === 'string' && specArray[0].split_by.trim()) {
+              console.log('📊 Detected template (split_by found):', specArray[0].split_by)
+              const template = specArray[0]
+              const splitBy = template.split_by
               
               if (primaryRealData.length > 0) {
                 console.log(`📊 Expanding template by column: ${splitBy}`)
@@ -2149,7 +2154,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 // Create spec for each unique value
                 graphSpecs = uniqueValues.map(value => {
                   // Deep copy template
-                  const spec = JSON.parse(JSON.stringify(rawSpec))
+                  const spec = JSON.parse(JSON.stringify(template))
                   delete spec.split_by // Remove split_by from spec
                   
                   // Replace {{SPLIT_VALUE}} placeholder
@@ -2166,45 +2171,25 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 console.warn('⚠️ Template found but no data to expand')
               }
             }
-            // Case 2: Array (multiple specs)
-            else if (Array.isArray(rawSpec)) {
-              console.log('📊 Detected array:', rawSpec.length, 'specs')
-              
-              if (rawSpec.length === 1) {
-                // Single spec in array
-                console.log('📊 Processing single spec from array')
-                graphSpec = buildGraphSpec(rawSpec[0], realDataSets)
-              } else if (rawSpec.length > 1) {
-                // Multiple specs
-                console.log('📊 Processing multiple specs from array')
-                graphSpecs = rawSpec.map((spec, index) => {
-                  const built = buildGraphSpec(spec, realDataSets)
-                  console.log(`📊 Built graphSpec ${index}:`, built)
-                  return built
-                }).filter(spec => spec !== null)
-                
-                console.log('📊 graphSpecs after build:', graphSpecs.length, 'specs')
-              }
-            }
-            // Case 3: Single spec object
-            else if (typeof rawSpec === 'object') {
-              console.log('📊 Detected single spec object')
-              graphSpec = buildGraphSpec(rawSpec, realDataSets)
+            // Case 2: Single spec
+            else if (specArray.length === 1) {
+              console.log('📊 Processing single spec')
+              graphSpec = buildGraphSpec(specArray[0], realDataSets)
               console.log('📊 graphSpec after build:', graphSpec)
               if (graphSpec?.data) {
                 console.log('📊 graphSpec.data traces:', graphSpec.data.length)
-                graphSpec.data.forEach((trace, i) => {
-                  console.log(`📊 Trace ${i}:`, {
-                    type: trace.type,
-                    mode: trace.mode,
-                    name: trace.name,
-                    xLength: trace.x?.length,
-                    yLength: trace.y?.length,
-                    xSample: trace.x?.slice(0, 3),
-                    ySample: trace.y?.slice(0, 3)
-                  })
-                })
               }
+            }
+            // Case 3: Multiple specs
+            else {
+              console.log('📊 Processing multiple specs:', specArray.length)
+              graphSpecs = specArray.map((spec, index) => {
+                const built = buildGraphSpec(spec, realDataSets)
+                console.log(`📊 Built graphSpec ${index}:`, built)
+                return built
+              }).filter(spec => spec !== null)
+              
+              console.log('📊 graphSpecs after build:', graphSpecs.length, 'specs')
             }
           }
           
