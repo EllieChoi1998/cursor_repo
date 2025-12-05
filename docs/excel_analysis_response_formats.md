@@ -22,7 +22,8 @@ This document summarizes the payload requirements discussed in the last answer s
     "summary": "string",
     "success_message": "string",
     "real_data": [ ... ],          // see section 3
-    "graph_spec": { ... },         // Declarative spec, see section 3
+    "graph_spec": { ... },         // Declarative spec for single graph, see section 3
+    "graph_specs": [ { ... }, { ... } ],  // Optional: Array of graph specs for multiple graphs
     "sql": "string | null",
     "timestamp": "ISO-8601 string",
     "additional_fields": "pass anything else the frontend might need"
@@ -33,9 +34,23 @@ This document summarizes the payload requirements discussed in the last answer s
 The frontend (`src/App.vue`) reads `analysis_type` to decide how to render the result tab:
 
 - `table` → `result.data` becomes the primary table rows.
-- `bar_graph`, `line_graph`, `box_plot`, `scatter_plot` → Plotly charts are rendered from `graph_spec`.
+- `bar_graph`, `line_graph`, `box_plot`, `scatter_plot` → Plotly charts are rendered from `graph_spec` (single) or `graph_specs` (multiple).
 - `general_text` → plain text block.
 - `excel_analysis`, `excel_chart`, `excel_summary` → specialized Excel cards using `data`, `summary`, and `chart_config`.
+
+### 2.1 Multiple Graphs Support
+
+When generating multiple graphs of the same type (e.g., separate line graphs for each category):
+
+- Use `graph_specs` (array) instead of `graph_spec` (single object)
+- Each graph spec in the array should be a complete declarative spec
+- The `real_data` remains the same (single dataset shared by all graphs)
+- Each graph can apply different filters or transformations on the same dataset
+- Frontend will render multiple graph components side by side or stacked
+
+**Example use case:** "Show line graph for each Tech category separately"
+- `real_data`: Contains all data with Tech column
+- `graph_specs`: Array of specs, each filtering different Tech value
 
 
 ## 3. `real_data` & Declarative Graph Specs
@@ -642,7 +657,156 @@ Send each example as its own SSE chunk (`data: { ... }\n\n`).
 **중요:** 배열에 값이 있으면 그 내용만 표시됩니다 (회귀선 포함 안 됨)
 **결과:** 산점도 점들 + 평균선 (회귀선 없음)
 
-### 4.6 Reference Lines 상세 스펙
+### 4.6 Multiple Graphs Example (여러 그래프 생성)
+
+**Use Case:** User requests separate graphs for each category
+
+**Request:** "각 Tech별로 CPK 트렌드를 분리해서 라인그래프 보여줘"
+
+```json
+{
+  "data": {
+    "analysis_type": "line_graph",
+    "file_name": "trend_data.xlsx",
+    "summary": "Tech별 CPK 트렌드 분리 분석",
+    "success_message": "✅ Tech별 라인차트 생성 완료 (3개)",
+    "real_data": [
+      [
+        {"DATE": "2025-11-01", "TECH": "Tech_A", "CPK": 1.4},
+        {"DATE": "2025-11-02", "TECH": "Tech_A", "CPK": 1.5},
+        {"DATE": "2025-11-01", "TECH": "Tech_B", "CPK": 1.2},
+        {"DATE": "2025-11-02", "TECH": "Tech_B", "CPK": 1.3},
+        {"DATE": "2025-11-01", "TECH": "Tech_C", "CPK": 1.6},
+        {"DATE": "2025-11-02", "TECH": "Tech_C", "CPK": 1.7}
+      ]
+    ],
+    "graph_specs": [
+      {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "DATE", "type": "temporal" },
+          "y": { "field": "CPK", "type": "quantitative" }
+        },
+        "transforms": [
+          { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_A" },
+          { "type": "sort", "field": "DATE", "direction": "asc" }
+        ],
+        "layout": {
+          "title": "Tech_A CPK Trend",
+          "height": 400,
+          "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
+          "xaxis": {
+            "title": "Date",
+            "tickangle": -45,
+            "tickfont": { "size": 10 },
+            "showgrid": true
+          },
+          "yaxis": {
+            "title": "CPK",
+            "range": [0.8, 2.0],
+            "showgrid": true
+          },
+          "shapes": [
+            {
+              "type": "line",
+              "x0": 0, "x1": 1, "xref": "paper",
+              "y0": 1.33, "y1": 1.33,
+              "line": { "color": "red", "width": 2, "dash": "dash" }
+            }
+          ]
+        }
+      },
+      {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "DATE", "type": "temporal" },
+          "y": { "field": "CPK", "type": "quantitative" }
+        },
+        "transforms": [
+          { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_B" },
+          { "type": "sort", "field": "DATE", "direction": "asc" }
+        ],
+        "layout": {
+          "title": "Tech_B CPK Trend",
+          "height": 400,
+          "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
+          "xaxis": {
+            "title": "Date",
+            "tickangle": -45,
+            "tickfont": { "size": 10 },
+            "showgrid": true
+          },
+          "yaxis": {
+            "title": "CPK",
+            "range": [0.8, 2.0],
+            "showgrid": true
+          },
+          "shapes": [
+            {
+              "type": "line",
+              "x0": 0, "x1": 1, "xref": "paper",
+              "y0": 1.33, "y1": 1.33,
+              "line": { "color": "red", "width": 2, "dash": "dash" }
+            }
+          ]
+        }
+      },
+      {
+        "schema_version": "1.0",
+        "chart_type": "line_graph",
+        "dataset_index": 0,
+        "encodings": {
+          "x": { "field": "DATE", "type": "temporal" },
+          "y": { "field": "CPK", "type": "quantitative" }
+        },
+        "transforms": [
+          { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_C" },
+          { "type": "sort", "field": "DATE", "direction": "asc" }
+        ],
+        "layout": {
+          "title": "Tech_C CPK Trend",
+          "height": 400,
+          "margin": { "l": 80, "r": 80, "t": 100, "b": 150 },
+          "xaxis": {
+            "title": "Date",
+            "tickangle": -45,
+            "tickfont": { "size": 10 },
+            "showgrid": true
+          },
+          "yaxis": {
+            "title": "CPK",
+            "range": [0.8, 2.0],
+            "showgrid": true
+          },
+          "shapes": [
+            {
+              "type": "line",
+              "x0": 0, "x1": 1, "xref": "paper",
+              "y0": 1.33, "y1": 1.33,
+              "line": { "color": "red", "width": 2, "dash": "dash" }
+            }
+          ]
+        }
+      }
+    ],
+    "timestamp": "2025-12-05T10:00:00.000Z"
+  }
+}
+```
+
+**Key Points:**
+- ✅ `real_data` contains all data (no changes)
+- ✅ `graph_specs` is an array of complete graph specifications
+- ✅ Each spec applies its own filter (`TECH == "Tech_A"`, etc.)
+- ✅ Each spec has its own title and styling
+- ✅ Frontend renders multiple graphs vertically stacked
+- ✅ Works with all graph types: `bar_graph`, `line_graph`, `box_plot`, `scatter_plot`
+
+### 4.7 Reference Lines 상세 스펙
 
 산점도에서 사용 가능한 `reference_lines` 옵션:
 

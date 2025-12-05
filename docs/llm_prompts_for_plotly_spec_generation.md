@@ -16,10 +16,13 @@ LLM에게 제공해야 할 정보:
 2. **사용자 요청**
    - 사용자가 입력한 자연어 질문/요청
    - 예: "장비별 불량 개수를 바차트로 보여줘"
+   - 예: "각 Tech별로 CPK 트렌드를 분리해서 라인그래프 보여줘" (다중 그래프)
 
 ### 출력 형식
 
-LLM은 반드시 **JSON 형식**으로 `graph_spec` 객체를 반환해야 합니다:
+#### 단일 그래프 (Single Graph)
+
+LLM은 **JSON 형식**으로 `graph_spec` 객체를 반환해야 합니다:
 
 ```json
 {
@@ -33,12 +36,57 @@ LLM은 반드시 **JSON 형식**으로 `graph_spec` 객체를 반환해야 합�
 }
 ```
 
+#### 다중 그래프 (Multiple Graphs)
+
+사용자가 **"각각", "분리", "별도", "나눠서", "개별"** 등의 키워드로 여러 그래프를 요청한 경우:
+
+```json
+{
+  "graph_specs": [
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": { ... },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_A" }
+      ],
+      "layout": {
+        "title": "Tech_A CPK Trend",
+        ...
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": { ... },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_B" }
+      ],
+      "layout": {
+        "title": "Tech_B CPK Trend",
+        ...
+      }
+    }
+  ]
+}
+```
+
+**중요:**
+- ✅ `graph_specs` 배열을 반환 (단일 `graph_spec`이 아님)
+- ✅ 각 spec은 완전한 그래프 스펙 (schema_version, chart_type, encodings, layout 등)
+- ✅ 각 spec은 필터를 사용해 데이터를 분리 (동일한 dataset_index 사용)
+- ✅ 각 spec의 title을 다르게 설정 (카테고리명 포함)
+- ✅ real_data는 변경 없음 (모든 데이터 포함)
+
 ### 중요 제약사항
 
 1. ⚠️ **실제 데이터 값을 포함하지 말 것** - 컬럼명 참조만 사용
 2. ⚠️ **존재하지 않는 컬럼명 사용 금지** - 제공된 메타정보의 컬럼만 사용
 3. ✅ **기본 레이아웃 옵션 적용** - 가독성 향상을 위한 커스터마이징
 4. ✅ **한글 사용자 요청 이해** - 자연어 처리 필요
+5. ✅ **다중 그래프 키워드 인식** - "각각", "분리", "별도", "나눠서", "개별" 등
 
 ---
 
@@ -341,6 +389,8 @@ Generate a JSON object with the following structure:
 
 # Example Output
 
+## Example 1: Single Line Graph
+
 For request: "날짜별 CPK 트렌드를 라인차트로 보여줘. 목표값 1.33도 표시해줘"
 
 ```json
@@ -387,7 +437,142 @@ For request: "날짜별 CPK 트렌드를 라인차트로 보여줘. 목표값 1.
 }
 ```
 
-Now generate the graph_spec JSON based on the provided data and user request.
+## Example 2: Multiple Line Graphs (각 Tech별로 분리)
+
+For request: "각 Tech별로 CPK 트렌드를 분리해서 라인그래프 보여줘"
+
+Given metadata shows TECH column has unique values: ["Tech_A", "Tech_B", "Tech_C"]
+
+```json
+{
+  "graph_specs": [
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "CPK", "type": "quantitative", "agg": "identity" }
+      },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_A" },
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "Tech_A CPK 트렌드",
+        "height": 400,
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 120, "pad": 4 },
+        "xaxis": {
+          "title": "날짜",
+          "tickangle": -45,
+          "tickfont": { "size": 10 },
+          "showgrid": true
+        },
+        "yaxis": {
+          "title": "CPK",
+          "range": [0.8, 2.0],
+          "showgrid": true,
+          "griddash": "dot"
+        },
+        "shapes": [
+          {
+            "type": "line",
+            "x0": 0, "x1": 1, "xref": "paper",
+            "y0": 1.33, "y1": 1.33,
+            "line": { "color": "red", "width": 2, "dash": "dash" }
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "CPK", "type": "quantitative", "agg": "identity" }
+      },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_B" },
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "Tech_B CPK 트렌드",
+        "height": 400,
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 120, "pad": 4 },
+        "xaxis": {
+          "title": "날짜",
+          "tickangle": -45,
+          "tickfont": { "size": 10 },
+          "showgrid": true
+        },
+        "yaxis": {
+          "title": "CPK",
+          "range": [0.8, 2.0],
+          "showgrid": true,
+          "griddash": "dot"
+        },
+        "shapes": [
+          {
+            "type": "line",
+            "x0": 0, "x1": 1, "xref": "paper",
+            "y0": 1.33, "y1": 1.33,
+            "line": { "color": "red", "width": 2, "dash": "dash" }
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "CPK", "type": "quantitative", "agg": "identity" }
+      },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_C" },
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "Tech_C CPK 트렌드",
+        "height": 400,
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 120, "pad": 4 },
+        "xaxis": {
+          "title": "날짜",
+          "tickangle": -45,
+          "tickfont": { "size": 10 },
+          "showgrid": true
+        },
+        "yaxis": {
+          "title": "CPK",
+          "range": [0.8, 2.0],
+          "showgrid": true,
+          "griddash": "dot"
+        },
+        "shapes": [
+          {
+            "type": "line",
+            "x0": 0, "x1": 1, "xref": "paper",
+            "y0": 1.33, "y1": 1.33,
+            "line": { "color": "red", "width": 2, "dash": "dash" }
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+**Important for Multiple Graphs:**
+- ✅ Return `graph_specs` array (not single `graph_spec`)
+- ✅ Check metadata for unique values in the grouping column (TECH)
+- ✅ Create one spec per unique value
+- ✅ Each spec uses same encodings but different filter
+- ✅ Each spec has unique title with category name
+- ✅ Use consistent layout/styling across all specs
+
+Now generate the graph_spec (or graph_specs) JSON based on the provided data and user request.
 ```
 
 ---
@@ -967,11 +1152,37 @@ LLM이 적절한 그래프 타입을 선택하도록 돕는 가이드:
 | 산점도, scatter, 상관관계, correlation | Scatter Plot | 변수 간 관계 |
 | 관계, 영향 | Scatter Plot | 두 변수 비교 |
 
+### 다중 그래프 키워드 인식
+
+| 사용자 키워드 | 의미 | 처리 방법 |
+|-------------|------|----------|
+| 각각, 각, each | 카테고리별 개별 그래프 | `graph_specs` 배열 생성 |
+| 분리, 분리해서, separate | 분리된 그래프 | `graph_specs` 배열 생성 |
+| 별도, 별도로, individually | 개별 그래프 | `graph_specs` 배열 생성 |
+| 나눠서, 나누어, split | 나뉜 그래프 | `graph_specs` 배열 생성 |
+| 개별, 개별적으로, per | 각각의 그래프 | `graph_specs` 배열 생성 |
+| ~별로 (Tech별로, 장비별로) | 카테고리별 | `graph_specs` 배열 생성 |
+
+**예시:**
+- "각 Tech별로 트렌드를 보여줘" → 다중 그래프
+- "Tech별로 분리해서 그래프 그려줘" → 다중 그래프  
+- "장비별로 개별 라인차트 생성해줘" → 다중 그래프
+- "각 DEVICE마다 별도 그래프로" → 다중 그래프
+
+**vs. 단일 그래프:**
+- "Tech별 트렌드를 보여줘" → 단일 그래프 (series 사용)
+- "장비별 비교 그래프" → 단일 그래프 (series 사용)
+
 ### 데이터 특성 기반 선택
 
 ```
-IF 사용자 요청 명시적:
-    → 요청한 그래프 타입 사용
+IF 사용자가 다중 그래프 키워드 사용 ("각각", "분리", "별도" 등):
+    → graph_specs 배열 생성
+    → 각 카테고리별로 필터 적용한 개별 스펙 생성
+    → 각 스펙의 title에 카테고리명 포함
+
+ELSE IF 사용자 요청 명시적:
+    → 요청한 그래프 타입 사용 (단일 graph_spec)
 
 ELSE IF x축이 날짜/시간 타입:
     → Line Graph

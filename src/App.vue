@@ -476,13 +476,33 @@
 
                     <!-- Plotly Graph Results -->
                     <div v-else-if="isPlotlyGraphType(result.type)" class="chart-section plotly-section">
-                      <PlotlyGraph
-                        :graph-spec="result.graphSpec"
-                        :title="result.title"
-                        :file-name="result.fileName"
-                        :success-message="''"
-                        :height="chartHeight"
-                      />
+                      <!-- Multiple Graphs (graph_specs array) -->
+                      <div v-if="result.graphSpecs && result.graphSpecs.length > 0" class="multiple-graphs-container">
+                        <div 
+                          v-for="(graphSpec, graphIndex) in result.graphSpecs" 
+                          :key="`${result.id}-graph-${graphIndex}`"
+                          class="single-graph-wrapper"
+                        >
+                          <PlotlyGraph
+                            :graph-spec="graphSpec"
+                            :title="graphSpec?.layout?.title?.text || graphSpec?.layout?.title || `Graph ${graphIndex + 1}`"
+                            :file-name="result.fileName"
+                            :success-message="''"
+                            :height="chartHeight"
+                          />
+                        </div>
+                      </div>
+                      
+                      <!-- Single Graph (legacy graph_spec) -->
+                      <div v-else class="single-graph-wrapper">
+                        <PlotlyGraph
+                          :graph-spec="result.graphSpec"
+                          :title="result.title"
+                          :file-name="result.fileName"
+                          :success-message="''"
+                          :height="chartHeight"
+                        />
+                      </div>
 
                       <div
                         v-if="result.realDataSets && result.realDataSets.length"
@@ -767,7 +787,25 @@
           </div>
         
         <div v-else-if="isPlotlyGraphType(fullscreenResult?.type)" class="fullscreen-chart fullscreen-plotly-vertical">
-          <div class="fullscreen-plotly-graph">
+          <!-- Multiple Graphs in Fullscreen -->
+          <div v-if="fullscreenResult?.graphSpecs && fullscreenResult.graphSpecs.length > 0" class="fullscreen-multiple-graphs">
+            <div 
+              v-for="(graphSpec, graphIndex) in fullscreenResult.graphSpecs" 
+              :key="`full-${fullscreenResult.id}-graph-${graphIndex}`"
+              class="fullscreen-single-graph"
+            >
+              <PlotlyGraph
+                :graph-spec="graphSpec"
+                :title="graphSpec?.layout?.title?.text || graphSpec?.layout?.title || `Graph ${graphIndex + 1}`"
+                :file-name="fullscreenResult.fileName"
+                :success-message="''"
+                :height="800"
+              />
+            </div>
+          </div>
+          
+          <!-- Single Graph in Fullscreen -->
+          <div v-else class="fullscreen-plotly-graph">
             <PlotlyGraph
               :graph-spec="fullscreenResult.graphSpec"
               :title="fullscreenResult.title"
@@ -776,6 +814,7 @@
               :height="800"
             />
           </div>
+          
           <div
             v-if="fullscreenResult?.realDataSets && fullscreenResult.realDataSets.length"
             class="plotly-real-data fullscreen"
@@ -2084,22 +2123,44 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           const primaryRealData = realDataSets[0] || []
           const hasGraphSpec = plotlyGraphTypes.includes(analysisType)
           console.log('📊 hasGraphSpec:', hasGraphSpec, 'analysisType:', analysisType)
-          const graphSpec = hasGraphSpec ? buildGraphSpec(responseData.graph_spec, realDataSets) : null
-          console.log('📊 graphSpec after build:', graphSpec)
-          if (graphSpec?.data) {
-            console.log('📊 graphSpec.data traces:', graphSpec.data.length)
-            graphSpec.data.forEach((trace, i) => {
-              console.log(`📊 Trace ${i}:`, {
-                type: trace.type,
-                mode: trace.mode,
-                name: trace.name,
-                xLength: trace.x?.length,
-                yLength: trace.y?.length,
-                xSample: trace.x?.slice(0, 3),
-                ySample: trace.y?.slice(0, 3)
-              })
-            })
+          
+          // Check if multiple graph specs are provided (graph_specs array)
+          let graphSpec = null
+          let graphSpecs = null
+          
+          if (hasGraphSpec) {
+            if (responseData.graph_specs && Array.isArray(responseData.graph_specs) && responseData.graph_specs.length > 0) {
+              // Multiple graphs: build each spec in the array
+              console.log('📊 Processing multiple graph_specs:', responseData.graph_specs.length)
+              graphSpecs = responseData.graph_specs.map((spec, index) => {
+                const built = buildGraphSpec(spec, realDataSets)
+                console.log(`📊 Built graphSpec ${index}:`, built)
+                return built
+              }).filter(spec => spec !== null) // Remove any null specs
+              
+              console.log('📊 graphSpecs after build:', graphSpecs.length, 'specs')
+            } else if (responseData.graph_spec) {
+              // Single graph: use legacy graph_spec
+              console.log('📊 Processing single graph_spec')
+              graphSpec = buildGraphSpec(responseData.graph_spec, realDataSets)
+              console.log('📊 graphSpec after build:', graphSpec)
+              if (graphSpec?.data) {
+                console.log('📊 graphSpec.data traces:', graphSpec.data.length)
+                graphSpec.data.forEach((trace, i) => {
+                  console.log(`📊 Trace ${i}:`, {
+                    type: trace.type,
+                    mode: trace.mode,
+                    name: trace.name,
+                    xLength: trace.x?.length,
+                    yLength: trace.y?.length,
+                    xSample: trace.x?.slice(0, 3),
+                    ySample: trace.y?.slice(0, 3)
+                  })
+                })
+              }
+            }
           }
+          
           const successMessage = responseData.success_message || responseData.summary || ''
           const baseTitle = plotlyTitleMap[analysisType] || 'Excel Analysis'
           const fileSuffix = responseData.file_name ? ` - ${responseData.file_name}` : ''
@@ -2116,12 +2177,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             successMessage,
             summary: responseData.summary,
             graphSpec,
+            graphSpecs, // New field for multiple graphs
             realData: primaryRealData,
             realDataSets,
             metadata: responseData,
             resultType: analysisType
           }
           console.log('📊 Created result with graphSpec:', result.graphSpec)
+          console.log('📊 Created result with graphSpecs:', result.graphSpecs?.length || 0, 'specs')
 
           if (analysisType === 'table') {
             result.data = primaryRealData
@@ -4716,6 +4779,46 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Multiple Graphs Container */
+.multiple-graphs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+}
+
+.single-graph-wrapper {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.single-graph-wrapper:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+/* Fullscreen Multiple Graphs */
+.fullscreen-multiple-graphs {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  padding: 1rem;
+}
+
+.fullscreen-single-graph {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .plotly-real-data {
