@@ -952,6 +952,25 @@ import {
   getTokenFromUrl, 
   logout as authLogout 
 } from './utils/auth.js'
+import {
+  adjustTextareaHeight as adjustTextareaHeightHelper,
+  scrollToBottom as scrollToBottomHelper,
+  formatTime as formatTimeHelper,
+  formatFileSize as formatFileSizeHelper,
+  openFullscreen as openFullscreenHelper,
+  closeFullscreen as closeFullscreenHelper,
+  startResize as startResizeHelper
+} from './utils/uiHelpers.js'
+import {
+  loadChatRooms as loadChatRoomsHelper,
+  refreshChatRoomHistory as refreshChatRoomHistoryHelper,
+  selectChatRoom as selectChatRoomHelper,
+  createNewChatRoom as createNewChatRoomHelper,
+  deleteChatRoom as deleteChatRoomHelper,
+  updateChatRoomInfo as updateChatRoomInfoHelper,
+  updateChatRoomName as updateChatRoomNameHelper,
+  handleUpdateRoomName as handleUpdateRoomNameHelper
+} from './utils/chatRoomManager.js'
 
 export default defineComponent({
   name: 'App',
@@ -1129,34 +1148,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       return `${minDate} - ${maxDate}`
     })
 
-    const formatTime = (timestamp) => {
-      if (!timestamp) return ''
-      
-      const now = new Date()
-      const messageDate = new Date(timestamp)
-      
-      // 오늘인지 확인
-      const isToday = messageDate.toDateString() === now.toDateString()
-      
-      if (isToday) {
-        // 오늘은 시간만 표시
-        return messageDate.toLocaleTimeString('ko-KR', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          second: '2-digit'
-        })
-      } else {
-        // 다른 날은 날짜와 시간 모두 표시
-        return messageDate.toLocaleString('ko-KR', { 
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit', 
-          minute: '2-digit',
-          second: '2-digit'
-        })
-      }
-    }
+    // formatTime을 헬퍼 함수로 위임
+    const formatTime = (timestamp) => formatTimeHelper(timestamp)
 
       // Deep merge helper: target values take precedence over source
       const stripCodeFences = (value) => {
@@ -1760,11 +1753,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
+    // scrollToBottom을 헬퍼 함수로 위임
     const scrollToBottom = async () => {
-      await nextTick()
-      if (messagesContainer.value) {
-        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-      }
+      await scrollToBottomHelper(messagesContainer.value)
     }
 
     const addMessage = (type, text, isEditable = false, originalMessage = null, messageType = 'text', files = null) => {
@@ -1923,88 +1914,56 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
-    // 리사이즈 기능
+    // 리사이즈 기능을 헬퍼 함수로 위임
     const startResize = (event) => {
-      isResizing.value = true
-      currentResizeBar.value = event.target
-      startX.value = event.clientX
-      
-      // 현재 너비들 저장
-      startWidths.value = {
-        sidebar: sidebar.value?.offsetWidth || 280,
-        chatSection: chatSection.value?.offsetWidth || 400,
-        resultsSidebar: resultsSidebar.value?.offsetWidth || 500
-      }
-      
-      document.body.style.cursor = 'col-resize'
-      document.body.style.userSelect = 'none'
-      
-      document.addEventListener('mousemove', handleResize)
-      document.addEventListener('mouseup', stopResize)
-      event.preventDefault()
-    }
-
-    const handleResize = (event) => {
-      if (!isResizing.value || !currentResizeBar.value) return
-      
-      const deltaX = event.clientX - startX.value
-      
-      if (currentResizeBar.value === resizeBar1.value) {
-        // 사이드바와 채팅 섹션 사이 리사이즈
-        const newSidebarWidth = Math.max(200, Math.min(500, startWidths.value.sidebar + deltaX))
-        const newChatWidth = Math.max(350, Math.min(800, startWidths.value.chatSection - deltaX))
-        
-        if (sidebar.value) {
-          sidebar.value.style.width = `${newSidebarWidth}px`
-          sidebar.value.style.flex = `0 0 ${newSidebarWidth}px`
-        }
-        if (chatSection.value) {
-          chatSection.value.style.width = `${newChatWidth}px`
-          chatSection.value.style.flex = `1 1 ${newChatWidth}px`
-        }
-      } else if (currentResizeBar.value === resizeBar2.value) {
-        // 채팅 섹션과 결과 사이드바 사이 리사이즈
-        const newChatWidth = Math.max(350, Math.min(800, startWidths.value.chatSection + deltaX))
-        const newResultsWidth = Math.max(300, startWidths.value.resultsSidebar - deltaX)
-        
-        if (chatSection.value) {
-          chatSection.value.style.width = `${newChatWidth}px`
-          chatSection.value.style.flex = `1 1 ${newChatWidth}px`
-        }
-        if (resultsSidebar.value) {
-          resultsSidebar.value.style.width = `${newResultsWidth}px`
-          resultsSidebar.value.style.flex = `1 1 ${newResultsWidth}px`
+      const resizeState = {
+        isResizing: true,
+        currentResizeBar: event.target,
+        startX: event.clientX,
+        startWidths: {
+          sidebar: sidebar.value?.offsetWidth || 280,
+          chatSection: chatSection.value?.offsetWidth || 400,
+          resultsSidebar: resultsSidebar.value?.offsetWidth || 500
         }
       }
-    }
-
-    const stopResize = () => {
-      isResizing.value = false
-      currentResizeBar.value = null
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
       
-      document.removeEventListener('mousemove', handleResize)
-      document.removeEventListener('mouseup', stopResize)
+      const refs = {
+        sidebar: sidebar.value,
+        chatSection: chatSection.value,
+        resultsSidebar: resultsSidebar.value,
+        resizeBar1: resizeBar1.value,
+        resizeBar2: resizeBar2.value
+      }
+      
+      // 헬퍼 함수 호출 및 cleanup 함수 저장
+      startResizeHelper(event, resizeState, refs)
+      
+      // 상태 업데이트
+      isResizing.value = resizeState.isResizing
+      currentResizeBar.value = resizeState.currentResizeBar
+      startX.value = resizeState.startX
+      startWidths.value = resizeState.startWidths
     }
 
-    // 전체화면 모달 제어 함수들
+    // 전체화면 모달 제어 함수들을 헬퍼 함수로 위임
     const openFullscreen = (result) => {
-      fullscreenResult.value = result
-      showFullscreen.value = true
-      // body 스크롤 방지
-      document.body.style.overflow = 'hidden'
-      // 모달 DOM이 붙은 다음 Plotly가 사이즈를 다시 잡도록 강제
-      nextTick(() => {
-        window.dispatchEvent(new Event('resize'))
-      })
+      const fullscreenState = {
+        fullscreenResult: result,
+        showFullscreen: true
+      }
+      openFullscreenHelper(result, fullscreenState)
+      fullscreenResult.value = fullscreenState.fullscreenResult
+      showFullscreen.value = fullscreenState.showFullscreen
     }
 
     const closeFullscreen = () => {
-      showFullscreen.value = false
-      fullscreenResult.value = null
-      // body 스크롤 복원
-      document.body.style.overflow = 'auto'
+      const fullscreenState = {
+        fullscreenResult: fullscreenResult.value,
+        showFullscreen: showFullscreen.value
+      }
+      closeFullscreenHelper(fullscreenState)
+      fullscreenResult.value = fullscreenState.fullscreenResult
+      showFullscreen.value = fullscreenState.showFullscreen
     }
 
     // API에서 데이터 가져오기
@@ -2682,21 +2641,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
-    // textarea 높이 자동 조정 함수
+    // textarea 높이 자동 조정 함수를 헬퍼 함수로 위임
     const adjustTextareaHeight = () => {
-      const textarea = messageInput.value
-      if (textarea) {
-        // 높이를 최소값으로 리셋
-        textarea.style.height = '80px'
-        
-        // 스크롤 높이를 계산하여 최대 10줄 정도(약 240px)로 제한
-        const minHeight = 80
-        const maxHeight = 240
-        const newHeight = Math.max(minHeight, Math.min(textarea.scrollHeight, maxHeight))
-        textarea.style.height = newHeight + 'px'
-        
-        console.log('🔍 Textarea height adjusted:', newHeight + 'px', 'scrollHeight:', textarea.scrollHeight)
-      }
+      adjustTextareaHeightHelper(messageInput.value)
     }
 
     const sendMessage = async () => {
@@ -2832,13 +2779,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
 
     // 파일 크기 포맷팅
-    const formatFileSize = (bytes) => {
-      if (bytes === 0) return '0 Bytes'
-      const k = 1024
-      const sizes = ['Bytes', 'KB', 'MB', 'GB']
-      const i = Math.floor(Math.log(bytes) / Math.log(k))
-      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
-    }
+    // formatFileSize를 헬퍼 함수로 위임
+    const formatFileSize = (bytes) => formatFileSizeHelper(bytes)
 
     // 실제 파일 업로드 처리 함수
     const uploadExcelFile = async (file, prompt) => {
@@ -3337,135 +3279,64 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
     
-    // 채팅방 관련 함수들
+    // 채팅방 관련 함수들을 헬퍼 함수로 위임
     const selectChatRoom = async (roomId) => {
-      console.log(`🔄 Selecting chatroom ${roomId}`)
-      console.log('📊 Previous activeChatId:', activeChatId.value)
-      console.log('💬 All chatMessages:', Object.keys(chatMessages.value))
-      console.log('📈 All chatResults:', Object.keys(chatResults.value))
-      console.log(`💬 Messages for room ${roomId}:`, chatMessages.value[roomId]?.length || 0, 'messages')
-      console.log(`📈 Results for room ${roomId}:`, chatResults.value[roomId]?.length || 0, 'results')
-      
-      activeChatId.value = roomId
-      const selectedRoom = chatRooms.value.find(room => room.id === roomId)
-      if (selectedRoom) {
-        selectedDataType.value = selectedRoom.dataType
-        // 히스토리는 이미 loadChatRooms에서 로드되므로 별도 로드 불필요
-        console.log(`✅ Selected chatroom ${roomId} with data type: ${selectedRoom.dataType}`)
-        console.log(`💬 Final messages count: ${(chatMessages.value[roomId] || []).length}`)
-        console.log(`📈 Final results count: ${(chatResults.value[roomId] || []).length}`)
+      const state = {
+        activeChatId,
+        chatRooms,
+        chatMessages,
+        chatResults,
+        selectedDataType
       }
-
-      scrollToBottom()
+      await selectChatRoomHelper(roomId, state, scrollToBottom)
     }
 
     const createNewChatRoom = async (newRoom) => {
-      try {
-        console.log('Creating new chatroom')
-        
-        // 백엔드에 새 채팅방 생성 (파라미터 없이)
-        const createdRoom = await createChatRoom()
-        console.log('Created room response:', createdRoom)
-        
-        // 로컬 상태 업데이트
-        const roomData = {
-          id: createdRoom.id,
-          name: `채팅방 #${createdRoom.id}`, // ID를 포함한 이름으로
-          dataType: 'pcm', // 기본값으로 설정
-          lastMessage: '새로운 채팅방',
-          lastMessageTime: new Date(), // 현재 시간으로 설정
-          messageCount: 0
-        }
-        
-        chatRooms.value.unshift(roomData)
-        activeChatId.value = createdRoom.id
-        selectedDataType.value = 'pcm' // 기본값으로 설정
-        
-        // 새 채팅방의 초기 메시지 설정 (빈 배열로 시작)
-        chatMessages.value[createdRoom.id] = []
-        
-        // 새 채팅방의 결과 배열 초기화
-        chatResults.value[createdRoom.id] = []
-        
-        // 새 채팅방의 입력 및 에러 상태 초기화
-        chatInputs.value[createdRoom.id] = ''
-        chatErrors.value[createdRoom.id] = { show: false, message: '' }
-        
-        // 새 채팅방 표시 활성화
-        newChatroomDisplay.value[createdRoom.id] = true
-        
-        console.log('Successfully created and configured new chatroom:', createdRoom.id)
-        
-        // 채팅방 목록 새로고침
-        await loadChatRooms()
-        
-      } catch (error) {
-        console.error('Failed to create chatroom:', error)
-        // 새 채팅방 생성 실패 - 백엔드에서 에러 메시지 처리
+      const state = {
+        chatRooms,
+        activeChatId,
+        selectedDataType,
+        chatMessages,
+        chatResults,
+        chatInputs,
+        chatErrors,
+        newChatroomDisplay
       }
+      await createNewChatRoomHelper(state, loadChatRooms)
     }
 
     const deleteChatRoom = async (roomId) => {
-      try {
-        // 백엔드에서 채팅방 삭제
-        await deleteChatRoomAPI(roomId)
-        
-        // 로컬 상태 업데이트
-        const index = chatRooms.value.findIndex(room => room.id === roomId)
-        if (index !== -1) {
-          chatRooms.value.splice(index, 1)
-          
-          // 채팅방 데이터 삭제
-          delete chatMessages.value[roomId]
-          delete chatResults.value[roomId]
-          delete chatInputs.value[roomId]
-          delete chatErrors.value[roomId]
-          delete newChatroomDisplay.value[roomId] // 채팅방 삭제 시 표시 상태도 제거
-          
-          // 삭제된 채팅방이 현재 활성화된 채팅방이었다면 다른 채팅방으로 전환
-          if (activeChatId.value === roomId) {
-            if (chatRooms.value.length > 0) {
-              selectChatRoom(chatRooms.value[0].id)
-            } else {
-              // 모든 채팅방이 삭제된 경우
-              activeChatId.value = null
-            }
-          }
-        }
-        
-        // 채팅방 목록 새로고침
-        await loadChatRooms()
-        
-      } catch (error) {
-        console.error('Failed to delete chatroom:', error)
-        // 채팅방 삭제 실패 - 백엔드에서 에러 메시지 처리
+      const state = {
+        chatRooms,
+        activeChatId,
+        chatMessages,
+        chatResults,
+        chatInputs,
+        chatErrors,
+        newChatroomDisplay
       }
+      await deleteChatRoomHelper(roomId, state, selectChatRoom, loadChatRooms)
     }
 
-    // 메시지 전송 시 채팅방 정보 업데이트
+    // 채팅방 정보 업데이트 함수들을 헬퍼 함수로 위임
     const updateChatRoomInfo = (message) => {
-      const currentRoom = chatRooms.value.find(room => room.id === activeChatId.value)
-      if (currentRoom) {
-        currentRoom.lastMessage = message
-        currentRoom.lastMessageTime = new Date()
-        currentRoom.messageCount += 1
+      const state = {
+        chatRooms,
+        activeChatId
       }
+      updateChatRoomInfoHelper(message, state)
     }
     
-    // 채팅방 이름 업데이트 (첫 번째 메시지 기반)
     const updateChatRoomName = (message) => {
-      const currentRoom = chatRooms.value.find(room => room.id === activeChatId.value)
-      if (currentRoom && !currentRoom.name.startsWith('새 채팅방')) {
-        // 첫 번째 사용자 메시지를 기반으로 채팅방 이름 설정
-        const shortMessage = message.length > 20 ? message.substring(0, 20) + '...' : message
-        currentRoom.name = shortMessage
+      const state = {
+        chatRooms,
+        activeChatId
       }
+      updateChatRoomNameHelper(message, state)
     }
 
-    // 채팅방 이름 수정 핸들러 (새로 추가)
     const handleUpdateRoomName = ({ roomId, name }) => {
-      console.log('🔄 Chatroom name updated:', { roomId, name })
-      // 로컬 상태는 이미 ChatRoomList에서 업데이트되었으므로 추가 작업 불필요
+      handleUpdateRoomNameHelper({ roomId, name })
     }
 
     // 인증 관련 함수들
