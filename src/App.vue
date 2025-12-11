@@ -241,6 +241,7 @@
                 <div class="message-input-group">
                   <textarea 
                     v-model="currentMessage" 
+                    @input="adjustTextareaHeight"
                     @keydown="handleKeyDown"
                     placeholder="Type your message here... (Enter for new line, Tab to send)"
                     class="chat-input"

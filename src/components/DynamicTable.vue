@@ -11,10 +11,10 @@
         >
         <button 
           @click="exportToExcel" 
-          class="emoji-btn export-excel-btn"
+          class="export-excel-btn-text"
           title="엑셀로 다운로드"
         >
-          📥
+          📥 엑셀 다운로드
         </button>
         <button 
           v-if="hasActiveFilters"
@@ -658,17 +658,28 @@ export default defineComponent({
   border-color: #ced4da;
 }
 
-.export-excel-btn {
+.export-excel-btn-text {
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
   color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
 }
 
-.export-excel-btn:hover {
+.export-excel-btn-text:hover {
   background: rgba(46, 204, 113, 0.9);
   border-color: rgba(46, 204, 113, 1);
   color: white;
-  transform: scale(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
 }
 
 .clear-all-filters-btn {
