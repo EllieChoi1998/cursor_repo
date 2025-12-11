@@ -10,6 +10,13 @@
           class="search-input"
         >
         <button 
+          @click="exportToExcel" 
+          class="emoji-btn export-excel-btn"
+          title="엑셀로 다운로드"
+        >
+          📥
+        </button>
+        <button 
           v-if="hasActiveFilters"
           @click="clearAllFilters" 
           class="emoji-btn clear-all-filters-btn"
@@ -365,6 +372,38 @@ export default defineComponent({
       }
     }
 
+    const exportToExcel = () => {
+      // 동적으로 xlsx 라이브러리 로드
+      import('xlsx').then((XLSX) => {
+        // 현재 필터링된 데이터를 사용
+        const dataToExport = filteredData.value
+        
+        // 데이터가 없으면 알림
+        if (dataToExport.length === 0) {
+          alert('다운로드할 데이터가 없습니다.')
+          return
+        }
+        
+        // 워크시트 생성
+        const ws = XLSX.utils.json_to_sheet(dataToExport)
+        
+        // 워크북 생성
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Data')
+        
+        // 파일 이름 생성 (현재 날짜 포함)
+        const date = new Date()
+        const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
+        const fileName = `${props.title.replace(/[^a-zA-Z0-9가-힣]/g, '_')}_${dateStr}.xlsx`
+        
+        // 파일 다운로드
+        XLSX.writeFile(wb, fileName)
+      }).catch((error) => {
+        console.error('엑셀 내보내기 오류:', error)
+        alert('엑셀 다운로드 중 오류가 발생했습니다.')
+      })
+    }
+
     return {
       searchTerm,
       currentPage,
@@ -393,7 +432,8 @@ export default defineComponent({
       formatNumber,
       getValueColorClass,
       previousPage,
-      nextPage
+      nextPage,
+      exportToExcel
     }
   }
 })
@@ -616,6 +656,19 @@ export default defineComponent({
   background: white;
   color: #6c757d;
   border-color: #ced4da;
+}
+
+.export-excel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.export-excel-btn:hover {
+  background: rgba(46, 204, 113, 0.9);
+  border-color: rgba(46, 204, 113, 1);
+  color: white;
+  transform: scale(1.1);
 }
 
 .clear-all-filters-btn {

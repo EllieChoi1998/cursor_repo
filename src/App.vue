@@ -2689,8 +2689,8 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // 높이를 auto로 설정하여 내용에 맞게 조정
         textarea.style.height = 'auto'
         
-        // 스크롤 높이를 계산하여 최대 5줄 정도(약 120px)로 제한
-        const newHeight = Math.min(textarea.scrollHeight, 120)
+        // 스크롤 높이를 계산하여 최대 10줄 정도(약 240px)로 제한
+        const newHeight = Math.min(textarea.scrollHeight, 240)
         textarea.style.height = newHeight + 'px'
         
         console.log('🔍 Textarea height adjusted:', newHeight + 'px')
@@ -4019,7 +4019,7 @@ body {
   transition: border-color 0.2s ease, height 0.1s ease;
   resize: none;
   min-height: 45px;
-  max-height: 120px;
+  max-height: 240px;
   font-family: inherit;
   line-height: 1.4;
   overflow-y: auto;
