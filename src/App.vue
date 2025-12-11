@@ -246,7 +246,6 @@
                     placeholder="Type your message here... (Enter for new line, Tab to send)"
                     class="chat-input"
                     :disabled="isLoading"
-                    rows="1"
                     ref="messageInput"
                   ></textarea>
                   
@@ -2687,14 +2686,16 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     const adjustTextareaHeight = () => {
       const textarea = messageInput.value
       if (textarea) {
-        // 높이를 auto로 설정하여 내용에 맞게 조정
-        textarea.style.height = 'auto'
+        // 높이를 최소값으로 리셋
+        textarea.style.height = '80px'
         
         // 스크롤 높이를 계산하여 최대 10줄 정도(약 240px)로 제한
-        const newHeight = Math.min(textarea.scrollHeight, 240)
+        const minHeight = 80
+        const maxHeight = 240
+        const newHeight = Math.max(minHeight, Math.min(textarea.scrollHeight, maxHeight))
         textarea.style.height = newHeight + 'px'
         
-        console.log('🔍 Textarea height adjusted:', newHeight + 'px')
+        console.log('🔍 Textarea height adjusted:', newHeight + 'px', 'scrollHeight:', textarea.scrollHeight)
       }
     }
 
@@ -3501,6 +3502,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       })
     })
 
+    // activeChatId 변경 시 textarea 높이 조정
+    watch(activeChatId, () => {
+      nextTick(() => {
+        adjustTextareaHeight()
+      })
+    })
+
     // selectedDataType 변경 감지
     watch(selectedDataType, (newValue, oldValue) => {
       console.log('🔄 selectedDataType changed:', oldValue, '->', newValue)
@@ -3517,6 +3525,11 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       if (isUserAuthenticated.value) {
         await loadChatRooms()
       }
+      
+      // textarea 초기 높이 설정
+      nextTick(() => {
+        adjustTextareaHeight()
+      })
       scrollToBottom()
       
       // ESC 키 이벤트 리스너 추가
@@ -4017,12 +4030,13 @@ body {
   border-radius: 25px;
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.2s ease, height 0.1s ease;
+  transition: border-color 0.2s ease;
   resize: none;
-  min-height: 45px;
+  height: auto;
+  min-height: 80px;
   max-height: 240px;
   font-family: inherit;
-  line-height: 1.4;
+  line-height: 1.5;
   overflow-y: auto;
   box-sizing: border-box;
 }
