@@ -16,10 +16,13 @@ LLM에게 제공해야 할 정보:
 2. **사용자 요청**
    - 사용자가 입력한 자연어 질문/요청
    - 예: "장비별 불량 개수를 바차트로 보여줘"
+   - 예: "각 Tech별로 CPK 트렌드를 분리해서 라인그래프 보여줘" (다중 그래프)
 
 ### 출력 형식
 
-LLM은 반드시 **JSON 형식**으로 `graph_spec` 객체를 반환해야 합니다:
+#### 단일 그래프 (Single Graph)
+
+LLM은 **JSON 형식**으로 `graph_spec` 객체를 반환해야 합니다:
 
 ```json
 {
@@ -33,12 +36,57 @@ LLM은 반드시 **JSON 형식**으로 `graph_spec` 객체를 반환해야 합�
 }
 ```
 
+#### 다중 그래프 (Multiple Graphs)
+
+사용자가 **"각각", "분리", "별도", "나눠서", "개별"** 등의 키워드로 여러 그래프를 요청한 경우:
+
+```json
+{
+  "graph_specs": [
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": { ... },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_A" }
+      ],
+      "layout": {
+        "title": "Tech_A CPK Trend",
+        ...
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": { ... },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_B" }
+      ],
+      "layout": {
+        "title": "Tech_B CPK Trend",
+        ...
+      }
+    }
+  ]
+}
+```
+
+**중요:**
+- ✅ `graph_specs` 배열을 반환 (단일 `graph_spec`이 아님)
+- ✅ 각 spec은 완전한 그래프 스펙 (schema_version, chart_type, encodings, layout 등)
+- ✅ 각 spec은 필터를 사용해 데이터를 분리 (동일한 dataset_index 사용)
+- ✅ 각 spec의 title을 다르게 설정 (카테고리명 포함)
+- ✅ real_data는 변경 없음 (모든 데이터 포함)
+
 ### 중요 제약사항
 
 1. ⚠️ **실제 데이터 값을 포함하지 말 것** - 컬럼명 참조만 사용
 2. ⚠️ **존재하지 않는 컬럼명 사용 금지** - 제공된 메타정보의 컬럼만 사용
 3. ✅ **기본 레이아웃 옵션 적용** - 가독성 향상을 위한 커스터마이징
 4. ✅ **한글 사용자 요청 이해** - 자연어 처리 필요
+5. ✅ **다중 그래프 키워드 인식** - "각각", "분리", "별도", "나눠서", "개별" 등
 
 ---
 
@@ -341,6 +389,8 @@ Generate a JSON object with the following structure:
 
 # Example Output
 
+## Example 1: Single Line Graph
+
 For request: "날짜별 CPK 트렌드를 라인차트로 보여줘. 목표값 1.33도 표시해줘"
 
 ```json
@@ -387,7 +437,260 @@ For request: "날짜별 CPK 트렌드를 라인차트로 보여줘. 목표값 1.
 }
 ```
 
-Now generate the graph_spec JSON based on the provided data and user request.
+## Example 2: Multiple Line Graphs - Template Approach (각 Tech별로 분리) ⭐ RECOMMENDED
+
+For request: "각 Tech별로 CPK 트렌드를 분리해서 라인그래프 보여줘"
+
+**❌ Problem:** Metadata may not include all unique values (could be 100+), or values are unknown to LLM
+**✅ Solution:** Generate a template with `split_by` field and `{{SPLIT_VALUE}}` placeholder
+
+```json
+{
+  "graph_spec_template": {
+    "schema_version": "1.0",
+    "chart_type": "line_graph",
+    "split_by": "TECH",
+    "dataset_index": 0,
+    "encodings": {
+      "x": { "field": "DATE", "type": "temporal" },
+      "y": { "field": "CPK", "type": "quantitative", "agg": "identity" }
+    },
+    "transforms": [
+      { "type": "filter", "field": "TECH", "op": "==", "value": "{{SPLIT_VALUE}}" },
+      { "type": "sort", "field": "DATE", "direction": "asc" }
+    ],
+    "layout": {
+      "title": "{{SPLIT_VALUE}} CPK 트렌드",
+      "height": 400,
+      "margin": { "l": 80, "r": 80, "t": 100, "b": 120, "pad": 4 },
+      "xaxis": {
+        "title": "날짜",
+        "tickangle": -45,
+        "tickfont": { "size": 10 },
+        "showgrid": true
+      },
+      "yaxis": {
+        "title": "CPK",
+        "range": [0.8, 2.0],
+        "showgrid": true,
+        "griddash": "dot"
+      },
+      "shapes": [
+        {
+          "type": "line",
+          "x0": 0, "x1": 1, "xref": "paper",
+          "y0": 1.33, "y1": 1.33,
+          "line": { "color": "red", "width": 2, "dash": "dash" }
+        }
+      ]
+    }
+  }
+}
+```
+
+**Key fields for template approach:**
+- ✅ `graph_spec_template`: Template object (not `graph_specs` array)
+- ✅ `split_by`: Column name to split by (e.g., "TECH")
+- ✅ `{{SPLIT_VALUE}}`: Placeholder replaced by backend with actual values
+- ✅ LLM doesn't need to know unique values (could be 100+)
+- ✅ Backend extracts unique values and creates `graph_specs` array
+
+**Backend processing:**
+```python
+# 1. Extract template and split column
+template = llm_response["graph_spec_template"]
+split_col = template.pop("split_by")  # "TECH"
+
+# 2. Get unique values
+unique_values = df[split_col].unique()[:10]  # Limit to 10
+
+# 3. Create specs for each value
+graph_specs = []
+for value in unique_values:
+    spec = copy.deepcopy(template)
+    spec_str = json.dumps(spec)
+    spec_str = spec_str.replace("{{SPLIT_VALUE}}", str(value))
+    graph_specs.append(json.loads(spec_str))
+
+# 4. Send to frontend
+response["graph_specs"] = graph_specs
+```
+
+**When to use template vs array:**
+- ✅ Use `graph_spec_template` when splitting by category values (unknown count)
+- ✅ Use `graph_specs` array when splitting by column names (known list)
+
+## Example 3: Multiple Graphs - Different Y-axis Columns
+
+For request: "WIDTH, THICKNESS, DEPTH 각각에 대해 장비별 트렌드를 라인그래프로 보여줘"
+
+Given metadata shows columns: DATE, EQ, WIDTH, THICKNESS, DEPTH
+
+```json
+{
+  "graph_specs": [
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "WIDTH", "type": "quantitative" },
+        "series": { "field": "EQ" }
+      },
+      "transforms": [
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "WIDTH Trend by Equipment",
+        "height": 400,
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 120 },
+        "xaxis": { "title": "날짜", "tickangle": -45 },
+        "yaxis": { "title": "WIDTH (μm)", "showgrid": true }
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "THICKNESS", "type": "quantitative" },
+        "series": { "field": "EQ" }
+      },
+      "transforms": [
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "THICKNESS Trend by Equipment",
+        "height": 400,
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 120 },
+        "xaxis": { "title": "날짜", "tickangle": -45 },
+        "yaxis": { "title": "THICKNESS (μm)", "showgrid": true }
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "DEPTH", "type": "quantitative" },
+        "series": { "field": "EQ" }
+      },
+      "transforms": [
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "DEPTH Trend by Equipment",
+        "height": 400,
+        "margin": { "l": 80, "r": 80, "t": 100, "b": 120 },
+        "xaxis": { "title": "날짜", "tickangle": -45 },
+        "yaxis": { "title": "DEPTH (μm)", "showgrid": true }
+      }
+    }
+  ]
+}
+```
+
+**Key differences from Example 2:**
+- ✅ Different `y.field` for each spec (WIDTH, THICKNESS, DEPTH)
+- ✅ No filters needed (all data used for each graph)
+- ✅ Same `series.field` (EQ) for all graphs
+- ✅ Different y-axis titles for each measurement
+
+## Example 4: Multiple Graphs - Combination Pattern
+
+For request: "Tech_A와 Tech_B 각각에 대해 CPK와 YIELD 트렌드를 각각 보여줘"
+
+This creates 2 techs × 2 metrics = 4 graphs
+
+```json
+{
+  "graph_specs": [
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "CPK", "type": "quantitative" }
+      },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_A" },
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "Tech_A CPK Trend",
+        "height": 400,
+        "yaxis": { "title": "CPK", "range": [0.8, 2.0] }
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "YIELD", "type": "quantitative" }
+      },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_A" },
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "Tech_A YIELD Trend",
+        "height": 400,
+        "yaxis": { "title": "YIELD (%)", "range": [95, 100] }
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "CPK", "type": "quantitative" }
+      },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_B" },
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "Tech_B CPK Trend",
+        "height": 400,
+        "yaxis": { "title": "CPK", "range": [0.8, 2.0] }
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "chart_type": "line_graph",
+      "dataset_index": 0,
+      "encodings": {
+        "x": { "field": "DATE", "type": "temporal" },
+        "y": { "field": "YIELD", "type": "quantitative" }
+      },
+      "transforms": [
+        { "type": "filter", "field": "TECH", "op": "==", "value": "Tech_B" },
+        { "type": "sort", "field": "DATE", "direction": "asc" }
+      ],
+      "layout": {
+        "title": "Tech_B YIELD Trend",
+        "height": 400,
+        "yaxis": { "title": "YIELD (%)", "range": [95, 100] }
+      }
+    }
+  ]
+}
+```
+
+**Combination pattern:**
+- ✅ Combines filter (TECH) + different encodings (CPK vs YIELD)
+- ✅ Creates matrix: categories × measurements
+- ✅ Each graph is fully independent
+- ✅ Different y-axis ranges for different metrics
+
+Now generate the graph_spec (or graph_specs) JSON based on the provided data and user request.
 ```
 
 ---
@@ -967,11 +1270,53 @@ LLM이 적절한 그래프 타입을 선택하도록 돕는 가이드:
 | 산점도, scatter, 상관관계, correlation | Scatter Plot | 변수 간 관계 |
 | 관계, 영향 | Scatter Plot | 두 변수 비교 |
 
+### 다중 그래프 키워드 인식
+
+| 사용자 키워드 | 의미 | 처리 방법 |
+|-------------|------|----------|
+| 각각, 각, each | 카테고리별 개별 그래프 | `graph_specs` 배열 생성 |
+| 분리, 분리해서, separate | 분리된 그래프 | `graph_specs` 배열 생성 |
+| 별도, 별도로, individually | 개별 그래프 | `graph_specs` 배열 생성 |
+| 나눠서, 나누어, split | 나뉜 그래프 | `graph_specs` 배열 생성 |
+| 개별, 개별적으로, per | 각각의 그래프 | `graph_specs` 배열 생성 |
+| ~별로 (Tech별로, 장비별로) | 카테고리별 | `graph_specs` 배열 생성 |
+
+**다중 그래프 요청 패턴 분석:**
+
+#### Pattern 1: 카테고리 값별 분리
+- "각 Tech별로 트렌드를 보여줘" → 다중 그래프 (Tech 값별)
+- "Tech별로 분리해서 그래프 그려줘" → 다중 그래프 (Tech 값별)
+- "장비별로 개별 라인차트 생성해줘" → 다중 그래프 (장비별)
+- "각 DEVICE마다 별도 그래프로" → 다중 그래프 (DEVICE별)
+
+#### Pattern 2: 여러 컬럼별 분리
+- "WIDTH, THICKNESS, DEPTH 각각에 대해 트렌드" → 다중 그래프 (Y축 컬럼별)
+- "CPK와 YIELD를 각각 그래프로" → 다중 그래프 (측정값별)
+- "A컬럼, B컬럼, C컬럼 각각 비교" → 다중 그래프 (컬럼별)
+
+#### Pattern 3: 특정 값들만 선택
+- "EQ01, EQ02, EQ03 각각에 대해" → 다중 그래프 (명시된 값들만)
+- "Tech_A와 Tech_B만 분리해서" → 다중 그래프 (선택된 값들)
+
+#### Pattern 4: 조합 패턴
+- "Tech_A와 B 각각의 CPK와 YIELD" → 다중 그래프 (카테고리 × 측정값)
+- "각 장비별로 WIDTH와 THICKNESS" → 다중 그래프 (장비 × 파라미터)
+
+**vs. 단일 그래프 (Series 사용):**
+- "Tech별 트렌드를 보여줘" → 단일 그래프 (series: TECH)
+- "장비별 비교 그래프" → 단일 그래프 (series: 장비)
+- "모든 Tech를 한 그래프에" → 단일 그래프 (series 사용)
+
 ### 데이터 특성 기반 선택
 
 ```
-IF 사용자 요청 명시적:
-    → 요청한 그래프 타입 사용
+IF 사용자가 다중 그래프 키워드 사용 ("각각", "분리", "별도" 등):
+    → graph_specs 배열 생성
+    → 각 카테고리별로 필터 적용한 개별 스펙 생성
+    → 각 스펙의 title에 카테고리명 포함
+
+ELSE IF 사용자 요청 명시적:
+    → 요청한 그래프 타입 사용 (단일 graph_spec)
 
 ELSE IF x축이 날짜/시간 타입:
     → Line Graph
@@ -995,47 +1340,173 @@ ELSE:
 
 ### 백엔드 구현 시 고려사항
 
-1. **LLM API 호출 흐름**
+1. **LLM API 호출 흐름 (개선)**
 ```python
 def generate_graph_spec(df, user_request):
     # 1. 데이터 메타정보 추출
     column_metadata = extract_column_metadata(df)
     sample_data = df.head(5).to_dict('records')
     
-    # 2. 그래프 타입 결정 (키워드 기반 또는 LLM)
+    # 2. 다중 그래프 여부 판단
+    is_multiple = should_create_multiple_graphs(user_request, column_metadata)
+    
+    # 3. 그래프 타입 결정
     graph_type = determine_graph_type(user_request)
     
-    # 3. 해당 그래프 타입의 프롬프트 선택
-    prompt = get_prompt_template(graph_type)
+    # 4. 적절한 프롬프트 선택
+    if is_multiple:
+        prompt = get_multiple_graphs_prompt_template(graph_type)
+    else:
+        prompt = get_single_graph_prompt_template(graph_type)
     
-    # 4. 프롬프트에 데이터 삽입
+    # 5. 프롬프트에 데이터 삽입
     filled_prompt = prompt.format(
         column_metadata=column_metadata,
         sample_data=sample_data,
         user_request=user_request
     )
     
-    # 5. LLM API 호출
+    # 6. LLM API 호출
     response = call_llm_api(filled_prompt)
     
-    # 6. JSON 파싱 및 검증
-    graph_spec = json.loads(response)
-    validate_graph_spec(graph_spec, df.columns)
+    # 7. JSON 파싱 및 검증
+    result = json.loads(response)
     
-    return graph_spec
+    if "graph_specs" in result:
+        # 다중 그래프: 각 spec 검증
+        for spec in result["graph_specs"]:
+            validate_graph_spec(spec, df.columns)
+        return result
+    else:
+        # 단일 그래프: spec 검증
+        validate_graph_spec(result, df.columns)
+        return {"graph_spec": result}
 ```
 
-2. **Error Handling**
+2. **다중 그래프 판단 로직**
+```python
+def should_create_multiple_graphs(user_request: str, column_metadata: dict) -> bool:
+    """
+    사용자 요청을 분석하여 다중 그래프 생성이 필요한지 판단
+    """
+    # Pattern 1: 카테고리 값별 분리 키워드
+    category_keywords = ["각각", "각", "분리", "별도", "나눠서", "개별", "따로"]
+    if any(keyword in user_request for keyword in category_keywords):
+        return True
+    
+    # Pattern 2: 여러 컬럼 명시 ("A, B, C 각각")
+    # 예: "WIDTH, THICKNESS, DEPTH 각각"
+    columns = [col["name"] for col in column_metadata["columns"]]
+    mentioned_columns = [col for col in columns if col in user_request]
+    if len(mentioned_columns) >= 2 and any(k in user_request for k in ["각각", "각"]):
+        return True
+    
+    # Pattern 3: 특정 값들 나열 ("EQ01, EQ02, EQ03 각각")
+    # LLM에게 판단 위임 가능
+    
+    return False
+
+def determine_multiple_graph_type(user_request: str, column_metadata: dict) -> str:
+    """
+    다중 그래프의 타입 결정: filter-based, encoding-based, combination 등
+    """
+    # Pattern A: 컬럼명이 여러 개 언급되면 encoding-based
+    columns = [col["name"] for col in column_metadata["columns"]]
+    mentioned_columns = [col for col in columns if col in user_request]
+    
+    if len(mentioned_columns) >= 2:
+        return "encoding-based"  # Y축 컬럼이 다른 여러 그래프
+    
+    # Pattern B: "각 XXX별로" → filter-based
+    category_pattern = r"각\s+(\w+)별로"
+    if re.search(category_pattern, user_request):
+        return "filter-based"  # 카테고리 값별로 필터링
+    
+    # Pattern C: 조합 키워드 감지
+    if "각각" in user_request and "대해" in user_request:
+        return "combination"  # 복합 패턴 (LLM에 위임)
+    
+    return "filter-based"  # 기본값
+```
+
+2. **다중 그래프 생성 전략**
+```python
+def create_multiple_graph_specs(df, user_request, graph_type, pattern_type):
+    """
+    다중 그래프 스펙 생성
+    """
+    if pattern_type == "filter-based":
+        # 카테고리 값별 분리
+        category_col = extract_category_column(user_request, df.columns)
+        unique_values = df[category_col].unique()[:10]  # 최대 10개
+        
+        specs = []
+        for value in unique_values:
+            spec = create_single_spec(
+                graph_type=graph_type,
+                encodings=get_base_encodings(df, user_request),
+                transforms=[
+                    {"type": "filter", "field": category_col, "op": "==", "value": value}
+                ],
+                title=f"{value} Analysis"
+            )
+            specs.append(spec)
+        return specs
+    
+    elif pattern_type == "encoding-based":
+        # 여러 Y축 컬럼별 분리
+        y_columns = extract_y_columns(user_request, df.columns)
+        
+        specs = []
+        for col in y_columns:
+            spec = create_single_spec(
+                graph_type=graph_type,
+                encodings={
+                    "x": get_x_encoding(df),
+                    "y": {"field": col, "type": "quantitative"},
+                    "series": get_series_encoding(df) if needed else None
+                },
+                transforms=[{"type": "sort", ...}],
+                title=f"{col} Analysis"
+            )
+            specs.append(spec)
+        return specs
+    
+    elif pattern_type == "combination":
+        # 조합: LLM에 위임하거나 매트릭스 생성
+        categories = extract_categories(user_request, df)
+        metrics = extract_metrics(user_request, df)
+        
+        specs = []
+        for cat in categories:
+            for metric in metrics:
+                spec = create_single_spec(
+                    graph_type=graph_type,
+                    encodings={"y": {"field": metric, ...}},
+                    transforms=[
+                        {"type": "filter", "field": cat["field"], "op": "==", "value": cat["value"]}
+                    ],
+                    title=f"{cat['value']} {metric} Analysis"
+                )
+                specs.append(spec)
+        return specs
+    
+    return []
+```
+
+3. **Error Handling**
    - LLM이 잘못된 컬럼명 생성 시 → 가장 유사한 실제 컬럼명으로 대체
    - JSON 파싱 실패 시 → 재시도 또는 기본 스펙 반환
    - 필수 필드 누락 시 → 기본값으로 채우기
+   - 다중 그래프 개수 제한 → 최대 10개 (성능 고려)
 
-3. **Optimization**
+4. **Optimization**
    - 샘플 데이터는 최대 5-10행으로 제한
    - 컬럼 메타정보에서 고유값은 최대 10개까지만 표시
+   - 다중 그래프 시 고유값이 너무 많으면 (>15개) 경고 또는 상위 10개만 선택
    - 프롬프트 토큰 수 최적화
 
-4. **Caching**
+5. **Caching**
    - 동일한 데이터 + 동일한 요청 → 캐시된 결과 재사용
    - TTL: 세션 단위 또는 30분
 

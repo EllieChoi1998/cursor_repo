@@ -476,13 +476,33 @@
 
                     <!-- Plotly Graph Results -->
                     <div v-else-if="isPlotlyGraphType(result.type)" class="chart-section plotly-section">
-                      <PlotlyGraph
-                        :graph-spec="result.graphSpec"
-                        :title="result.title"
-                        :file-name="result.fileName"
-                        :success-message="''"
-                        :height="chartHeight"
-                      />
+                      <!-- Multiple Graphs (graph_specs array) -->
+                      <div v-if="result.graphSpecs && result.graphSpecs.length > 0" class="multiple-graphs-container">
+                        <div 
+                          v-for="(graphSpec, graphIndex) in result.graphSpecs" 
+                          :key="`${result.id}-graph-${graphIndex}`"
+                          class="single-graph-wrapper"
+                        >
+                          <PlotlyGraph
+                            :graph-spec="graphSpec"
+                            :title="graphSpec?.layout?.title?.text || graphSpec?.layout?.title || `Graph ${graphIndex + 1}`"
+                            :file-name="result.fileName"
+                            :success-message="''"
+                            :height="chartHeight"
+                          />
+                        </div>
+                      </div>
+                      
+                      <!-- Single Graph (legacy graph_spec) -->
+                      <div v-else class="single-graph-wrapper">
+                        <PlotlyGraph
+                          :graph-spec="result.graphSpec"
+                          :title="result.title"
+                          :file-name="result.fileName"
+                          :success-message="''"
+                          :height="chartHeight"
+                        />
+                      </div>
 
                       <div
                         v-if="result.realDataSets && result.realDataSets.length"
@@ -767,7 +787,25 @@
           </div>
         
         <div v-else-if="isPlotlyGraphType(fullscreenResult?.type)" class="fullscreen-chart fullscreen-plotly-vertical">
-          <div class="fullscreen-plotly-graph">
+          <!-- Multiple Graphs in Fullscreen -->
+          <div v-if="fullscreenResult?.graphSpecs && fullscreenResult.graphSpecs.length > 0" class="fullscreen-multiple-graphs">
+            <div 
+              v-for="(graphSpec, graphIndex) in fullscreenResult.graphSpecs" 
+              :key="`full-${fullscreenResult.id}-graph-${graphIndex}`"
+              class="fullscreen-single-graph"
+            >
+              <PlotlyGraph
+                :graph-spec="graphSpec"
+                :title="graphSpec?.layout?.title?.text || graphSpec?.layout?.title || `Graph ${graphIndex + 1}`"
+                :file-name="fullscreenResult.fileName"
+                :success-message="''"
+                :height="800"
+              />
+            </div>
+          </div>
+          
+          <!-- Single Graph in Fullscreen -->
+          <div v-else class="fullscreen-plotly-graph">
             <PlotlyGraph
               :graph-spec="fullscreenResult.graphSpec"
               :title="fullscreenResult.title"
@@ -776,6 +814,7 @@
               :height="800"
             />
           </div>
+          
           <div
             v-if="fullscreenResult?.realDataSets && fullscreenResult.realDataSets.length"
             class="plotly-real-data fullscreen"
@@ -893,6 +932,19 @@ import {
 } from './services/api.js'
 import { API_BASE_URL } from './services/api.js'
 import { isErrorResponse, extractErrorMessage } from './config/dataTypes.js'
+import {
+  getValueByPath,
+  coerceNumber,
+  mergeDeep,
+  aggregatePoints,
+  splitSeriesPoints,
+  applyDeclarativeTransforms
+} from './utils/plotlyHelpers.js'
+import {
+  buildBarFigure,
+  buildLineFigure,
+  buildBoxFigure
+} from './utils/plotlyGraphBuilders.js'
 import { 
   isAuthenticated, 
   getUserFromToken, 
@@ -1107,27 +1159,6 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
     }
 
       // Deep merge helper: target values take precedence over source
-      const mergeDeep = (source, target) => {
-        if (!target || typeof target !== 'object' || Array.isArray(target)) {
-          return target !== undefined ? target : source
-        }
-        if (!source || typeof source !== 'object' || Array.isArray(source)) {
-          return target
-        }
-        
-        const result = { ...source }
-        for (const key in target) {
-          if (target.hasOwnProperty(key)) {
-            if (target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
-              result[key] = mergeDeep(result[key], target[key])
-            } else {
-              result[key] = target[key]
-            }
-          }
-        }
-        return result
-      }
-
       const stripCodeFences = (value) => {
         if (typeof value !== 'string') return value
         const trimmed = value.trim()
@@ -1194,517 +1225,6 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           config,
           frames,
           raw: figure
-        }
-      }
-
-      const getValueByPath = (record, field) => {
-        if (!record || !field) return undefined
-        if (!field.includes('.')) return record[field]
-        return field.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), record)
-      }
-
-      const coerceNumber = (value) => {
-        if (value === null || value === undefined) return null
-        if (typeof value === 'number' && Number.isFinite(value)) return value
-        const num = Number(value)
-        return Number.isFinite(num) ? num : null
-      }
-
-      const applyDeclarativeTransforms = (rows, transforms) => {
-        if (!Array.isArray(transforms) || !transforms.length) return rows
-        return transforms.reduce((currentRows, transform) => {
-          if (!transform || typeof transform !== 'object') return currentRows
-          if (transform.type === 'filter') {
-            const { field, op = '==', value } = transform
-            return currentRows.filter((row) => {
-              const target = getValueByPath(row, field)
-              switch (op) {
-                case '>':
-                  return target > value
-                case '>=':
-                  return target >= value
-                case '<':
-                  return target < value
-                case '<=':
-                  return target <= value
-                case '!=':
-                case '<>':
-                  return target !== value
-                case 'in':
-                  return Array.isArray(value) ? value.includes(target) : false
-                case 'not_in':
-                  return Array.isArray(value) ? !value.includes(target) : true
-                case 'contains':
-                  return Array.isArray(target) ? target.includes(value) : String(target ?? '').includes(String(value ?? ''))
-                default:
-                  return target === value
-              }
-            })
-          }
-          if (transform.type === 'sort') {
-            const { field, direction = 'asc' } = transform
-            const multiplier = direction === 'desc' ? -1 : 1
-            return [...currentRows].sort((a, b) => {
-              const valueA = getValueByPath(a, field)
-              const valueB = getValueByPath(b, field)
-              if (valueA === valueB) return 0
-              return valueA > valueB ? multiplier : -multiplier
-            })
-          }
-          return currentRows
-        }, rows)
-      }
-
-      const aggregatePoints = (points, agg) => {
-        if (!agg || agg === 'identity' || agg === 'none') return points
-        const mode = agg.toLowerCase()
-        const grouped = new Map()
-
-        points.forEach(({ x, y }) => {
-          const key = x ?? '__missing__'
-          if (!grouped.has(key)) {
-            grouped.set(key, { values: [], order: grouped.size })
-          }
-          if (y !== null && y !== undefined) {
-            grouped.get(key).values.push(y)
-          }
-        })
-
-        const summarise = (values) => {
-          if (!values.length) return null
-          switch (mode) {
-            case 'sum':
-              return values.reduce((acc, val) => acc + val, 0)
-            case 'avg':
-            case 'average':
-            case 'mean':
-              return values.reduce((acc, val) => acc + val, 0) / values.length
-            case 'max':
-              return Math.max(...values)
-            case 'min':
-              return Math.min(...values)
-            case 'count':
-              return values.length
-            case 'median': {
-              const sorted = [...values].sort((a, b) => a - b)
-              const mid = Math.floor(sorted.length / 2)
-              return sorted.length % 2
-                ? sorted[mid]
-                : (sorted[mid - 1] + sorted[mid]) / 2
-            }
-            default:
-              return values[values.length - 1]
-          }
-        }
-
-        const aggregated = Array.from(grouped.entries())
-          .sort((a, b) => a[1].order - b[1].order)
-          .map(([x, { values }]) => ({ x: x === '__missing__' ? null : x, y: summarise(values) }))
-
-        return aggregated
-      }
-
-      const splitSeriesPoints = (rows, { xField, yField, seriesField }) => {
-        const seriesMap = new Map()
-        const safeField = (field) => field || null
-
-        rows.forEach((row) => {
-          const xValue = safeField(xField) ? getValueByPath(row, xField) : null
-          const yRaw = safeField(yField) ? getValueByPath(row, yField) : null
-          const yValue = coerceNumber(yRaw)
-          const seriesKey = safeField(seriesField) ? getValueByPath(row, seriesField) : 'Series'
-          if (!seriesMap.has(seriesKey)) {
-            seriesMap.set(seriesKey, [])
-          }
-          seriesMap.get(seriesKey).push({ x: xValue, y: yValue })
-        })
-
-        return seriesMap
-      }
-
-      const buildBarFigure = (rows, encodings = {}, spec = {}) => {
-        const xField = encodings.x?.field || encodings.category?.field
-        const yField = encodings.y?.field || encodings.value?.field
-        if (!xField || !yField) return null
-
-        const seriesField = encodings.series?.field || encodings.group?.field || encodings.color?.field
-        const aggregator = encodings.y?.agg || encodings.y?.aggregate || 'sum'
-        const seriesMap = splitSeriesPoints(rows, { xField, yField, seriesField })
-
-        const data = Array.from(seriesMap.entries()).map(([seriesKey, points]) => {
-          const aggregated = aggregatePoints(points, aggregator)
-          const trace = {
-            type: 'bar',
-            name: seriesKey,
-            x: aggregated.map((point) => point.x),
-            y: aggregated.map((point) => point.y)
-          }
-          // Only add marker if color palette is specified
-          if (spec.encodings?.color?.palette) {
-            trace.marker = { color: spec.encodings.color.palette }
-          }
-          return trace
-        })
-
-        // Apply default layout customizations
-        const defaultLayout = {
-          height: 500,
-          margin: { l: 80, r: 80, t: 100, b: 150, pad: 4 },  // b: 150 for long x-axis labels
-          xaxis: {
-            tickangle: -45,
-            tickfont: { size: 10, color: '#666' },
-            showgrid: true,
-            gridcolor: '#e5e5e5',
-            gridwidth: 1
-          },
-          yaxis: {
-            showgrid: true,
-            gridcolor: '#d3d3d3',
-            gridwidth: 1,
-            zeroline: true,
-            zerolinecolor: '#999',
-            zerolinewidth: 2
-          }
-        }
-
-        // Deep merge: spec.layout takes precedence
-        const mergedLayout = mergeDeep(defaultLayout, spec.layout || {})
-
-        return {
-          data,
-          layout: mergedLayout,
-          config: { ...(spec.config || {}) }
-        }
-      }
-
-      const buildLineFigure = (rows, encodings = {}, spec = {}, chartType = 'line') => {
-        console.log('[buildLineFigure] START', {
-          chartType,
-          rowsCount: rows?.length,
-          encodings,
-          spec,
-          firstRow: rows?.[0]
-        })
-        
-        const xField = encodings.x?.field || encodings.category?.field
-        const yField = encodings.y?.field || encodings.value?.field
-        
-        console.log('[buildLineFigure] Fields:', { xField, yField })
-        
-        if (!xField || !yField) {
-          console.error('[buildLineFigure] Missing xField or yField!')
-          return null
-        }
-
-        const seriesField = encodings.series?.field || encodings.group?.field || encodings.color?.field
-        const aggregator = encodings.y?.agg || encodings.y?.aggregate || 'identity'
-        const seriesMap = splitSeriesPoints(rows, { xField, yField, seriesField })
-
-        console.log('[buildLineFigure] SeriesMap size:', seriesMap.size)
-        seriesMap.forEach((points, key) => {
-          console.log(`[buildLineFigure] Series "${key}":`, points.length, 'points')
-          console.log('[buildLineFigure] First 3 points:', points.slice(0, 3))
-        })
-
-        // For scatter plots, ALWAYS use 'markers' mode (ignore spec.mode)
-        // For line graphs, use spec.mode or default to 'lines+markers'
-        const baseMode = chartType === 'scatter' 
-          ? 'markers'  // FORCE markers-only for scatter plots
-          : (spec.mode || 'lines+markers')
-        
-        console.log('[buildLineFigure] baseMode:', baseMode, 'chartType:', chartType)
-        
-        const traces = Array.from(seriesMap.entries()).map(([seriesKey, points]) => {
-          const aggregated = aggregatePoints(points, aggregator)
-          console.log(`[buildLineFigure] Aggregated "${seriesKey}":`, aggregated.length, 'points')
-          console.log('[buildLineFigure] Aggregated first 3:', aggregated.slice(0, 3))
-          
-          const trace = {
-            type: chartType === 'scatter' ? 'scatter' : 'scatter',
-            mode: baseMode,
-            name: seriesKey,
-            x: aggregated.map((point) => point.x),
-            y: aggregated.map((point) => point.y)
-          }
-          
-          console.log(`[buildLineFigure] Trace "${seriesKey}":`, {
-            xLength: trace.x.length,
-            yLength: trace.y.length,
-            xSample: trace.x.slice(0, 3),
-            ySample: trace.y.slice(0, 3)
-          })
-          
-          return trace
-        })
-        
-        console.log('[buildLineFigure] Total traces:', traces.length)
-
-        // For scatter plots, add regression line by default
-        if (chartType === 'scatter') {
-          // ALWAYS add default regression line unless explicitly provided in array
-          // undefined, null, empty string, empty array [] → add default regression
-          // array with items → use those items (if no regression in array, won't add)
-          let referenceLines = spec.reference_lines
-          
-          console.log('[buildLineFigure] Original reference_lines:', referenceLines)
-          console.log('[buildLineFigure] reference_lines type:', typeof referenceLines)
-          
-          // Check if reference_lines is undefined, null, empty string, or empty array
-          if (referenceLines === undefined || 
-              referenceLines === null || 
-              referenceLines === '' ||
-              (typeof referenceLines === 'string' && referenceLines.trim() === '') ||
-              (Array.isArray(referenceLines) && referenceLines.length === 0)) {
-            console.log('[buildLineFigure] No reference lines provided - using default regression line')
-            referenceLines = [
-              {
-                type: 'regression',
-                name: '회귀선',
-                color: 'blue',
-                width: 2,
-                dash: 'solid'
-              }
-            ]
-          } else if (Array.isArray(referenceLines) && referenceLines.length > 0) {
-            console.log('[buildLineFigure] Using user-defined reference lines:', referenceLines.length)
-            // User provided specific reference lines - use them as-is
-          } else {
-            console.warn('[buildLineFigure] Unexpected reference_lines format:', referenceLines, '- using default')
-            referenceLines = [
-              {
-                type: 'regression',
-                name: '회귀선',
-                color: 'blue',
-                width: 2,
-                dash: 'solid'
-              }
-            ]
-          }
-
-          // Add reference lines for scatter plots (mean, regression, etc.)
-          try {
-            referenceLines.forEach((refLine) => {
-              if (refLine.type === 'mean' || refLine.type === 'average') {
-                // Calculate mean of y values
-                const allYValues = []
-                traces.forEach(trace => {
-                  if (trace.y && Array.isArray(trace.y)) {
-                    allYValues.push(...trace.y.filter(v => typeof v === 'number' && !isNaN(v)))
-                  }
-                })
-                
-                if (allYValues.length === 0) return
-                
-                const mean = allYValues.reduce((sum, val) => sum + val, 0) / allYValues.length
-                
-                // Get x range
-                const allXValues = []
-                traces.forEach(trace => {
-                  if (trace.x && Array.isArray(trace.x)) {
-                    allXValues.push(...trace.x.filter(v => typeof v === 'number' && !isNaN(v)))
-                  }
-                })
-                
-                if (allXValues.length === 0) return
-                
-                const xMin = Math.min(...allXValues)
-                const xMax = Math.max(...allXValues)
-                
-                traces.push({
-                  type: 'scatter',
-                  mode: 'lines',
-                  name: refLine.name || 'Mean',
-                  x: [xMin, xMax],
-                  y: [mean, mean],
-                  line: {
-                    color: refLine.color || 'red',
-                    width: refLine.width || 2,
-                    dash: refLine.dash || 'dash'
-                  },
-                  showlegend: true
-                })
-              } else if (refLine.type === 'horizontal') {
-                // Fixed horizontal line at specified y value
-                if (typeof refLine.value !== 'number' || isNaN(refLine.value)) return
-                
-                const allXValues = []
-                traces.forEach(trace => {
-                  if (trace.x && Array.isArray(trace.x)) {
-                    allXValues.push(...trace.x.filter(v => typeof v === 'number' && !isNaN(v)))
-                  }
-                })
-                
-                if (allXValues.length === 0) return
-                
-                const xMin = Math.min(...allXValues)
-                const xMax = Math.max(...allXValues)
-                
-                traces.push({
-                  type: 'scatter',
-                  mode: 'lines',
-                  name: refLine.name || 'Reference',
-                  x: [xMin, xMax],
-                  y: [refLine.value, refLine.value],
-                  line: {
-                    color: refLine.color || 'red',
-                    width: refLine.width || 2,
-                    dash: refLine.dash || 'dash'
-                  },
-                  showlegend: true
-                })
-              } else if (refLine.type === 'regression' || refLine.type === 'linear') {
-                // Simple linear regression
-                const allPoints = []
-                traces.forEach(trace => {
-                  if (trace.x && trace.y && Array.isArray(trace.x) && Array.isArray(trace.y)) {
-                    trace.x.forEach((x, i) => {
-                      const xVal = typeof x === 'number' ? x : parseFloat(x)
-                      const yVal = typeof trace.y[i] === 'number' ? trace.y[i] : parseFloat(trace.y[i])
-                      
-                      if (!isNaN(xVal) && !isNaN(yVal) && isFinite(xVal) && isFinite(yVal)) {
-                        allPoints.push({ x: xVal, y: yVal })
-                      }
-                    })
-                  }
-                })
-                
-                if (allPoints.length < 2) {
-                  console.warn('[buildLineFigure] Not enough valid points for regression line:', allPoints.length)
-                  return
-                }
-                
-                // Calculate linear regression
-                const n = allPoints.length
-                const sumX = allPoints.reduce((sum, p) => sum + p.x, 0)
-                const sumY = allPoints.reduce((sum, p) => sum + p.y, 0)
-                const sumXY = allPoints.reduce((sum, p) => sum + p.x * p.y, 0)
-                const sumX2 = allPoints.reduce((sum, p) => sum + p.x * p.x, 0)
-                
-                const denominator = (n * sumX2 - sumX * sumX)
-                
-                if (denominator === 0) {
-                  console.warn('[buildLineFigure] Cannot calculate regression: denominator is 0')
-                  return
-                }
-                
-                const slope = (n * sumXY - sumX * sumY) / denominator
-                const intercept = (sumY - slope * sumX) / n
-                
-                if (!isFinite(slope) || !isFinite(intercept)) {
-                  console.warn('[buildLineFigure] Invalid regression values:', { slope, intercept })
-                  return
-                }
-                
-                const xMin = Math.min(...allPoints.map(p => p.x))
-                const xMax = Math.max(...allPoints.map(p => p.x))
-                
-                traces.push({
-                  type: 'scatter',
-                  mode: 'lines',
-                  name: refLine.name || 'Regression',
-                  x: [xMin, xMax],
-                  y: [slope * xMin + intercept, slope * xMax + intercept],
-                  line: {
-                    color: refLine.color || 'blue',
-                    width: refLine.width || 2,
-                    dash: refLine.dash || 'solid'
-                  },
-                  showlegend: true
-                })
-              }
-            })
-          } catch (error) {
-            console.error('[buildLineFigure] Error adding reference lines:', error)
-            // Continue without reference lines if there's an error
-          }
-        }
-        // End of scatter plot reference lines processing
-
-        // Apply default layout customizations
-        const defaultLayout = {
-          height: 500,
-          margin: { l: 80, r: 80, t: 100, b: 150, pad: 4 },  // b: 150 for long x-axis labels
-          xaxis: {
-            tickangle: -45,
-            tickfont: { size: 10, color: '#666' },
-            showgrid: true,
-            gridcolor: '#e5e5e5',
-            gridwidth: 1
-          },
-          yaxis: {
-            showgrid: true,
-            gridcolor: '#d3d3d3',
-            gridwidth: 1,
-            griddash: 'dot',
-            zeroline: true,
-            zerolinecolor: '#999',
-            zerolinewidth: 2
-          }
-        }
-
-        // Deep merge: spec.layout takes precedence
-        const mergedLayout = mergeDeep(defaultLayout, spec.layout || {})
-
-        return {
-          data: traces,
-          layout: mergedLayout,
-          config: { ...(spec.config || {}) }
-        }
-      }
-
-      const buildBoxFigure = (rows, encodings = {}, spec = {}) => {
-        const valueField = encodings.value?.field || encodings.y?.field
-        const categoryField = encodings.category?.field || encodings.x?.field
-        const seriesField = encodings.series?.field || encodings.group?.field || encodings.color?.field
-        if (!valueField) return null
-
-        const groups = new Map()
-        rows.forEach((row) => {
-          const bucketKey = seriesField ? getValueByPath(row, seriesField) : getValueByPath(row, categoryField) || 'Series'
-          if (!groups.has(bucketKey)) {
-            groups.set(bucketKey, [])
-          }
-          const value = coerceNumber(getValueByPath(row, valueField))
-          if (value !== null) {
-            groups.get(bucketKey).push(value)
-          }
-        })
-
-        const data = Array.from(groups.entries()).map(([key, values]) => ({
-          type: 'box',
-          name: key,
-          y: values,
-          boxpoints: spec.boxpoints || 'outliers'
-        }))
-
-        // Apply default layout customizations
-        const defaultLayout = {
-          height: 500,
-          margin: { l: 80, r: 80, t: 100, b: 150, pad: 4 },  // b: 150 for long x-axis labels
-          xaxis: {
-            tickangle: -45,
-            tickfont: { size: 10, color: '#666' },
-            showgrid: true,
-            gridcolor: '#e5e5e5',
-            gridwidth: 1
-          },
-          yaxis: {
-            showgrid: true,
-            gridcolor: '#d3d3d3',
-            gridwidth: 1,
-            zeroline: true,
-            zerolinecolor: '#999',
-            zerolinewidth: 2
-          }
-        }
-
-        // Deep merge: spec.layout takes precedence
-        const mergedLayout = mergeDeep(defaultLayout, spec.layout || {})
-
-        return {
-          data,
-          layout: mergedLayout,
-          config: { ...(spec.config || {}) }
         }
       }
 
@@ -2084,22 +1604,102 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           const primaryRealData = realDataSets[0] || []
           const hasGraphSpec = plotlyGraphTypes.includes(analysisType)
           console.log('📊 hasGraphSpec:', hasGraphSpec, 'analysisType:', analysisType)
-          const graphSpec = hasGraphSpec ? buildGraphSpec(responseData.graph_spec, realDataSets) : null
-          console.log('📊 graphSpec after build:', graphSpec)
-          if (graphSpec?.data) {
-            console.log('📊 graphSpec.data traces:', graphSpec.data.length)
-            graphSpec.data.forEach((trace, i) => {
-              console.log(`📊 Trace ${i}:`, {
-                type: trace.type,
-                mode: trace.mode,
-                name: trace.name,
-                xLength: trace.x?.length,
-                yLength: trace.y?.length,
-                xSample: trace.x?.slice(0, 3),
-                ySample: trace.y?.slice(0, 3)
-              })
-            })
+          
+          // Process graph_spec (always array)
+          let graphSpec = null
+          let graphSpecs = null
+          
+          if (hasGraphSpec && responseData.graph_spec && Array.isArray(responseData.graph_spec)) {
+            const specArray = responseData.graph_spec
+            console.log('📊 Processing graph_spec array, length:', specArray.length)
+            
+            if (specArray.length === 0) {
+              console.warn('⚠️ Empty graph_spec array')
+            }
+            // Case 1: Template (first item has split_by)
+            else if (specArray[0]?.split_by && typeof specArray[0].split_by === 'string' && specArray[0].split_by.trim()) {
+              console.log('📊 Detected template (split_by found):', specArray[0].split_by)
+              const template = specArray[0]
+              const splitBy = template.split_by
+              
+              if (primaryRealData.length > 0) {
+                console.log(`📊 Expanding template by column: ${splitBy}`)
+                
+                // Extract unique values from split_by column
+                const uniqueValues = [...new Set(primaryRealData.map(row => row[splitBy]))]
+                  .filter(val => val !== null && val !== undefined)
+                  .slice(0, 10) // Limit to 10 graphs max
+                
+                console.log(`📊 Found ${uniqueValues.length} unique values:`, uniqueValues)
+                
+                // Create spec for each unique value
+                graphSpecs = uniqueValues.map(value => {
+                  // Deep copy template
+                  const spec = JSON.parse(JSON.stringify(template))
+                  const splitByColumn = spec.split_by
+                  delete spec.split_by // Remove split_by from spec
+                  
+                  // Replace {{SPLIT_VALUE}} placeholder
+                  let specStr = JSON.stringify(spec)
+                  specStr = specStr.replace(/\{\{SPLIT_VALUE\}\}/g, String(value))
+                  const expandedSpec = JSON.parse(specStr)
+                  
+                  // Add filter transform for this split value
+                  if (!expandedSpec.transforms) {
+                    expandedSpec.transforms = []
+                  }
+                  // Add filter at the beginning to filter data by split value
+                  expandedSpec.transforms.unshift({
+                    type: 'filter',
+                    field: splitByColumn,
+                    op: '==',
+                    value: value
+                  })
+                  
+                  // Add title to layout showing the split value
+                  if (!expandedSpec.layout) {
+                    expandedSpec.layout = {}
+                  }
+                  if (!expandedSpec.layout.title) {
+                    expandedSpec.layout.title = {
+                      text: `${splitByColumn} = ${value}`,
+                      font: { size: 16 }
+                    }
+                  }
+                  
+                  console.log(`📊 Creating graph for ${splitByColumn}=${value}`)
+                  
+                  // Build graph spec
+                  return buildGraphSpec(expandedSpec, realDataSets)
+                }).filter(spec => spec !== null)
+                
+                console.log('📊 graphSpecs after template expansion:', graphSpecs.length, 'specs')
+              } else {
+                console.warn('⚠️ Template found but no data to expand')
+              }
+            }
+            // Case 2: Single spec
+            else if (specArray.length === 1) {
+              console.log('📊 Processing single spec')
+              graphSpec = buildGraphSpec(specArray[0], realDataSets)
+              console.log('📊 graphSpec after build:', graphSpec)
+              if (graphSpec?.data) {
+                console.log('📊 graphSpec.data traces:', graphSpec.data.length)
+              }
+            }
+            // Case 3: Multiple specs
+            else {
+              console.log('📊 Processing multiple specs:', specArray.length)
+              graphSpecs = specArray.map((spec, index) => {
+                const built = buildGraphSpec(spec, realDataSets)
+                console.log(`📊 Built graphSpec ${index}:`, built)
+                return built
+              }).filter(spec => spec !== null)
+              
+              console.log('📊 graphSpecs after build:', graphSpecs.length, 'specs')
+            }
           }
+          
           const successMessage = responseData.success_message || responseData.summary || ''
           const baseTitle = plotlyTitleMap[analysisType] || 'Excel Analysis'
           const fileSuffix = responseData.file_name ? ` - ${responseData.file_name}` : ''
@@ -2116,12 +1716,14 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             successMessage,
             summary: responseData.summary,
             graphSpec,
+            graphSpecs, // New field for multiple graphs
             realData: primaryRealData,
             realDataSets,
             metadata: responseData,
             resultType: analysisType
           }
           console.log('📊 Created result with graphSpec:', result.graphSpec)
+          console.log('📊 Created result with graphSpecs:', result.graphSpecs?.length || 0, 'specs')
 
           if (analysisType === 'table') {
             result.data = primaryRealData
@@ -4716,6 +4318,46 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Multiple Graphs Container */
+.multiple-graphs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+}
+
+.single-graph-wrapper {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.single-graph-wrapper:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+/* Fullscreen Multiple Graphs */
+.fullscreen-multiple-graphs {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  padding: 1rem;
+}
+
+.fullscreen-single-graph {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .plotly-real-data {
