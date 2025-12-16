@@ -1,7 +1,5 @@
 <template>
   <div class="llm-plotly">
-    <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
-
     <!-- FOR_KEY별 멀티 차트 컨테이너 -->
     <div class="charts-grid">
       <div
@@ -75,8 +73,6 @@ export default defineComponent({
         chartRefs.value[forKey] = el
       }
     }
-
-    const successMessage = computed(() => props.backendData.success_message || '')
 
     // ---- 파서들 ----
     const parseJSONLoose = (v) => {
@@ -524,7 +520,6 @@ export default defineComponent({
     watch(forKeyList, createCharts)
 
     return {
-      successMessage,
       title: props.title,
       criteria,
       forKeyList,
@@ -540,16 +535,6 @@ export default defineComponent({
 .llm-plotly {
   width: 100%;
   position: relative;
-}
-
-.success-message {
-  padding: 10px;
-  margin-bottom: 10px;
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-  border-radius: 4px;
-  color: #155724;
-  font-size: 14px;
 }
 
 /* 멀티 차트 레이아웃 */

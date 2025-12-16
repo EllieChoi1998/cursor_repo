@@ -357,6 +357,15 @@
                 <div class="result-content">
                   <!-- PCM Trend Chart (기존 그래프 로직 유지) -->
                   <div v-if="result.type === 'pcm_trend'" class="chart-section">
+                    <div class="sql-toolbar">
+                      <button
+                        class="sql-copy-btn"
+                        :disabled="!canCopySql(result.sql)"
+                        @click="copySql(result.sql)"
+                      >
+                        사용한 SQL 쿼리문 복사
+                      </button>
+                    </div>
                     <PCMTrendChart 
                       :data="result.data"
                       :height="chartHeight"
@@ -366,6 +375,15 @@
                   
                   <!-- PCM Trend Point Chart (기존 그래프 로직 유지) -->
                   <div v-else-if="result.type === 'pcm_trend_point'" class="chart-section">
+                    <div class="sql-toolbar">
+                      <button
+                        class="sql-copy-btn"
+                        :disabled="!canCopySql(result.sql)"
+                        @click="copySql(result.sql)"
+                      >
+                        사용한 SQL 쿼리문 복사
+                      </button>
+                    </div>
                     <PCMTrendPointChart 
                       :data="result.data"
                       :height="chartHeight"
@@ -377,6 +395,15 @@
                   
                             <!-- PCM To Trend Chart (sameness_to_trend, commonality_to_trend) -->
           <div v-else-if="result.type === 'sameness_to_trend' || result.type === 'commonality_to_trend'" class="chart-section">
+                    <div class="sql-toolbar">
+                      <button
+                        class="sql-copy-btn"
+                        :disabled="!canCopySql(result.sql)"
+                        @click="copySql(result.sql)"
+                      >
+                        사용한 SQL 쿼리문 복사
+                      </button>
+                    </div>
                     <PCMToTrend 
                       :data="result.data"
                       :height="chartHeight"
@@ -537,6 +564,23 @@
                       </div>
                     </div>
 
+                    <!-- PCM Dynamic Table (commonality/sameness 등) -->
+                    <div v-else-if="result.type === 'dynamic_table'" class="chart-section">
+                      <div class="sql-toolbar">
+                        <button
+                          class="sql-copy-btn"
+                          :disabled="!canCopySql(result.sql)"
+                          @click="copySql(result.sql)"
+                        >
+                          사용한 SQL 쿼리문 복사
+                        </button>
+                      </div>
+                      <DynamicTable
+                        :data="result.data || result.realData"
+                        :title="result.title || result.resultType || 'Data Table'"
+                      />
+                    </div>
+
                     <!-- Table Results -->
                     <div v-else-if="result.type === 'table'" class="chart-section table-result-section">
                       <div
@@ -557,11 +601,28 @@
 
                   <!-- Metadata Only (real_data가 없는 경우) -->
                   <div v-else-if="result.type === 'metadata_only'" class="chart-section">
-                    <div class="metadata-info">
+                    <div v-if="result.onlySql" class="sql-toolbar">
+                      <button
+                        class="sql-copy-btn"
+                        :disabled="!canCopySql(result.sql)"
+                        @click="copySql(result.sql)"
+                      >
+                        사용한 SQL 쿼리문 복사
+                      </button>
+                    </div>
+                    <div v-else class="metadata-info">
                       <h4> Analysis Metadata</h4>
+                      <div class="sql-toolbar">
+                        <button
+                          class="sql-copy-btn"
+                          :disabled="!canCopySql(result.sql)"
+                          @click="copySql(result.sql)"
+                        >
+                          사용한 SQL 쿼리문 복사
+                        </button>
+                      </div>
                       <div class="metadata-details">
                         <p><strong>Result Type:</strong> {{ result.resultType }}</p>
-                        <p v-if="result.sql"><strong>SQL:</strong> {{ result.sql }}</p>
                         <p v-if="result.metadata"><strong>Timestamp:</strong> {{ result.metadata.timestamp }}</p>
                         <p v-if="result.metadata && result.metadata.files">
                           <strong>Files:</strong> {{ result.metadata.files.length }} files found
@@ -594,6 +655,15 @@
                     v-else-if="(result.type === 'inline_trend_initial' || result.type === 'inline_trend_followup') && result.backendData?.llm_spec"
                     class="chart-section inline-vertical"
                   >
+                    <div class="sql-toolbar">
+                      <button
+                        class="sql-copy-btn"
+                        :disabled="!canCopySql(result.sql)"
+                        @click="copySql(result.sql)"
+                      >
+                        사용한 SQL 쿼리문 복사
+                      </button>
+                    </div>
                     <LLMDrivenInlineChart
                       :backendData="result.backendData"
                       :height="chartHeight"
@@ -605,6 +675,15 @@
                     v-else-if="result.type === 'inline_trend_initial' || result.type === 'inline_trend_followup'"
                     class="chart-section inline-vertical"
                   >
+                    <div class="sql-toolbar">
+                      <button
+                        class="sql-copy-btn"
+                        :disabled="!canCopySql(result.sql)"
+                        @click="copySql(result.sql)"
+                      >
+                        사용한 SQL 쿼리문 복사
+                      </button>
+                    </div>
                     <INLINETrendChart
                       :backendData="result.backendData"
                       :height="chartHeight"
@@ -846,6 +925,22 @@
             <p v-else class="empty-text">표시할 메시지가 없습니다.</p>
           </div>
         </div>
+
+        <div v-else-if="fullscreenResult?.type === 'dynamic_table'" class="fullscreen-chart">
+          <div class="sql-toolbar">
+            <button
+              class="sql-copy-btn"
+              :disabled="!canCopySql(fullscreenResult.sql)"
+              @click="copySql(fullscreenResult.sql)"
+            >
+              사용한 SQL 쿼리문 복사
+            </button>
+          </div>
+          <DynamicTable
+            :data="fullscreenResult.data || fullscreenResult.realData"
+            :title="fullscreenResult.title || fullscreenResult.resultType || 'Data Table'"
+          />
+        </div>
         
         <div v-else-if="fullscreenResult?.type === 'table'" class="fullscreen-chart table-result-section">
           <div
@@ -866,11 +961,28 @@
           
           <!-- Metadata Only (전체화면) -->
           <div v-else-if="fullscreenResult?.type === 'metadata_only'" class="fullscreen-chart">
-            <div class="metadata-info-fullscreen">
+            <div v-if="fullscreenResult.onlySql" class="sql-toolbar">
+              <button
+                class="sql-copy-btn"
+                :disabled="!canCopySql(fullscreenResult.sql)"
+                @click="copySql(fullscreenResult.sql)"
+              >
+                사용한 SQL 쿼리문 복사
+              </button>
+            </div>
+            <div v-else class="metadata-info-fullscreen">
               <h3> Analysis Metadata</h3>
+              <div class="sql-toolbar">
+                <button
+                  class="sql-copy-btn"
+                  :disabled="!canCopySql(fullscreenResult.sql)"
+                  @click="copySql(fullscreenResult.sql)"
+                >
+                  사용한 SQL 쿼리문 복사
+                </button>
+              </div>
               <div class="metadata-details-fullscreen">
                 <p><strong>Result Type:</strong> {{ fullscreenResult.resultType }}</p>
-                <p v-if="fullscreenResult.sql"><strong>SQL:</strong> {{ fullscreenResult.sql }}</p>
                 <p v-if="fullscreenResult.metadata"><strong>Timestamp:</strong> {{ fullscreenResult.metadata.timestamp }}</p>
                 <p v-if="fullscreenResult.metadata && fullscreenResult.metadata.files">
                   <strong>Files:</strong> {{ fullscreenResult.metadata.files.length }} files found
@@ -1395,6 +1507,26 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // 결과 타입에 따라 다른 처리
         if (responseData.result === 'lot_start') {
           // PCM 트렌드 데이터 처리
+          if (!realData || !Array.isArray(realData) || realData.length === 0) {
+            const sql = responseData.sql
+            if (sql && String(sql).trim()) {
+              return {
+                id: `history_${chatId}_${Date.now()}`,
+                type: 'metadata_only',
+                title: 'PCM Trend Analysis',
+                isActive: false,
+                timestamp: new Date(),
+                chatId: chatId,
+                sql,
+                realData: [],
+                resultType: responseData.result,
+                userMessage: userMessage,
+                metadata: responseData,
+                onlySql: true
+              }
+            }
+            return null
+          }
           const chartData = generatePCMDataWithRealData(realData)
           result = {
             id: `history_${chatId}_${Date.now()}`,
@@ -1411,6 +1543,26 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           }
         } else if (responseData.result === 'lot_point') {
           // PCM 트렌드 포인트 데이터 처리
+          if (!realData || !Array.isArray(realData) || realData.length === 0) {
+            const sql = responseData.sql
+            if (sql && String(sql).trim()) {
+              return {
+                id: `history_${chatId}_${Date.now()}`,
+                type: 'metadata_only',
+                title: 'PCM Trend Point Chart',
+                isActive: false,
+                timestamp: new Date(),
+                chatId: chatId,
+                sql,
+                realData: [],
+                resultType: responseData.result,
+                userMessage: userMessage,
+                metadata: responseData,
+                onlySql: true
+              }
+            }
+            return null
+          }
           result = {
             id: `history_${chatId}_${Date.now()}`,
             type: 'pcm_trend_point',
@@ -1498,8 +1650,25 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           // INLINE Trend Initial 데이터 처리
           const realData = responseData.real_data
           
-          // real_data가 없으면 analysis report 탭을 생성하지 않음
+          // real_data가 없고 sql만 오는 경우: SQL 복사 버튼만 보이는 결과 생성
           if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+            const sql = responseData.sql
+            if (sql && String(sql).trim()) {
+              return {
+                id: `history_${chatId}_${Date.now()}`,
+                type: 'metadata_only',
+                title: 'INLINE Trend Initial Analysis',
+                isActive: false,
+                timestamp: new Date(),
+                chatId: chatId,
+                sql,
+                realData: [],
+                resultType: responseData.result,
+                userMessage: userMessage,
+                metadata: responseData,
+                onlySql: true
+              }
+            }
             return null
           }
           
@@ -1527,8 +1696,25 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           // INLINE Trend Followup 데이터 처리
           const realData = responseData.real_data
           
-          // real_data가 없으면 analysis report 탭을 생성하지 않음
+          // real_data가 없고 sql만 오는 경우: SQL 복사 버튼만 보이는 결과 생성
           if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+            const sql = responseData.sql
+            if (sql && String(sql).trim()) {
+              return {
+                id: `history_${chatId}_${Date.now()}`,
+                type: 'metadata_only',
+                title: 'INLINE Trend Followup Analysis',
+                isActive: false,
+                timestamp: new Date(),
+                chatId: chatId,
+                sql,
+                realData: [],
+                resultType: responseData.result,
+                userMessage: userMessage,
+                metadata: responseData,
+                onlySql: true
+              }
+            }
             return null
           }
           
@@ -1728,6 +1914,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         } else if (responseData.result_type || responseData.result) {
           // real_data가 없어도 메타데이터만으로 결과 생성
           const resultType = responseData.result_type || responseData.result
+          const sqlValue = responseData.sql || responseData.SQL
           result = {
             id: `history_${chatId}_${Date.now()}`,
             type: 'metadata_only',
@@ -1735,11 +1922,15 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             isActive: false,
             timestamp: new Date(),
             chatId: chatId,
-            sql: responseData.sql || responseData.SQL,
+            sql: sqlValue,
             realData: realData,
             resultType: resultType,
             userMessage: userMessage,
-            metadata: responseData // 전체 메타데이터 저장
+            metadata: responseData, // 전체 메타데이터 저장
+            // inline/pcm 계열에서 real_data 없이 sql만 올 때는 버튼만 표시
+            onlySql: (!realData || (Array.isArray(realData) && realData.length === 0)) &&
+              !!(sqlValue && String(sqlValue).trim()) &&
+              ['inline_trend_initial', 'inline_trend_followup', 'lot_start', 'lot_point'].includes(String(resultType))
           }
         }
 
@@ -2085,6 +2276,18 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     }
 
+    // Bot 메시지 즉시 업데이트 (success_message 전용)
+    const updateBotMessageInstant = (messageIndex, newText) => {
+      const messages = chatMessages.value[activeChatId.value]
+      if (messages && messages[messageIndex] && messages[messageIndex].type === 'bot') {
+        if (typingTimeout.value) clearTimeout(typingTimeout.value)
+        isTyping.value = false
+        currentTypingText.value = ''
+        messages[messageIndex].text = newText
+        messages[messageIndex].timestamp = new Date()
+      }
+    }
+
     const processUserMessage = async (message) => {
       // 모든 메시지를 백엔드로 전송하여 백엔드에서 처리하도록 함
       await processStreamingChat(message)
@@ -2134,7 +2337,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 currentBotMessageIndex.value = messages.length - 1
               } else {
                 // 기존 메시지 업데이트
-                updateBotMessage(currentBotMessageIndex.value, data.response.success_message)
+                updateBotMessageInstant(currentBotMessageIndex.value, data.response.success_message)
               }
             }
             
@@ -2204,6 +2407,30 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // real_data가 없으면 analysis report 탭을 생성하지 않음
               if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                const sql = data.response.sql
+                if (sql && String(sql).trim()) {
+                  const sqlOnlyResult = {
+                    id: data.response_id || `local_${Date.now()}`,
+                    type: 'metadata_only',
+                    title: data.response.result === 'inline_trend_followup'
+                      ? 'INLINE Trend Followup Analysis'
+                      : 'INLINE Trend Initial Analysis',
+                    isActive: true,
+                    timestamp: new Date(),
+                    chatId: data.chat_id,
+                    messageId: data.message_id,
+                    responseId: data.response_id,
+                    sql,
+                    realData: [],
+                    resultType: data.response.result,
+                    metadata: data.response,
+                    onlySql: true
+                  }
+                  const currentResults = chatResults.value[activeChatId.value] || []
+                  currentResults.forEach(r => r.isActive = false)
+                  currentResults.push(sqlOnlyResult)
+                  chatResults.value[activeChatId.value] = currentResults
+                }
                 return
               }
               
@@ -2219,6 +2446,28 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               const realData = data.response.real_data || []
               if (realData.length === 0) {
                 // real_data가 없으면 analysis report 탭을 생성하지 않음
+                const sql = data.response.sql
+                if (sql && String(sql).trim()) {
+                  const sqlOnlyResult = {
+                    id: data.response_id || `local_${Date.now()}`,
+                    type: 'metadata_only',
+                    title: 'PCM Trend Analysis',
+                    isActive: true,
+                    timestamp: new Date(),
+                    chatId: data.chat_id,
+                    messageId: data.message_id,
+                    responseId: data.response_id,
+                    sql,
+                    realData: [],
+                    resultType: data.response.result,
+                    metadata: data.response,
+                    onlySql: true
+                  }
+                  const currentResults = chatResults.value[activeChatId.value] || []
+                  currentResults.forEach(r => r.isActive = false)
+                  currentResults.push(sqlOnlyResult)
+                  chatResults.value[activeChatId.value] = currentResults
+                }
                 return
               }
               const chartData = generatePCMDataWithRealData(realData)
@@ -2257,6 +2506,28 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // real_data가 없으면 analysis report 탭을 생성하지 않음
               if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                const sql = data.response.sql
+                if (sql && String(sql).trim()) {
+                  const sqlOnlyResult = {
+                    id: data.response_id || `local_${Date.now()}`,
+                    type: 'metadata_only',
+                    title: 'PCM Trend Point Chart',
+                    isActive: true,
+                    timestamp: new Date(),
+                    chatId: data.chat_id,
+                    messageId: data.message_id,
+                    responseId: data.response_id,
+                    sql,
+                    realData: [],
+                    resultType: data.response.result,
+                    metadata: data.response,
+                    onlySql: true
+                  }
+                  const currentResults = chatResults.value[activeChatId.value] || []
+                  currentResults.forEach(r => r.isActive = false)
+                  currentResults.push(sqlOnlyResult)
+                  chatResults.value[activeChatId.value] = currentResults
+                }
                 return
               }
               
@@ -2290,6 +2561,28 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // real_data가 없으면 analysis report 탭을 생성하지 않음
               if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                const sql = data.response.sql
+                if (sql && String(sql).trim()) {
+                  const sqlOnlyResult = {
+                    id: data.response_id || `local_${Date.now()}`,
+                    type: 'metadata_only',
+                    title: 'PCM Commonality Analysis',
+                    isActive: true,
+                    timestamp: new Date(),
+                    chatId: data.chat_id,
+                    messageId: data.message_id,
+                    responseId: data.response_id,
+                    sql,
+                    realData: [],
+                    resultType: data.response.result,
+                    metadata: data.response,
+                    onlySql: true
+                  }
+                  const currentResults = chatResults.value[activeChatId.value] || []
+                  currentResults.forEach(r => r.isActive = false)
+                  currentResults.push(sqlOnlyResult)
+                  chatResults.value[activeChatId.value] = currentResults
+                }
                 return
               }
               
@@ -2350,6 +2643,28 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // real_data가 없으면 analysis report 탭을 생성하지 않음
               if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                const sql = data.response.sql
+                if (sql && String(sql).trim()) {
+                  const sqlOnlyResult = {
+                    id: data.response_id || `local_${Date.now()}`,
+                    type: 'metadata_only',
+                    title: 'PCM Sameness to Trend Analysis',
+                    isActive: true,
+                    timestamp: new Date(),
+                    chatId: data.chat_id,
+                    messageId: data.message_id,
+                    responseId: data.response_id,
+                    sql,
+                    realData: [],
+                    resultType: data.response.result,
+                    metadata: data.response,
+                    onlySql: true
+                  }
+                  const currentResults = chatResults.value[activeChatId.value] || []
+                  currentResults.forEach(r => r.isActive = false)
+                  currentResults.push(sqlOnlyResult)
+                  chatResults.value[activeChatId.value] = currentResults
+                }
                 return
               }
               
@@ -2396,6 +2711,28 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // real_data가 없으면 analysis report 탭을 생성하지 않음
               if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                const sql = data.response.sql
+                if (sql && String(sql).trim()) {
+                  const sqlOnlyResult = {
+                    id: data.response_id || `local_${Date.now()}`,
+                    type: 'metadata_only',
+                    title: 'PCM Commonality to Trend Analysis',
+                    isActive: true,
+                    timestamp: new Date(),
+                    chatId: data.chat_id,
+                    messageId: data.message_id,
+                    responseId: data.response_id,
+                    sql,
+                    realData: [],
+                    resultType: data.response.result,
+                    metadata: data.response,
+                    onlySql: true
+                  }
+                  const currentResults = chatResults.value[activeChatId.value] || []
+                  currentResults.forEach(r => r.isActive = false)
+                  currentResults.push(sqlOnlyResult)
+                  chatResults.value[activeChatId.value] = currentResults
+                }
                 return
               }
               
@@ -2442,6 +2779,28 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // real_data가 없으면 analysis report 탭을 생성하지 않음
               if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                const sql = data.response.sql
+                if (sql && String(sql).trim()) {
+                  const sqlOnlyResult = {
+                    id: data.response_id || `local_${Date.now()}`,
+                    type: 'metadata_only',
+                    title: 'PCM Sameness Analysis',
+                    isActive: true,
+                    timestamp: new Date(),
+                    chatId: data.chat_id,
+                    messageId: data.message_id,
+                    responseId: data.response_id,
+                    sql,
+                    realData: [],
+                    resultType: data.response.result,
+                    metadata: data.response,
+                    onlySql: true
+                  }
+                  const currentResults = chatResults.value[activeChatId.value] || []
+                  currentResults.forEach(r => r.isActive = false)
+                  currentResults.push(sqlOnlyResult)
+                  chatResults.value[activeChatId.value] = currentResults
+                }
                 return
               }
               
@@ -2479,6 +2838,28 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
               
               // real_data가 없으면 analysis report 탭을 생성하지 않음
               if (!realData || (Array.isArray(realData) && realData.length === 0)) {
+                const sql = data.response.sql
+                if (sql && String(sql).trim()) {
+                  const sqlOnlyResult = {
+                    id: data.response_id || `local_${Date.now()}`,
+                    type: 'metadata_only',
+                    title: 'PCM Commonality Analysis',
+                    isActive: true,
+                    timestamp: new Date(),
+                    chatId: data.chat_id,
+                    messageId: data.message_id,
+                    responseId: data.response_id,
+                    sql,
+                    realData: [],
+                    resultType: data.response.result,
+                    metadata: data.response,
+                    onlySql: true
+                  }
+                  const currentResults = chatResults.value[activeChatId.value] || []
+                  currentResults.forEach(r => r.isActive = false)
+                  currentResults.push(sqlOnlyResult)
+                  chatResults.value[activeChatId.value] = currentResults
+                }
                 return
               }
               
@@ -2815,7 +3196,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 const messages = chatMessages.value[activeChatId.value]
                 currentBotMessageIndex.value = messages.length - 1
               } else {
-                updateBotMessage(currentBotMessageIndex.value, successMessage)
+                updateBotMessageInstant(currentBotMessageIndex.value, successMessage)
               }
             }
             
@@ -3418,6 +3799,33 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
       }
     })
 
+    // SQL 복사 버튼 로직 (PCM/INLINE 전용)
+    const MIN_SQL_LENGTH = 10
+    const normalizeSql = (sql) => (typeof sql === 'string'
+      ? sql.trim()
+      : (sql == null ? '' : String(sql).trim()))
+    const canCopySql = (sql) => normalizeSql(sql).length >= MIN_SQL_LENGTH
+    const copySql = async (sql) => {
+      const text = normalizeSql(sql)
+      if (!text) return
+      try {
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text)
+          return
+        }
+      } catch (_) {}
+
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'fixed'
+      textarea.style.left = '-9999px'
+      document.body.appendChild(textarea)
+      textarea.select()
+      try { document.execCommand('copy') } catch (_) {}
+      document.body.removeChild(textarea)
+    }
+
           return {
         messages,
         currentMessage,
@@ -3490,7 +3898,9 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         isUserAuthenticated,
         logout,
         checkAuthentication,
-        isPlotlyGraphType
+        isPlotlyGraphType,
+        canCopySql,
+        copySql
       }
   }
 })
