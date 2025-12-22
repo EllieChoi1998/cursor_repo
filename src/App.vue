@@ -1395,12 +1395,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
         // 결과 타입에 따라 다른 처리
         if (responseData.result === 'lot_start') {
           // PCM 트렌드 데이터 처리
+          const sortCriteria = responseData.sort_criteria || responseData.sortCriteria
           const chartData = generatePCMDataWithRealData(realData)
           result = {
             id: `history_${chatId}_${Date.now()}`,
             type: 'pcm_trend',
             title: `PCM Trend Analysis`,
-            data: chartData,
+            data: sortCriteria ? { real_data: chartData, sort_criteria: sortCriteria } : chartData,
             isActive: false,
             timestamp: new Date(),
             chatId: chatId,
@@ -2217,6 +2218,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             } else if (data.response.result === 'lot_start') {
               // PCM 트렌드 데이터 처리
               const realData = data.response.real_data || []
+              const sortCriteria = data.response.sort_criteria || data.response.sortCriteria
               if (realData.length === 0) {
                 // real_data가 없으면 analysis report 탭을 생성하지 않음
                 return
@@ -2231,7 +2233,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
                 type: 'pcm_trend',
                 title: `PCM Trend Analysis`,
-                data: chartData,
+                data: sortCriteria ? { real_data: chartData, sort_criteria: sortCriteria } : chartData,
                 isActive: true,
                 timestamp: new Date(),
                 chatId: data.chat_id,

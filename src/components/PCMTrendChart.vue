@@ -25,7 +25,7 @@
       <div v-if="paraTypes.length === 1" class="para-chart-header">
         <h3>{{ title }} - PARA: {{ paraTypes[0] }}</h3>
         <div class="para-chart-info">
-          <span class="data-count">{{ data.length }} records</span>
+          <span class="data-count">{{ getDisplayData().length }} records</span>
         </div>
       </div>
       <div ref="chartContainer" class="chart-container"></div>
@@ -41,7 +41,7 @@ export default defineComponent({
   name: 'PCMTrendChart',
   props: {
     data: {
-      type: Array,
+      type: [Array, Object],
       default: () => [
         {
           DATE_WAFER_ID: 1,
@@ -187,27 +187,110 @@ export default defineComponent({
     const chartRefs = ref([])
     const columns = ['DATE_WAFER_ID', 'MIN', 'MAX', 'Q1', 'Q2', 'Q3', 'DEVICE', 'USL', 'TGT', 'LSL', 'UCL', 'LCL', 'PARA']
 
+    const VALID_SORT_CRITERIA = ['TIMELY', 'DEVICE', 'TEST_EQ']
+
+    const coerceNumber = (value) => {
+      if (value === null || value === undefined) return null
+      if (typeof value === 'number') return Number.isFinite(value) ? value : null
+      const parsed = Number(value)
+      return Number.isFinite(parsed) ? parsed : null
+    }
+
+    const compareMaybeNumeric = (a, b) => {
+      const aNum = coerceNumber(a)
+      const bNum = coerceNumber(b)
+      if (aNum !== null && bNum !== null) return aNum - bNum
+      return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' })
+    }
+
+    const uniqueInOrder = (arr) => {
+      const seen = new Set()
+      const out = []
+      arr.forEach((v) => {
+        const key = v === null || v === undefined ? '__missing__' : String(v)
+        if (!seen.has(key)) {
+          seen.add(key)
+          out.push(v)
+        }
+      })
+      return out
+    }
+
+    /**
+     * lot_start 응답이 아래처럼 와도 안전하게 처리:
+     * - Array rows
+     * - { real_data: <rows|para-map>, sort_criteria: '...' }
+     * - { PARA1: [...], PARA2: [...], sort_criteria: '...' }
+     */
+    const extractPayload = (input) => {
+      let sortCriteria = null
+      let source = input
+
+      if (!source) return { rows: [], sortCriteria }
+
+      if (typeof source === 'object' && !Array.isArray(source)) {
+        if (source.sort_criteria) sortCriteria = source.sort_criteria
+        if (source.sortCriteria) sortCriteria = source.sortCriteria
+        if (source.real_data !== undefined) source = source.real_data
+      }
+
+      if (Array.isArray(source)) {
+        if (source.length === 0) return { rows: [], sortCriteria }
+        // legacy: [ [rows] ]
+        if (Array.isArray(source[0])) return { rows: source[0], sortCriteria }
+        return { rows: source, sortCriteria }
+      }
+
+      if (source && typeof source === 'object') {
+        const keys = Object.keys(source)
+        const merged = []
+        keys.forEach((key) => {
+          const value = source[key]
+          if (Array.isArray(value)) {
+            value.forEach((row) => merged.push({ ...(row || {}), PARA: key }))
+          }
+        })
+        return { rows: merged, sortCriteria }
+      }
+
+      return { rows: [], sortCriteria }
+    }
+
+    const sortCriteria = computed(() => {
+      const payload = extractPayload(props.data)
+      const raw = payload.sortCriteria
+      if (typeof raw !== 'string') return 'TIMELY'
+      const upper = raw.toUpperCase()
+      return VALID_SORT_CRITERIA.includes(upper) ? upper : 'TIMELY'
+    })
+
+    const getDisplayData = () => {
+      const payload = extractPayload(props.data)
+      return payload.rows || []
+    }
+
     // PARA 타입별로 데이터 그룹화
     const paraTypes = computed(() => {
-      if (!props.data || props.data.length === 0) {
+      const rows = getDisplayData()
+      if (!rows || rows.length === 0) {
         console.log('PCMTrendChart - 데이터가 없음')
         return []
       }
       
-      const types = [...new Set(props.data.map(row => row.PARA).filter(para => para !== undefined && para !== null))]
+      const types = [...new Set(rows.map(row => row.PARA).filter(para => para !== undefined && para !== null))]
       console.log('PCMTrendChart - PARA 타입 확인:', types)
-      console.log('PCMTrendChart - 전체 데이터 개수:', props.data.length)
-      console.log('PCMTrendChart - 첫 번째 데이터 샘플:', props.data[0])
+      console.log('PCMTrendChart - 전체 데이터 개수:', rows.length)
+      console.log('PCMTrendChart - 첫 번째 데이터 샘플:', rows[0])
       
       // 모든 데이터에 PARA 컬럼이 있는지 확인
-      const hasParaCount = props.data.filter(row => row.PARA !== undefined && row.PARA !== null).length
-      console.log(`PCMTrendChart - PARA 컬럼이 있는 데이터: ${hasParaCount}/${props.data.length}`)
+      const hasParaCount = rows.filter(row => row.PARA !== undefined && row.PARA !== null).length
+      console.log(`PCMTrendChart - PARA 컬럼이 있는 데이터: ${hasParaCount}/${rows.length}`)
       
       return types.sort()
     })
 
     const getParaData = (paraType) => {
-      return props.data.filter(row => row.PARA === paraType)
+      return getDisplayData().filter(row => row.PARA === paraType)
     }
 
     const setChartRef = (el, index) => {
@@ -219,6 +302,12 @@ export default defineComponent({
     // Helper function to generate data points for box plots
     const generateBoxPlotData = (min, q1, q2, q3, max, count = 30) => {
       const data = []
+      const minVal = coerceNumber(min)
+      const q1Val = coerceNumber(q1)
+      const q2Val = coerceNumber(q2)
+      const q3Val = coerceNumber(q3)
+      const maxVal = coerceNumber(max)
+      if ([minVal, q1Val, q2Val, q3Val, maxVal].some(v => v === null)) return []
       
       // Generate data points within each quartile
       const q1Count = Math.floor(count * 0.25)
@@ -228,22 +317,22 @@ export default defineComponent({
       
       // Q1 range (min to q1)
       for (let i = 0; i < q1Count; i++) {
-        data.push(min + Math.random() * (q1 - min))
+        data.push(minVal + Math.random() * (q1Val - minVal))
       }
       
       // Q2 range (q1 to q2)
       for (let i = 0; i < q2Count; i++) {
-        data.push(q1 + Math.random() * (q2 - q1))
+        data.push(q1Val + Math.random() * (q2Val - q1Val))
       }
       
       // Q3 range (q2 to q3)
       for (let i = 0; i < q3Count; i++) {
-        data.push(q2 + Math.random() * (q3 - q2))
+        data.push(q2Val + Math.random() * (q3Val - q2Val))
       }
       
       // Q4 range (q3 to max)
       for (let i = 0; i < q4Count; i++) {
-        data.push(q3 + Math.random() * (max - q3))
+        data.push(q3Val + Math.random() * (maxVal - q3Val))
       }
       
       return data
@@ -254,157 +343,184 @@ export default defineComponent({
 
       console.log(`PCMTrendChart 차트 생성: ${chartTitle || 'Default'} - ${data.length}개 데이터`)
 
-      // Extract data for control lines
-      const dateWaferIds = data.map(row => row.DATE_WAFER_ID)
-      const usls = data.map(row => row.USL)
-      const tgts = data.map(row => row.TGT)
-      const lsls = data.map(row => row.LSL)
-      const ucls = data.map(row => row.UCL)
-      const lcls = data.map(row => row.LCL)
+      const currentSort = sortCriteria.value
+      const colorField = currentSort === 'TEST_EQ' ? 'TEST_EQ' : 'DEVICE' // TIMELY/DEVICE는 DEVICE 고정
+      const resolvedColorField = data.some(row => row && row[colorField] !== undefined) ? colorField : 'DEVICE'
 
-      // x축 라벨 생성 (적절한 간격으로 표시)
-      const xOrder = [...new Set(dateWaferIds)].sort((a, b) => a - b)
-      const maxLabels = 50
-      const step = Math.max(1, Math.floor(xOrder.length / maxLabels))
-      const sampledLabels = xOrder.filter((_, index) => index % step === 0)
+      // 파이썬 로직과 동일한 정렬: TIMELY => DATE, DEVICE/TEST_EQ => (criteria, DATE)
+      const sorted = [...data].sort((a, b) => {
+        if (currentSort === 'DEVICE' || currentSort === 'TEST_EQ') {
+          const aKey = a?.[currentSort]
+          const bKey = b?.[currentSort]
+          const cmpKey = String(aKey ?? '').localeCompare(String(bKey ?? ''), undefined, { numeric: true, sensitivity: 'base' })
+          if (cmpKey !== 0) return cmpKey
+        }
+        return compareMaybeNumeric(a?.DATE_WAFER_ID, b?.DATE_WAFER_ID)
+      })
 
-      // Create box plot traces for each device
-      const deviceTypes = [...new Set(data.map(row => row.DEVICE))]
-      const boxTraces = []
-      
-      deviceTypes.forEach(device => {
-        const deviceData = data.filter(row => row.DEVICE === device)
-        
-        // Generate box plot data for each date point
+      // x축 카테고리 순서(등장 순서 유지)
+      const xOrder = uniqueInOrder(sorted.map(row => row?.DATE_WAFER_ID))
+
+      const maxLabels = props.maxLabels || 50
+      const labelStep = Math.max(1, Math.floor(xOrder.length / maxLabels))
+      const sampledLabels = xOrder.filter((_, index) => index % labelStep === 0)
+
+      // 그룹(색상) 키 목록
+      const groupKeys = uniqueInOrder(sorted.map(row => row?.[resolvedColorField]))
+
+      // Create box plot traces for each group (DEVICE or TEST_EQ)
+      const boxTraces = groupKeys.map(groupKey => {
+        const groupRows = sorted.filter(row => row?.[resolvedColorField] === groupKey)
         const allBoxData = []
         const allLabels = []
-        
-        deviceData.forEach(row => {
-          const boxData = generateBoxPlotData(
-            row.MIN, 
-            row.Q1, 
-            row.Q2, 
-            row.Q3, 
-            row.MAX
-          )
+
+        groupRows.forEach(row => {
+          const boxData = generateBoxPlotData(row.MIN, row.Q1, row.Q2, row.Q3, row.MAX)
+          if (!boxData.length) return
           allBoxData.push(...boxData)
           allLabels.push(...Array(boxData.length).fill(row.DATE_WAFER_ID))
         })
 
-        boxTraces.push({
+        if (!allBoxData.length) return null
+
+        return {
           type: 'box',
           x: allLabels,
           y: allBoxData,
-          name: `Device ${device}`,
+          name: `${resolvedColorField} ${groupKey}`,
           boxpoints: 'outliers',
           jitter: 0.3,
           pointpos: -1.8,
           marker: {
-            color: getDeviceColor(device),
+            color: getSeriesColor(groupKey),
             size: 4
           },
           line: {
-            color: getDeviceColor(device),
+            color: getSeriesColor(groupKey),
             width: 2
           },
-          fillcolor: getDeviceColor(device, 0.4),
+          fillcolor: getSeriesColor(groupKey, 0.4),
           showlegend: true
-        })
+        }
+      }).filter(Boolean)
+
+      // control line: 날짜별 첫 row를 사용 (중복 x 방지)
+      const firstRowByDate = new Map()
+      sorted.forEach((row) => {
+        const key = row?.DATE_WAFER_ID
+        if (!firstRowByDate.has(key)) firstRowByDate.set(key, row)
       })
 
-      // Create scatter traces for control lines
-      const scatterTraces = [
-        {
+      const seriesByDate = (field) => xOrder.map((date) => coerceNumber(firstRowByDate.get(date)?.[field]))
+      const shouldDrawLine = (arr) => arr.some(v => typeof v === 'number' && Number.isFinite(v))
+
+      const usls = seriesByDate('USL')
+      const tgts = seriesByDate('TGT')
+      const lsls = seriesByDate('LSL')
+      const ucls = seriesByDate('UCL')
+      const lcls = seriesByDate('LCL')
+
+      const scatterTraces = []
+      if (shouldDrawLine(usls)) {
+        scatterTraces.push({
           type: 'scatter',
-          x: dateWaferIds,
+          x: xOrder,
           y: usls,
           mode: 'lines',
           name: 'USL',
-          line: { 
-            color: 'rgba(0, 0, 0, 0.8)',
-            width: 2
-          },
-          marker: {
-            color: 'rgba(0, 0, 0, 0.8)',
-            size: 4
-          },
+          line: { color: 'rgba(255, 0, 0, 0.8)', width: 2 },
           showlegend: true
-        },
-        {
+        })
+      }
+      if (shouldDrawLine(tgts)) {
+        scatterTraces.push({
           type: 'scatter',
-          x: dateWaferIds,
+          x: xOrder,
           y: tgts,
           mode: 'lines',
           name: 'TGT',
-          line: { 
-            color: 'rgba(0, 0, 0, 0.5)',
-            width: 2
-          },
-          marker: {
-            color: 'rgba(0, 0, 0, 0.5)',
-            size: 4
-          },
+          line: { color: 'rgba(0, 0, 0, 0.5)', width: 2 },
           showlegend: true
-        },
-        {
+        })
+      }
+      if (shouldDrawLine(lsls)) {
+        scatterTraces.push({
           type: 'scatter',
-          x: dateWaferIds,
+          x: xOrder,
           y: lsls,
           mode: 'lines',
           name: 'LSL',
-          line: { 
-            color: 'rgba(0, 0, 0, 0.8)',
-            width: 2
-          },
-          marker: {
-            color: 'rgba(0, 0, 0, 0.8)',
-            size: 4
-          },
+          line: { color: 'rgba(255, 0, 0, 0.8)', width: 2 },
           showlegend: true
-        },
-        {
+        })
+      }
+      if (shouldDrawLine(ucls)) {
+        scatterTraces.push({
           type: 'scatter',
-          x: dateWaferIds,
+          x: xOrder,
           y: ucls,
           mode: 'lines',
           name: 'UCL',
-          line: { 
-            color: 'rgba(255, 128, 10, 0.5)',
-            width: 2,
-            dash: 'dash'
-          },
-          marker: {
-            color: 'rgba(255, 128, 10, 0.5)',
-            size: 4
-          },
+          line: { color: 'rgba(255, 128, 10, 0.5)', width: 2, dash: 'dash' },
           showlegend: true
-        },
-        {
+        })
+      }
+      if (shouldDrawLine(lcls)) {
+        scatterTraces.push({
           type: 'scatter',
-          x: dateWaferIds,
+          x: xOrder,
           y: lcls,
           mode: 'lines',
           name: 'LCL',
-          line: { 
-            color: 'rgba(255, 128, 10, 0.5)',
-            width: 2,
-            dash: 'dash'
-          },
-          marker: {
-            color: 'rgba(255, 128, 10, 0.5)',
-            size: 4
-          },
+          line: { color: 'rgba(255, 128, 10, 0.5)', width: 2, dash: 'dash' },
           showlegend: true
-        }
-      ]
+        })
+      }
 
       // Combine all traces
       const allTraces = [...boxTraces, ...scatterTraces]
 
+      const formatMaybeDate = (value) => {
+        if (value === null || value === undefined) return 'N/A'
+        const str = String(value)
+        // e.g. "2025-06-1:36:57:54_A..." or "2025-06-01 ..."
+        const match = str.match(/^(\d{4}-\d{2}-\d{1,2})/)
+        if (match) return match[1]
+        return str
+      }
+
+      const formatSpecValue = (value) => {
+        const num = coerceNumber(value)
+        if (num === null) return 'N/A'
+        if (Number.isInteger(num)) return String(num)
+        // up to 4 decimals, trim trailing zeros
+        return String(Number(num.toFixed(4)))
+      }
+
+      const pickFirstFinite = (rows, field) => {
+        for (const row of rows) {
+          const val = coerceNumber(row?.[field])
+          if (val !== null) return val
+        }
+        return null
+      }
+
+      const fromVal = xOrder.length ? formatMaybeDate(xOrder[0]) : 'N/A'
+      const toVal = xOrder.length ? formatMaybeDate(xOrder[xOrder.length - 1]) : 'N/A'
+      const uslVal = formatSpecValue(pickFirstFinite(sorted, 'USL'))
+      const tgtVal = formatSpecValue(pickFirstFinite(sorted, 'TGT'))
+      const lslVal = formatSpecValue(pickFirstFinite(sorted, 'LSL'))
+
+      // PARA 이름은 chartTitle에 포함된 "PARA: xxx"가 있으면 우선 사용, 없으면 props.title 사용
+      const paraMatch = String(chartTitle || '').match(/PARA:\s*([^\s<]+)\s*$/)
+      const paraLabel = paraMatch ? paraMatch[1] : (paraTypes.value.length === 1 ? paraTypes.value[0] : null)
+      const baseTitle = paraLabel ? `${paraLabel} PCM Trend` : (chartTitle || props.title)
+      const fullTitle = `${baseTitle}<br>From: ${fromVal}    To: ${toVal}<br>USL : (${uslVal}) - TGT : (${tgtVal}) - LSL : (${lslVal})`
+
       // Layout configuration
       const layout = {
         title: {
-          text: chartTitle || props.title,
+          text: fullTitle,
           font: {
             size: 16,
             color: '#333'
@@ -436,6 +552,7 @@ export default defineComponent({
           gridcolor: '#f0f0f0'
         },
         height: props.height,
+        boxmode: 'overlay',
         showlegend: true,
         legend: {
           orientation: 'v', 
@@ -470,7 +587,8 @@ export default defineComponent({
 
     const createCharts = async () => {
       // 데이터가 없거나 유효하지 않으면 차트 생성하지 않음
-      if (!props.data || props.data.length === 0) {
+      const rows = getDisplayData()
+      if (!rows || rows.length === 0) {
         console.log('PCMTrendChart: 데이터가 없어서 차트 생성 중단')
         return
       }
@@ -502,13 +620,13 @@ export default defineComponent({
         // 단일 PARA 또는 PARA 컬럼이 없는 경우
         console.log('PCMTrendChart: 단일 차트 생성, PARA 타입:', paraTypes.value)
         if (chartContainer.value) {
-          createSingleChart(chartContainer.value, props.data, props.title)
+          createSingleChart(chartContainer.value, rows, props.title)
         }
       }
     }
 
-    // Helper function to get colors for different devices
-    const getDeviceColor = (device, alpha = 1) => {
+    // Helper function to get colors for groups (DEVICE/TEST_EQ)
+    const getSeriesColor = (groupKey, alpha = 1) => {
       const colorPalette = [
         [102, 126, 234], // 블루
         [118, 75, 162],  // 퍼플
@@ -532,17 +650,18 @@ export default defineComponent({
         [189, 195, 199]  // 베이지
       ]
       
-      const getDeviceIndex = (deviceName) => {
+      const getIndex = (name) => {
         let hash = 0
-        for (let i = 0; i < deviceName.toString().length; i++) {
-          const char = deviceName.toString().charCodeAt(i)
+        const str = (name === null || name === undefined) ? 'Series' : name.toString()
+        for (let i = 0; i < str.length; i++) {
+          const char = str.charCodeAt(i)
           hash = ((hash << 5) - hash) + char
           hash = hash & hash
         }
         return Math.abs(hash) % colorPalette.length
       }
       
-      const colorIndex = getDeviceIndex(device)
+      const colorIndex = getIndex(groupKey)
       const [r, g, b] = colorPalette[colorIndex]
       
       return `rgba(${r}, ${g}, ${b}, ${alpha})`
@@ -564,6 +683,7 @@ export default defineComponent({
       chartContainer,
       chartRefs,
       paraTypes,
+      getDisplayData,
       getParaData,
       setChartRef
     }
