@@ -1411,11 +1411,13 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
           }
         } else if (responseData.result === 'lot_point') {
           // PCM 트렌드 포인트 데이터 처리
+          // sort_criteria가 추가로 내려오는 경우를 위해 data를 wrapper 형태로 전달 (backward compatible)
+          const sortCriteria = responseData.sort_criteria || responseData.sortCriteria
           result = {
             id: `history_${chatId}_${Date.now()}`,
             type: 'pcm_trend_point',
             title: `PCM Trend Point Chart`,
-            data: realData,
+            data: sortCriteria ? { real_data: realData, sort_criteria: sortCriteria } : realData,
             isActive: false,
             timestamp: new Date(),
             chatId: chatId,
@@ -2254,6 +2256,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
             } else if (data.response.result === 'lot_point') {
               // PCM 트렌드 포인트 데이터 처리
               const realData = data.response.real_data
+              const sortCriteria = data.response.sort_criteria || data.response.sortCriteria
               
               // real_data가 없으면 analysis report 탭을 생성하지 않음
               if (!realData || (Array.isArray(realData) && realData.length === 0)) {
@@ -2268,7 +2271,7 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
                 id: data.response_id || `local_${Date.now()}`, // 백엔드에서 받는 response_id 사용
                 type: 'pcm_trend_point',
                 title: `PCM Trend Point Chart`,
-                data: realData,
+                data: sortCriteria ? { real_data: realData, sort_criteria: sortCriteria } : realData,
                 isActive: true,
                 timestamp: new Date(),
                 chatId: data.chat_id,
