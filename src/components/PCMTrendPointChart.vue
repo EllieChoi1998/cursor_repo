@@ -100,160 +100,6 @@ export default defineComponent({
     const chartContainer = ref(null)
     const chartRefs = ref([])
 
-    const VALID_SORT_CRITERIA = ['TIMELY', 'DEVICE', 'TEST_EQ']
-
-    /**
-     * backend payload가 아래처럼 바뀌어도 견고하게 처리:
-     * - Array rows
-     * - { real_data: <rows|para-map>, sort_criteria: '...' }
-     * - { PARA1: [...], PARA2: [...], sort_criteria: '...' }
-     * - { real_data: { PARA1: [...], ... }, sort_criteria: '...' }
-     */
-    const extractPayload = (input) => {
-      let sortCriteria = null
-      let source = input
-
-      if (!source) return { rows: [], sortCriteria }
-
-      // wrapper: { real_data, sort_criteria }
-      if (typeof source === 'object' && !Array.isArray(source)) {
-        if (source.sort_criteria) sortCriteria = source.sort_criteria
-        if (source.sortCriteria) sortCriteria = source.sortCriteria
-
-        if (source.real_data !== undefined) {
-          source = source.real_data
-        }
-      }
-
-      // wrapper: { real_data: { ... } } 형태가 한 번 더 중첩될 수 있음
-      if (source && typeof source === 'object' && !Array.isArray(source) && source.real_data !== undefined) {
-        if (!sortCriteria && source.sort_criteria) sortCriteria = source.sort_criteria
-        if (!sortCriteria && source.sortCriteria) sortCriteria = source.sortCriteria
-        source = source.real_data
-      }
-
-      // Array 형태
-      if (Array.isArray(source)) {
-        if (source.length === 0) return { rows: [], sortCriteria }
-        // legacy: [ [rows] ]
-        if (Array.isArray(source[0])) return { rows: source[0], sortCriteria }
-        return { rows: source, sortCriteria }
-      }
-
-      // PARA map 형태: { PARA1: [..], PARA2: [..], ... } (+ metadata keys)
-      if (source && typeof source === 'object') {
-        const keys = Object.keys(source)
-        const merged = []
-        keys.forEach((key) => {
-          const value = source[key]
-          if (Array.isArray(value)) {
-            value.forEach((row) => {
-              merged.push({ ...(row || {}), PARA: key })
-            })
-          }
-        })
-        return { rows: merged, sortCriteria }
-      }
-
-      return { rows: [], sortCriteria }
-    }
-
-    const sortCriteria = computed(() => {
-      const payload = extractPayload(props.data)
-      const raw = payload.sortCriteria
-      if (typeof raw !== 'string') return 'TIMELY'
-      const upper = raw.toUpperCase()
-      return VALID_SORT_CRITERIA.includes(upper) ? upper : 'TIMELY'
-    })
-
-    const coerceNumber = (value) => {
-      if (value === null || value === undefined) return null
-      if (typeof value === 'number') return Number.isFinite(value) ? value : null
-      const parsed = Number(value)
-      return Number.isFinite(parsed) ? parsed : null
-    }
-
-    const compareMaybeNumeric = (a, b) => {
-      const aNum = coerceNumber(a)
-      const bNum = coerceNumber(b)
-      if (aNum !== null && bNum !== null) return aNum - bNum
-      // 날짜/문자열 정렬은 localeCompare로 안정적으로 처리
-      return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' })
-    }
-
-    const uniqueInOrder = (arr) => {
-      const seen = new Set()
-      const out = []
-      arr.forEach((v) => {
-        const key = v === null || v === undefined ? '__missing__' : String(v)
-        if (!seen.has(key)) {
-          seen.add(key)
-          out.push(v)
-        }
-      })
-      return out
-    }
-
-    // 색상 팔레트 (DEVICE/TEST_EQ 등 공통 사용)
-    const getGroupColor = (groupName, alpha = 1) => {
-      const palette = [
-        [102, 126, 234],
-        [118, 75, 162],
-        [255, 128, 10],
-        [46, 204, 113],
-        [231, 76, 60],
-        [52, 152, 219],
-        [155, 89, 182],
-        [241, 196, 15],
-        [230, 126, 34],
-        [26, 188, 156],
-        [192, 57, 43],
-        [142, 68, 173],
-        [39, 174, 96],
-        [211, 84, 0],
-        [41, 128, 185],
-        [243, 156, 18],
-        [149, 165, 166],
-        [44, 62, 80],
-        [127, 140, 141],
-        [189, 195, 199]
-      ]
-
-      const name = groupName === null || groupName === undefined ? 'Series' : String(groupName)
-      let hash = 0
-      for (let i = 0; i < name.length; i++) {
-        const char = name.charCodeAt(i)
-        hash = ((hash << 5) - hash) + char
-        hash &= hash
-      }
-      const idx = Math.abs(hash) % palette.length
-      const [r, g, b] = palette[idx]
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`
-    }
-
-    // (MIN/Q1/Q2/Q3/MAX) 요약값만 있을 때 박스 데이터 생성
-    const generateBoxPlotDataFromSummary = (min, q1, q2, q3, max, count = 30) => {
-      const minVal = coerceNumber(min)
-      const q1Val = coerceNumber(q1)
-      const q2Val = coerceNumber(q2)
-      const q3Val = coerceNumber(q3)
-      const maxVal = coerceNumber(max)
-      if ([minVal, q1Val, q2Val, q3Val, maxVal].some(v => v === null)) return []
-
-      const data = []
-      const q1Count = Math.floor(count * 0.25)
-      const q2Count = Math.floor(count * 0.25)
-      const q3Count = Math.floor(count * 0.25)
-      const q4Count = count - q1Count - q2Count - q3Count
-
-      for (let i = 0; i < q1Count; i++) data.push(minVal + Math.random() * (q1Val - minVal))
-      for (let i = 0; i < q2Count; i++) data.push(q1Val + Math.random() * (q2Val - q1Val))
-      for (let i = 0; i < q3Count; i++) data.push(q2Val + Math.random() * (q3Val - q2Val))
-      for (let i = 0; i < q4Count; i++) data.push(q3Val + Math.random() * (maxVal - q3Val))
-
-      return data
-    }
-
     // 실제 데이터 추출 함수 (PARA별 객체 구조 처리)
     const getRealData = () => {
       console.log('PCMTrendPointChart - props.data 확인:', props.data)
@@ -266,12 +112,84 @@ export default defineComponent({
         return []
       }
 
-      const payload = extractPayload(props.data)
-      const rows = payload.rows || []
-      console.log('PCMTrendPointChart - extractPayload rows:', rows.length, 'sort_criteria:', payload.sortCriteria)
-      if (!rows.length) return []
-      console.log('PCMTrendPointChart - rows sample:', rows[0])
-      return rows
+      // PARA별 객체 구조인지 확인 (PARA1, PARA2, ... 형태)
+      if (typeof props.data === 'object' && !Array.isArray(props.data)) {
+        const keys = Object.keys(props.data)
+        console.log('PCMTrendPointChart - 객체 구조 감지, 키들:', keys)
+        
+        // PARA로 시작하는 키들이 있는지 확인하거나, 첫 번째 값이 배열인지 확인
+        const firstKey = keys[0]
+        if (firstKey && Array.isArray(props.data[firstKey])) {
+          console.log('PCMTrendPointChart - PARA별 객체 구조 확인됨')
+          
+          // 모든 PARA 데이터를 하나의 배열로 합치기
+          const allData = []
+          keys.forEach(paraKey => {
+            const paraData = props.data[paraKey]
+            if (Array.isArray(paraData)) {
+              console.log(`PCMTrendPointChart - ${paraKey}: ${paraData.length}개 데이터`)
+              console.log(`PCMTrendPointChart - ${paraKey} 첫 번째 데이터:`, paraData[0])
+              
+              // 각 데이터에 PARA 정보 추가
+              paraData.forEach(row => {
+                allData.push({
+                  ...row,
+                  PARA: paraKey
+                })
+              })
+            }
+          })
+          console.log('PCMTrendPointChart - 전체 병합된 데이터:', allData.length, '개')
+          console.log('PCMTrendPointChart - 병합된 데이터 샘플:', allData[0])
+          return allData
+        }
+      }
+
+      // real_data 구조인지 확인 (중첩된 경우)
+      if (props.data.real_data && typeof props.data.real_data === 'object') {
+        console.log('PCMTrendPointChart - real_data 중첩 구조 감지:', Object.keys(props.data.real_data))
+        // real_data 안의 모든 PARA 데이터를 하나의 배열로 합치기
+        const allData = []
+        Object.keys(props.data.real_data).forEach(paraKey => {
+          const paraData = props.data.real_data[paraKey]
+          if (Array.isArray(paraData)) {
+            // 각 데이터에 PARA 정보 추가
+            paraData.forEach(row => {
+              allData.push({
+                ...row,
+                PARA: paraKey
+              })
+            })
+          }
+        })
+        console.log('PCMTrendPointChart - real_data에서 추출한 전체 데이터:', allData.length, '개')
+        return allData
+      }
+
+      // 기존 구조 처리 (배열)
+      if (Array.isArray(props.data)) {
+        console.log('PCMTrendPointChart - 배열 구조 감지')
+        if (props.data.length === 0) {
+          console.log('PCMTrendPointChart - props.data가 빈 배열')
+          return []
+        }
+        
+        // props.data[0]이 배열인 경우 (기존 방식)
+        const data = props.data[0]
+        if (Array.isArray(data)) {
+          console.log('PCMTrendPointChart - props.data[0] 배열 구조 사용')
+          return data
+        }
+        
+        // props.data 자체가 데이터 배열인 경우
+        if (props.data[0] && props.data[0].DATE_WAFER_ID !== undefined) {
+          console.log('PCMTrendPointChart - props.data 직접 사용')
+          return props.data
+        }
+      }
+      
+      console.log('PCMTrendPointChart - 알 수 없는 데이터 구조')
+      return []
     }
 
     // real_data 존재 여부 확인
@@ -308,7 +226,7 @@ export default defineComponent({
       }
     }
 
-    // 원본 createChart 함수 기반으로 수정 (box + spec lines + sort_criteria)
+    // 원본 createChart 함수 기반으로 수정
     const createSingleChart = (container, inputData, chartTitle = null) => {
       if (!container) return
       
@@ -320,161 +238,31 @@ export default defineComponent({
       }
 
       console.log(`PCMTrendPointChart 차트 생성: ${chartTitle || 'Default'} - ${data.length}개 데이터`)
-
-      const currentSort = sortCriteria.value
-      const colorField = currentSort === 'TEST_EQ' ? 'TEST_EQ' : 'DEVICE' // TIMELY/DEVICE => DEVICE, TEST_EQ => TEST_EQ
-
-      // 파이썬 로직과 동일하게 정렬 기준 반영
-      const sorted = [...data].sort((a, b) => {
-        if (currentSort === 'DEVICE' || currentSort === 'TEST_EQ') {
-          const aKey = a?.[currentSort]
-          const bKey = b?.[currentSort]
-          const cmpKey = String(aKey ?? '').localeCompare(String(bKey ?? ''), undefined, { numeric: true, sensitivity: 'base' })
-          if (cmpKey !== 0) return cmpKey
-        }
-        return compareMaybeNumeric(a?.DATE_WAFER_ID, b?.DATE_WAFER_ID)
+      
+      // PCM_SITE별로 그룹화
+      const siteGroups = {}
+      data.forEach(row => {
+        if (!siteGroups[row.PCM_SITE]) siteGroups[row.PCM_SITE] = { x: [], y: [] }
+        siteGroups[row.PCM_SITE].x.push(row.DATE_WAFER_ID)
+        siteGroups[row.PCM_SITE].y.push(row.VALUE)
       })
-
-      // x축 카테고리 순서(출현 순서 유지) - Plotly/px.box의 category_orders 효과
-      const categoryOrder = uniqueInOrder(sorted.map((row) => row?.DATE_WAFER_ID))
-
-      // tick label 샘플링
-      const maxLabels = props.maxLabels || 50
-      const step = Math.max(1, Math.floor(categoryOrder.length / maxLabels))
-      const sampledLabels = categoryOrder.filter((_, index) => index % step === 0)
-
-      // 그룹 필드가 없으면 안전하게 fallback
-      const resolvedGroupField = (sorted.length && sorted[0] && sorted[0][colorField] !== undefined)
-        ? colorField
-        : (sorted.length && sorted[0] && sorted[0].DEVICE !== undefined)
-          ? 'DEVICE'
-          : (sorted.length && sorted[0] && sorted[0].PCM_SITE !== undefined)
-            ? 'PCM_SITE'
-            : null
-
-      const groupKeys = uniqueInOrder(sorted.map((row) => resolvedGroupField ? row?.[resolvedGroupField] : 'Series'))
-
-      const hasSummary = sorted.some((row) =>
-        row && row.MIN !== undefined && row.MAX !== undefined && row.Q1 !== undefined && row.Q2 !== undefined && row.Q3 !== undefined
-      )
-      const hasValue = sorted.some((row) => row && row.VALUE !== undefined)
-
-      // Box traces (overlay)
-      const boxTraces = groupKeys.map((groupKey) => {
-        const rows = sorted.filter((row) => {
-          if (!resolvedGroupField) return true
-          return row?.[resolvedGroupField] === groupKey
-        })
-
-        const x = []
-        const y = []
-
-        if (hasSummary) {
-          rows.forEach((row) => {
-            const values = generateBoxPlotDataFromSummary(row.MIN, row.Q1, row.Q2, row.Q3, row.MAX)
-            if (!values.length) return
-            values.forEach((val) => {
-              x.push(row.DATE_WAFER_ID)
-              y.push(val)
-            })
-          })
-        } else if (hasValue) {
-          rows.forEach((row) => {
-            const val = coerceNumber(row.VALUE)
-            if (val === null) return
-            x.push(row.DATE_WAFER_ID)
-            y.push(val)
-          })
-        }
-
-        const traceName = resolvedGroupField ? `${resolvedGroupField}: ${groupKey}` : String(groupKey ?? 'Series')
-        const baseColor = getGroupColor(groupKey)
-        return {
-          type: 'box',
-          name: traceName,
-          x,
-          y,
-          boxpoints: 'outliers',
-          marker: { color: baseColor, size: 4 },
-          line: { color: baseColor, width: 2 },
-          fillcolor: getGroupColor(groupKey, 0.35),
-          showlegend: true
-        }
-      }).filter((t) => Array.isArray(t.y) && t.y.length > 0)
-
-      // Spec/control lines (가능한 경우에만)
-      const firstRowByDate = new Map()
-      sorted.forEach((row) => {
-        const key = row?.DATE_WAFER_ID
-        if (!firstRowByDate.has(key)) firstRowByDate.set(key, row)
-      })
-      const seriesByDate = (field) => categoryOrder.map((date) => coerceNumber(firstRowByDate.get(date)?.[field]))
-      const shouldDrawLine = (arr) => arr.some((v) => typeof v === 'number' && Number.isFinite(v))
-
-      const usl = seriesByDate('USL')
-      const tgt = seriesByDate('TGT')
-      const lsl = seriesByDate('LSL')
-      const ucl = seriesByDate('UCL')
-      const lcl = seriesByDate('LCL')
-
-      const lineTraces = []
-      if (shouldDrawLine(usl)) {
-        lineTraces.push({
-          type: 'scatter',
-          mode: 'lines',
-          name: 'USL',
-          x: categoryOrder,
-          y: usl,
-          line: { color: 'rgba(255, 0, 0, 0.8)', width: 2 },
-          showlegend: true
-        })
-      }
-      if (shouldDrawLine(tgt)) {
-        lineTraces.push({
-          type: 'scatter',
-          mode: 'lines',
-          name: 'TGT',
-          x: categoryOrder,
-          y: tgt,
-          line: { color: 'rgba(0, 0, 0, 0.5)', width: 2 },
-          showlegend: true
-        })
-      }
-      if (shouldDrawLine(lsl)) {
-        lineTraces.push({
-          type: 'scatter',
-          mode: 'lines',
-          name: 'LSL',
-          x: categoryOrder,
-          y: lsl,
-          line: { color: 'rgba(255, 0, 0, 0.8)', width: 2 },
-          showlegend: true
-        })
-      }
-      if (shouldDrawLine(ucl)) {
-        lineTraces.push({
-          type: 'scatter',
-          mode: 'lines',
-          name: 'UCL',
-          x: categoryOrder,
-          y: ucl,
-          line: { color: 'rgba(255, 128, 10, 0.5)', width: 2, dash: 'dash' },
-          showlegend: true
-        })
-      }
-      if (shouldDrawLine(lcl)) {
-        lineTraces.push({
-          type: 'scatter',
-          mode: 'lines',
-          name: 'LCL',
-          x: categoryOrder,
-          y: lcl,
-          line: { color: 'rgba(255, 128, 10, 0.5)', width: 2, dash: 'dash' },
-          showlegend: true
-        })
-      }
-
-      const traces = [...boxTraces, ...lineTraces]
+      
+      // 각 site별 trace 생성
+      const traces = Object.keys(siteGroups).map(site => ({
+        type: 'scatter',
+        mode: 'lines+markers',
+        x: siteGroups[site].x,
+        y: siteGroups[site].y,
+        name: `Site ${site}`,
+        marker: { size: 6 },
+        line: { width: 1.5 }
+      }))
+      
+      // x축 라벨 생성 (적절한 간격으로 표시)
+      const xOrder = [...new Set(data.map(row => row.DATE_WAFER_ID))].sort((a, b) => a - b)
+      const maxLabels = 50
+      const step = Math.max(1, Math.floor(xOrder.length / maxLabels))
+      const sampledLabels = xOrder.filter((_, index) => index % step === 0)
       
       const layout = {
         title: {
@@ -502,7 +290,7 @@ export default defineComponent({
           side: 'bottom',
           tickposition: 'outside',
           categoryorder: 'array',
-          categoryarray: categoryOrder
+          categoryarray: xOrder
         },
         yaxis: {
           title: 'Value',
@@ -510,7 +298,6 @@ export default defineComponent({
           gridcolor: '#f0f0f0'
         },
         height: props.height,
-        boxmode: 'overlay',
         showlegend: true,
         legend: {
           orientation: 'v',
@@ -537,8 +324,7 @@ export default defineComponent({
         container: container,
         tracesCount: traces.length,
         dataLength: data.length,
-        sort_criteria: currentSort,
-        color_field: colorField
+        siteGroups: Object.keys(siteGroups)
       })
       
       Plotly.newPlot(container, traces, layout, {
