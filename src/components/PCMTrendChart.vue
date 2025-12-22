@@ -480,10 +480,47 @@ export default defineComponent({
       // Combine all traces
       const allTraces = [...boxTraces, ...scatterTraces]
 
+      const formatMaybeDate = (value) => {
+        if (value === null || value === undefined) return 'N/A'
+        const str = String(value)
+        // e.g. "2025-06-1:36:57:54_A..." or "2025-06-01 ..."
+        const match = str.match(/^(\d{4}-\d{2}-\d{1,2})/)
+        if (match) return match[1]
+        return str
+      }
+
+      const formatSpecValue = (value) => {
+        const num = coerceNumber(value)
+        if (num === null) return 'N/A'
+        if (Number.isInteger(num)) return String(num)
+        // up to 4 decimals, trim trailing zeros
+        return String(Number(num.toFixed(4)))
+      }
+
+      const pickFirstFinite = (rows, field) => {
+        for (const row of rows) {
+          const val = coerceNumber(row?.[field])
+          if (val !== null) return val
+        }
+        return null
+      }
+
+      const fromVal = xOrder.length ? formatMaybeDate(xOrder[0]) : 'N/A'
+      const toVal = xOrder.length ? formatMaybeDate(xOrder[xOrder.length - 1]) : 'N/A'
+      const uslVal = formatSpecValue(pickFirstFinite(sorted, 'USL'))
+      const tgtVal = formatSpecValue(pickFirstFinite(sorted, 'TGT'))
+      const lslVal = formatSpecValue(pickFirstFinite(sorted, 'LSL'))
+
+      // PARA 이름은 chartTitle에 포함된 "PARA: xxx"가 있으면 우선 사용, 없으면 props.title 사용
+      const paraMatch = String(chartTitle || '').match(/PARA:\s*([^\s<]+)\s*$/)
+      const paraLabel = paraMatch ? paraMatch[1] : (paraTypes.value.length === 1 ? paraTypes.value[0] : null)
+      const baseTitle = paraLabel ? `${paraLabel} PCM Trend` : (chartTitle || props.title)
+      const fullTitle = `${baseTitle}<br>From: ${fromVal}    To: ${toVal}<br>USL : (${uslVal}) - TGT : (${tgtVal}) - LSL : (${lslVal})`
+
       // Layout configuration
       const layout = {
         title: {
-          text: chartTitle || props.title,
+          text: fullTitle,
           font: {
             size: 16,
             color: '#333'
