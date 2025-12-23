@@ -142,6 +142,9 @@
                              파일 다운로드
                             </button>
                           </div>
+                          <div v-if="file.reasons" class="file-reason">
+                            {{file.reasons}}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -181,6 +184,9 @@
                             >
                              파일 다운로드
                             </button>
+                          </div>
+                          <div v-if="file.reasons" class="file-reason">
+                            {{file.reasons}}
                           </div>
                         </div>
                       </div>
@@ -3500,4 +3506,3 @@ const showOriginalTime = ref(false) // 원본 시간 표시 토글
 
 <style src="./styles/app.css">
 </style>
-
