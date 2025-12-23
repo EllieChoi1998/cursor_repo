@@ -219,8 +219,8 @@ export default defineComponent({
     /**
      * lot_start 응답이 아래처럼 와도 안전하게 처리:
      * - Array rows
-     * - { real_data: <rows|para-map>, sort_criteria: '...' }
-     * - { PARA1: [...], PARA2: [...], sort_criteria: '...' }
+     * - { real_data: <rows|para-map>, SORT_CRITERIA: '...' }
+     * - { PARA1: [...], PARA2: [...], SORT_CRITERIA: '...' }
      */
     const extractPayload = (input) => {
       let sortCriteria = null
@@ -229,9 +229,11 @@ export default defineComponent({
       if (!source) return { rows: [], sortCriteria }
 
       if (typeof source === 'object' && !Array.isArray(source)) {
-        if (source.sort_criteria) sortCriteria = source.sort_criteria
+        if (source.SORT_CRITERIA) sortCriteria = source.SORT_CRITERIA
         if (source.sortCriteria) sortCriteria = source.sortCriteria
         if (source.real_data !== undefined) source = source.real_data
+        // # ellie: 12/22 note - 수정 필요함 여기 지금 적용이 안돼고 있음!!
+        console.log(`‼️‼️‼️ sort_criteria: `, sortCriteria)
       }
 
       if (Array.isArray(source)) {
