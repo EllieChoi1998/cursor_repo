@@ -143,27 +143,34 @@ export default defineComponent({
       return typeMap[props.resultType] || props.resultType
     })
 
-    const normalizedData = computed(() => {
-      if (!props.data) {
-        return []
+    const findKeyValue = (row, targetKey) => {
+      if (!row || typeof row !== 'object') {
+        return undefined
       }
-
-      if (Array.isArray(props.data)) {
-        return props.data
+      if (row[targetKey] !== undefined) {
+        return row[targetKey]
       }
-
-      if (typeof props.data === 'object' && props.data !== null) {
-        const combined = []
-        Object.values(props.data).forEach(paraData => {
-          if (Array.isArray(paraData)) {
-            combined.push(...paraData)
-          }
-        })
-        return combined
+      const normalizedTarget = targetKey.trim().toUpperCase()
+      const matchedKey = Object.keys(row).find(
+        key => key.trim().toUpperCase() === normalizedTarget
+      )
+      if (matchedKey) {
+        return row[matchedKey]
       }
+      return undefined
+    }
 
-      return []
-    })
+    const extractRouteDesc = (row) => {
+      const mainRoute = findKeyValue(row, 'MAIN_ROUTE_DESC')
+      if (mainRoute !== undefined) {
+        return mainRoute
+      }
+      return findKeyValue(row, 'MAIN_ROUTE')
+    }
+
+    const extractPara = (row) => {
+      return findKeyValue(row, 'PARA')
+    }
 
     const normalizeRouteDesc = (value) => {
       if (value === undefined || value === null || value === '') {
@@ -179,6 +186,64 @@ export default defineComponent({
       return value
     }
 
+    const normalizedData = computed(() => {
+      if (!props.data) {
+        return []
+      }
+
+      const combined = []
+      const appendRow = (row, paraKey = undefined) => {
+        if (!row || typeof row !== 'object') {
+          return
+        }
+        const routeDesc = extractRouteDesc(row)
+        const para = extractPara(row) ?? paraKey
+        combined.push({
+          ...row,
+          MAIN_ROUTE_DESC: routeDesc ?? row.MAIN_ROUTE_DESC,
+          PARA: para ?? row.PARA
+        })
+      }
+
+      if (Array.isArray(props.data)) {
+        props.data.forEach(row => appendRow(row))
+        return combined
+      }
+
+      if (typeof props.data === 'object' && props.data !== null) {
+        Object.entries(props.data).forEach(([paraKey, paraData]) => {
+          if (Array.isArray(paraData)) {
+            paraData.forEach(row => appendRow(row, paraKey))
+          }
+        })
+        return combined
+      }
+
+      return []
+    })
+
+    const routeTypes = computed(() => {
+      if (!normalizedData.value || normalizedData.value.length === 0) {
+        return []
+      }
+      const types = new Set()
+      normalizedData.value.forEach(row => {
+        types.add(normalizeRouteDesc(extractRouteDesc(row)))
+      })
+      return Array.from(types).sort()
+    })
+
+    const paraTypes = computed(() => {
+      if (!normalizedData.value || normalizedData.value.length === 0) {
+        return []
+      }
+      const types = new Set()
+      normalizedData.value.forEach(row => {
+        types.add(normalizePara(extractPara(row) ?? row.PARA))
+      })
+      return Array.from(types).sort()
+    })
+
     // MAIN_ROUTE_DESC-PARA 쌍으로 데이터 그룹화
     const groupEntries = computed(() => {
       if (!normalizedData.value || normalizedData.value.length === 0) {
@@ -186,37 +251,43 @@ export default defineComponent({
         return []
       }
 
-      const groupMap = new Map()
-      normalizedData.value.forEach(row => {
-        const routeDesc = normalizeRouteDesc(row.MAIN_ROUTE_DESC)
-        const para = normalizePara(row.PARA)
-        const key = `${routeDesc}|||${para}`
-        if (!groupMap.has(key)) {
-          groupMap.set(key, { key, routeDesc, para })
-        }
-      })
+      const routes = routeTypes.value
+      const paras = paraTypes.value
+      if (routes.length === 0 || paras.length === 0) {
+        return []
+      }
 
-      const entries = Array.from(groupMap.values())
-      entries.sort((a, b) => {
-        const routeCompare = a.routeDesc.toString().localeCompare(b.routeDesc.toString())
-        if (routeCompare !== 0) {
-          return routeCompare
-        }
-        return a.para.toString().localeCompare(b.para.toString())
+      const entries = []
+      routes.forEach(routeDesc => {
+        paras.forEach(para => {
+          entries.push({
+            key: `${routeDesc}|||${para}`,
+            routeDesc,
+            para
+          })
+        })
       })
 
       console.log(
-        'PCMToTrend - MAIN_ROUTE_DESC/PARA 그룹 확인:',
-        entries.map(entry => `${entry.routeDesc} - ${entry.para}`)
+        'PCMToTrend - MAIN_ROUTE_DESC 종류:',
+        routes
+      )
+      console.log(
+        'PCMToTrend - PARA 종류:',
+        paras
+      )
+      console.log(
+        'PCMToTrend - MAIN_ROUTE_DESC/PARA 그룹 조합 수:',
+        entries.length
       )
       console.log('PCMToTrend - 전체 데이터 개수:', normalizedData.value.length)
       console.log('PCMToTrend - 첫 번째 데이터 샘플:', normalizedData.value[0])
 
       const hasRouteCount = normalizedData.value.filter(
-        row => row.MAIN_ROUTE_DESC !== undefined && row.MAIN_ROUTE_DESC !== null && row.MAIN_ROUTE_DESC !== ''
+        row => extractRouteDesc(row) !== undefined && extractRouteDesc(row) !== null && extractRouteDesc(row) !== ''
       ).length
       const hasParaCount = normalizedData.value.filter(
-        row => row.PARA !== undefined && row.PARA !== null && row.PARA !== ''
+        row => extractPara(row) !== undefined && extractPara(row) !== null && extractPara(row) !== ''
       ).length
       console.log(`PCMToTrend - MAIN_ROUTE_DESC 컬럼이 있는 데이터: ${hasRouteCount}/${normalizedData.value.length}`)
       console.log(`PCMToTrend - PARA 컬럼이 있는 데이터: ${hasParaCount}/${normalizedData.value.length}`)
@@ -626,13 +697,13 @@ export default defineComponent({
             const groupData = getGroupData(group)
             console.log(`PCMToTrend: MAIN_ROUTE_DESC ${group.routeDesc} / PARA ${group.para} 데이터 개수: ${groupData.length}`)
 
-            if (groupData.length === 0) {
-              console.warn(`PCMToTrend: MAIN_ROUTE_DESC ${group.routeDesc} / PARA ${group.para}에 데이터가 없음`)
-              return
-            }
-            
             const container = chartRefs.value[index]
             if (container) {
+              if (groupData.length === 0) {
+                console.warn(`PCMToTrend: MAIN_ROUTE_DESC ${group.routeDesc} / PARA ${group.para}에 데이터가 없음`)
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">데이터가 없습니다.</div>'
+                return
+              }
               createSingleChart(container, groupData, `${resultTypeName.value} - ${formatGroupLabel(group)}`)
             } else {
               console.warn(`PCMToTrend: MAIN_ROUTE_DESC ${group.routeDesc} / PARA ${group.para}의 차트 컨테이너를 찾을 수 없음`)
