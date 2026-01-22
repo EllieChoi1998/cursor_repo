@@ -1,16 +1,16 @@
 <template>
   <div class="pcm-to-trend">
-    <!-- MAIN_ROUTE_DESC별로 그룹화된 차트들 -->
-    <div v-if="routeTypes.length > 1" class="multi-para-charts">
+    <!-- MAIN_ROUTE_DESC-PARA 쌍으로 그룹화된 차트들 -->
+    <div v-if="groupEntries.length > 1" class="multi-para-charts">
       <div 
-        v-for="(routeDesc, index) in routeTypes" 
-        :key="routeDesc"
+        v-for="(group, index) in groupEntries" 
+        :key="group.key"
         class="para-chart-container"
       >
         <div class="para-chart-header">
-          <h3>{{ resultTypeName }} - MAIN_ROUTE_DESC: {{ routeDesc }}</h3>
+          <h3>{{ resultTypeName }} - {{ formatGroupLabel(group) }}</h3>
           <div class="para-chart-info">
-            <span class="data-count">{{ getRouteData(routeDesc).length }} records</span>
+            <span class="data-count">{{ getGroupData(group).length }} records</span>
           </div>
         </div>
         <div 
@@ -20,12 +20,12 @@
       </div>
     </div>
     
-    <!-- 단일 MAIN_ROUTE_DESC 또는 MAIN_ROUTE_DESC 컬럼이 없는 경우 기존 로직 -->
+    <!-- 단일 MAIN_ROUTE_DESC-PARA 쌍이거나 컬럼이 없는 경우 기존 로직 -->
     <div v-else class="single-chart">
-      <div v-if="routeTypes.length === 1" class="para-chart-header">
-        <h3>{{ resultTypeName }} - MAIN_ROUTE_DESC: {{ routeTypes[0] }}</h3>
+      <div v-if="groupEntries.length === 1" class="para-chart-header">
+        <h3>{{ resultTypeName }} - {{ formatGroupLabel(groupEntries[0]) }}</h3>
         <div class="para-chart-info">
-          <span class="data-count">{{ getRouteData(routeTypes[0]).length }} records</span>
+          <span class="data-count">{{ getGroupData(groupEntries[0]).length }} records</span>
         </div>
       </div>
       <div ref="chartContainer" class="chart-container"></div>
@@ -165,39 +165,80 @@ export default defineComponent({
       return []
     })
 
-    // MAIN_ROUTE_DESC 타입별로 데이터 그룹화
-    const routeTypes = computed(() => {
+    const normalizeRouteDesc = (value) => {
+      if (value === undefined || value === null || value === '') {
+        return 'Unknown MAIN_ROUTE_DESC'
+      }
+      return value
+    }
+
+    const normalizePara = (value) => {
+      if (value === undefined || value === null || value === '') {
+        return 'Unknown PARA'
+      }
+      return value
+    }
+
+    // MAIN_ROUTE_DESC-PARA 쌍으로 데이터 그룹화
+    const groupEntries = computed(() => {
       if (!normalizedData.value || normalizedData.value.length === 0) {
         console.log('PCMToTrend - 데이터가 없음')
         return []
       }
 
-      const types = [
-        ...new Set(
-          normalizedData.value
-            .map(row => row.MAIN_ROUTE_DESC)
-            .filter(route => route !== undefined && route !== null && route !== '')
-        )
-      ]
-      console.log('PCMToTrend - MAIN_ROUTE_DESC 타입 확인:', types)
+      const groupMap = new Map()
+      normalizedData.value.forEach(row => {
+        const routeDesc = normalizeRouteDesc(row.MAIN_ROUTE_DESC)
+        const para = normalizePara(row.PARA)
+        const key = `${routeDesc}|||${para}`
+        if (!groupMap.has(key)) {
+          groupMap.set(key, { key, routeDesc, para })
+        }
+      })
+
+      const entries = Array.from(groupMap.values())
+      entries.sort((a, b) => {
+        const routeCompare = a.routeDesc.toString().localeCompare(b.routeDesc.toString())
+        if (routeCompare !== 0) {
+          return routeCompare
+        }
+        return a.para.toString().localeCompare(b.para.toString())
+      })
+
+      console.log(
+        'PCMToTrend - MAIN_ROUTE_DESC/PARA 그룹 확인:',
+        entries.map(entry => `${entry.routeDesc} - ${entry.para}`)
+      )
       console.log('PCMToTrend - 전체 데이터 개수:', normalizedData.value.length)
       console.log('PCMToTrend - 첫 번째 데이터 샘플:', normalizedData.value[0])
 
       const hasRouteCount = normalizedData.value.filter(
         row => row.MAIN_ROUTE_DESC !== undefined && row.MAIN_ROUTE_DESC !== null && row.MAIN_ROUTE_DESC !== ''
       ).length
+      const hasParaCount = normalizedData.value.filter(
+        row => row.PARA !== undefined && row.PARA !== null && row.PARA !== ''
+      ).length
       console.log(`PCMToTrend - MAIN_ROUTE_DESC 컬럼이 있는 데이터: ${hasRouteCount}/${normalizedData.value.length}`)
+      console.log(`PCMToTrend - PARA 컬럼이 있는 데이터: ${hasParaCount}/${normalizedData.value.length}`)
 
-      return types.sort()
+      return entries
     })
 
-    const getRouteData = (routeDesc) => {
+    const formatGroupLabel = (group) => {
+      return `MAIN_ROUTE_DESC: ${group.routeDesc} / PARA: ${group.para}`
+    }
+
+    const getGroupData = (group) => {
       if (!normalizedData.value || normalizedData.value.length === 0) {
         return []
       }
-      const routeData = normalizedData.value.filter(row => row.MAIN_ROUTE_DESC === routeDesc)
-      console.log(`PCMToTrend: MAIN_ROUTE_DESC ${routeDesc} 데이터:`, routeData)
-      return routeData
+      const routeDesc = normalizeRouteDesc(group.routeDesc)
+      const para = normalizePara(group.para)
+      const groupData = normalizedData.value.filter(
+        row => normalizeRouteDesc(row.MAIN_ROUTE_DESC) === routeDesc && normalizePara(row.PARA) === para
+      )
+      console.log(`PCMToTrend: MAIN_ROUTE_DESC ${routeDesc} / PARA ${para} 데이터:`, groupData)
+      return groupData
     }
 
     const setChartRef = (el, index) => {
@@ -578,34 +619,34 @@ export default defineComponent({
 
         await nextTick()
 
-        if (routeTypes.value.length > 1) {
-          // 여러 MAIN_ROUTE_DESC 타입이 있는 경우 각각 차트 생성
-          console.log(`PCMToTrend: ${routeTypes.value.length}개의 MAIN_ROUTE_DESC별 차트 생성`, routeTypes.value)
-          routeTypes.value.forEach((routeDesc, index) => {
-            const routeData = getRouteData(routeDesc)
-            console.log(`PCMToTrend: MAIN_ROUTE_DESC ${routeDesc} 데이터 개수: ${routeData.length}`)
+        if (groupEntries.value.length > 1) {
+          // 여러 MAIN_ROUTE_DESC-PARA 쌍이 있는 경우 각각 차트 생성
+          console.log(`PCMToTrend: ${groupEntries.value.length}개의 MAIN_ROUTE_DESC-PARA 쌍별 차트 생성`, groupEntries.value)
+          groupEntries.value.forEach((group, index) => {
+            const groupData = getGroupData(group)
+            console.log(`PCMToTrend: MAIN_ROUTE_DESC ${group.routeDesc} / PARA ${group.para} 데이터 개수: ${groupData.length}`)
 
-            if (routeData.length === 0) {
-              console.warn(`PCMToTrend: MAIN_ROUTE_DESC ${routeDesc}에 데이터가 없음`)
+            if (groupData.length === 0) {
+              console.warn(`PCMToTrend: MAIN_ROUTE_DESC ${group.routeDesc} / PARA ${group.para}에 데이터가 없음`)
               return
             }
             
             const container = chartRefs.value[index]
             if (container) {
-              createSingleChart(container, routeData, `${resultTypeName.value} - MAIN_ROUTE_DESC: ${routeDesc}`)
+              createSingleChart(container, groupData, `${resultTypeName.value} - ${formatGroupLabel(group)}`)
             } else {
-              console.warn(`PCMToTrend: MAIN_ROUTE_DESC ${routeDesc}의 차트 컨테이너를 찾을 수 없음`)
+              console.warn(`PCMToTrend: MAIN_ROUTE_DESC ${group.routeDesc} / PARA ${group.para}의 차트 컨테이너를 찾을 수 없음`)
             }
           })
         } else {
-          // 단일 MAIN_ROUTE_DESC 또는 MAIN_ROUTE_DESC 컬럼이 없는 경우
-          console.log('PCMToTrend: 단일 차트 생성, MAIN_ROUTE_DESC 타입:', routeTypes.value)
+          // 단일 MAIN_ROUTE_DESC-PARA 쌍 또는 컬럼이 없는 경우
+          console.log('PCMToTrend: 단일 차트 생성, MAIN_ROUTE_DESC-PARA 그룹:', groupEntries.value)
           if (chartContainer.value) {
             let dataToUse
-            if (routeTypes.value.length === 1) {
-              const firstRoute = routeTypes.value[0]
-              dataToUse = getRouteData(firstRoute)
-              console.log(`PCMToTrend: MAIN_ROUTE_DESC ${firstRoute}의 데이터 사용:`, dataToUse.length)
+            if (groupEntries.value.length === 1) {
+              const firstGroup = groupEntries.value[0]
+              dataToUse = getGroupData(firstGroup)
+              console.log(`PCMToTrend: MAIN_ROUTE_DESC ${firstGroup.routeDesc} / PARA ${firstGroup.para}의 데이터 사용:`, dataToUse.length)
             } else {
               dataToUse = normalizedData.value
               console.log('PCMToTrend: 전체 데이터 사용:', dataToUse.length)
@@ -683,7 +724,7 @@ export default defineComponent({
 
     onMounted(() => {
       console.log('PCMToTrend 마운트됨 - 기본 데이터:', props.data)
-      console.log('PCMToTrend 마운트됨 - MAIN_ROUTE_DESC 타입들:', routeTypes.value)
+      console.log('PCMToTrend 마운트됨 - MAIN_ROUTE_DESC/PARA 그룹들:', groupEntries.value)
       createCharts()
     })
 
@@ -697,9 +738,10 @@ export default defineComponent({
       chartContainer,
       chartRefs,
       normalizedData,
-      routeTypes,
+      groupEntries,
       resultTypeName,
-      getRouteData,
+      formatGroupLabel,
+      getGroupData,
       setChartRef
     }
   }
