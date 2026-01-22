@@ -143,6 +143,14 @@ export default defineComponent({
       return typeMap[props.resultType] || props.resultType
     })
 
+    const normalizeKey = (value) => {
+      return value
+        .toString()
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+    }
+
     const findKeyValue = (row, targetKey) => {
       if (!row || typeof row !== 'object') {
         return undefined
@@ -150,12 +158,19 @@ export default defineComponent({
       if (row[targetKey] !== undefined) {
         return row[targetKey]
       }
-      const normalizedTarget = targetKey.trim().toUpperCase()
-      const matchedKey = Object.keys(row).find(
-        key => key.trim().toUpperCase() === normalizedTarget
-      )
-      if (matchedKey) {
-        return row[matchedKey]
+      const normalizedTarget = normalizeKey(targetKey)
+      const keys = Object.keys(row)
+      const exactMatch = keys.find(key => normalizeKey(key) === normalizedTarget)
+      if (exactMatch) {
+        return row[exactMatch]
+      }
+      const startsWithMatch = keys.find(key => normalizeKey(key).startsWith(normalizedTarget))
+      if (startsWithMatch) {
+        return row[startsWithMatch]
+      }
+      const containsMatch = keys.find(key => normalizeKey(key).includes(normalizedTarget))
+      if (containsMatch) {
+        return row[containsMatch]
       }
       return undefined
     }
@@ -173,15 +188,23 @@ export default defineComponent({
     }
 
     const normalizeRouteDesc = (value) => {
-      if (value === undefined || value === null || value === '') {
+      if (value === undefined || value === null) {
         return 'Unknown MAIN_ROUTE_DESC'
+      }
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        return trimmed === '' ? 'Unknown MAIN_ROUTE_DESC' : trimmed
       }
       return value
     }
 
     const normalizePara = (value) => {
-      if (value === undefined || value === null || value === '') {
+      if (value === undefined || value === null) {
         return 'Unknown PARA'
+      }
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        return trimmed === '' ? 'Unknown PARA' : trimmed
       }
       return value
     }
@@ -228,7 +251,8 @@ export default defineComponent({
       }
       const types = new Set()
       normalizedData.value.forEach(row => {
-        types.add(normalizeRouteDesc(extractRouteDesc(row)))
+        const routeDesc = row.MAIN_ROUTE_DESC ?? extractRouteDesc(row)
+        types.add(normalizeRouteDesc(routeDesc))
       })
       return Array.from(types).sort()
     })
@@ -239,7 +263,8 @@ export default defineComponent({
       }
       const types = new Set()
       normalizedData.value.forEach(row => {
-        types.add(normalizePara(extractPara(row) ?? row.PARA))
+        const para = row.PARA ?? extractPara(row)
+        types.add(normalizePara(para))
       })
       return Array.from(types).sort()
     })
@@ -306,7 +331,8 @@ export default defineComponent({
       const routeDesc = normalizeRouteDesc(group.routeDesc)
       const para = normalizePara(group.para)
       const groupData = normalizedData.value.filter(
-        row => normalizeRouteDesc(row.MAIN_ROUTE_DESC) === routeDesc && normalizePara(row.PARA) === para
+        row => normalizeRouteDesc(row.MAIN_ROUTE_DESC ?? extractRouteDesc(row)) === routeDesc
+          && normalizePara(row.PARA ?? extractPara(row)) === para
       )
       console.log(`PCMToTrend: MAIN_ROUTE_DESC ${routeDesc} / PARA ${para} 데이터:`, groupData)
       return groupData
