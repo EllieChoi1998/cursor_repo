@@ -1,16 +1,16 @@
 <template>
   <div class="pcm-to-trend">
-    <!-- PARA별로 그룹화된 차트들 -->
-    <div v-if="paraTypes.length > 1" class="multi-para-charts">
+    <!-- MAIN_ROUTE_DESC-PARA 쌍으로 그룹화된 차트들 -->
+    <div v-if="groupEntries.length > 1" class="multi-para-charts">
       <div 
-        v-for="(paraType, index) in paraTypes" 
-        :key="paraType"
+        v-for="(group, index) in groupEntries" 
+        :key="group.key"
         class="para-chart-container"
       >
         <div class="para-chart-header">
-          <h3>{{ resultTypeName }} - PARA: {{ paraType }}</h3>
+          <h3>{{ resultTypeName }} - {{ formatGroupLabel(group) }}</h3>
           <div class="para-chart-info">
-            <span class="data-count">{{ getParaData(paraType).length }} records</span>
+            <span class="data-count">{{ getGroupData(group).length }} records</span>
           </div>
         </div>
         <div 
@@ -20,12 +20,12 @@
       </div>
     </div>
     
-    <!-- 단일 PARA 또는 PARA 컬럼이 없는 경우 기존 로직 -->
+    <!-- 단일 MAIN_ROUTE_DESC-PARA 쌍이거나 컬럼이 없는 경우 기존 로직 -->
     <div v-else class="single-chart">
-      <div v-if="paraTypes.length === 1" class="para-chart-header">
-        <h3>{{ resultTypeName }} - PARA: {{ paraTypes[0] }}</h3>
+      <div v-if="groupEntries.length === 1" class="para-chart-header">
+        <h3>{{ resultTypeName }} - {{ formatGroupLabel(groupEntries[0]) }}</h3>
         <div class="para-chart-info">
-          <span class="data-count">{{ data.length }} records</span>
+          <span class="data-count">{{ getGroupData(groupEntries[0]).length }} records</span>
         </div>
       </div>
       <div ref="chartContainer" class="chart-container"></div>
@@ -143,45 +143,199 @@ export default defineComponent({
       return typeMap[props.resultType] || props.resultType
     })
 
-    // PARA 타입별로 데이터 그룹화
-    const paraTypes = computed(() => {
-      if (!props.data || props.data.length === 0) {
-        console.log('PCMToTrend - 데이터가 없음')
+    const normalizeKey = (value) => {
+      return value
+        .toString()
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+    }
+
+    const findKeyValue = (row, targetKey) => {
+      if (!row || typeof row !== 'object') {
+        return undefined
+      }
+      if (row[targetKey] !== undefined) {
+        return row[targetKey]
+      }
+      const normalizedTarget = normalizeKey(targetKey)
+      const keys = Object.keys(row)
+      const exactMatch = keys.find(key => normalizeKey(key) === normalizedTarget)
+      if (exactMatch) {
+        return row[exactMatch]
+      }
+      const startsWithMatch = keys.find(key => normalizeKey(key).startsWith(normalizedTarget))
+      if (startsWithMatch) {
+        return row[startsWithMatch]
+      }
+      const containsMatch = keys.find(key => normalizeKey(key).includes(normalizedTarget))
+      if (containsMatch) {
+        return row[containsMatch]
+      }
+      return undefined
+    }
+
+    const extractRouteDesc = (row) => {
+      const mainRoute = findKeyValue(row, 'MAIN_ROUTE_DESC')
+      if (mainRoute !== undefined) {
+        return mainRoute
+      }
+      return findKeyValue(row, 'MAIN_ROUTE')
+    }
+
+    const extractPara = (row) => {
+      return findKeyValue(row, 'PARA')
+    }
+
+    const normalizeRouteDesc = (value) => {
+      if (value === undefined || value === null) {
+        return 'Unknown MAIN_ROUTE_DESC'
+      }
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        return trimmed === '' ? 'Unknown MAIN_ROUTE_DESC' : trimmed
+      }
+      return value
+    }
+
+    const normalizePara = (value) => {
+      if (value === undefined || value === null) {
+        return 'Unknown PARA'
+      }
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        return trimmed === '' ? 'Unknown PARA' : trimmed
+      }
+      return value
+    }
+
+    const normalizedData = computed(() => {
+      if (!props.data) {
         return []
       }
-      
-      // 데이터가 배열인지 확인
-      if (Array.isArray(props.data)) {
-        const types = [...new Set(props.data.map(row => row.PARA).filter(para => para !== undefined && para !== null))]
-        console.log('PCMToTrend - PARA 타입 확인:', types)
-        console.log('PCMToTrend - 전체 데이터 개수:', props.data.length)
-        console.log('PCMToTrend - 첫 번째 데이터 샘플:', props.data[0])
-        
-        // 모든 데이터에 PARA 컬럼이 있는지 확인
-        const hasParaCount = props.data.filter(row => row.PARA !== undefined && row.PARA !== null).length
-        console.log(`PCMToTrend - PARA 컬럼이 있는 데이터: ${hasParaCount}/${props.data.length}`)
-        
-        return types.sort()
-      } else if (typeof props.data === 'object' && props.data !== null) {
-        // 객체 형태로 PARA별로 분리된 데이터인 경우
-        const types = Object.keys(props.data)
-        console.log('PCMToTrend - 객체 형태 PARA 타입 확인:', types)
-        return types.sort()
+
+      const combined = []
+      const appendRow = (row, paraKey = undefined) => {
+        if (!row || typeof row !== 'object') {
+          return
+        }
+        const routeDesc = extractRouteDesc(row)
+        const para = extractPara(row) ?? paraKey
+        combined.push({
+          ...row,
+          MAIN_ROUTE_DESC: routeDesc ?? row.MAIN_ROUTE_DESC,
+          PARA: para ?? row.PARA
+        })
       }
-      
+
+      if (Array.isArray(props.data)) {
+        props.data.forEach(row => appendRow(row))
+        return combined
+      }
+
+      if (typeof props.data === 'object' && props.data !== null) {
+        Object.entries(props.data).forEach(([paraKey, paraData]) => {
+          if (Array.isArray(paraData)) {
+            paraData.forEach(row => appendRow(row, paraKey))
+          }
+        })
+        return combined
+      }
+
       return []
     })
 
-    const getParaData = (paraType) => {
-      if (Array.isArray(props.data)) {
-        return props.data.filter(row => row.PARA === paraType)
-      } else if (typeof props.data === 'object' && props.data !== null) {
-        // 객체 형태로 PARA별로 분리된 데이터인 경우
-        const paraData = props.data[paraType] || []
-        console.log(`PCMToTrend: PARA ${paraType} 데이터:`, paraData)
-        return paraData
+    const routeTypes = computed(() => {
+      if (!normalizedData.value || normalizedData.value.length === 0) {
+        return []
       }
-      return []
+      const types = new Set()
+      normalizedData.value.forEach(row => {
+        const routeDesc = row.MAIN_ROUTE_DESC ?? extractRouteDesc(row)
+        types.add(normalizeRouteDesc(routeDesc))
+      })
+      return Array.from(types).sort()
+    })
+
+    const paraTypes = computed(() => {
+      if (!normalizedData.value || normalizedData.value.length === 0) {
+        return []
+      }
+      const types = new Set()
+      normalizedData.value.forEach(row => {
+        const para = row.PARA ?? extractPara(row)
+        types.add(normalizePara(para))
+      })
+      return Array.from(types).sort()
+    })
+
+    // MAIN_ROUTE_DESC-PARA 쌍으로 데이터 그룹화
+    const groupEntries = computed(() => {
+      if (!normalizedData.value || normalizedData.value.length === 0) {
+        console.log('PCMToTrend - 데이터가 없음')
+        return []
+      }
+
+      const routes = routeTypes.value
+      const paras = paraTypes.value
+      if (routes.length === 0 || paras.length === 0) {
+        return []
+      }
+
+      const entries = []
+      routes.forEach(routeDesc => {
+        paras.forEach(para => {
+          entries.push({
+            key: `${routeDesc}|||${para}`,
+            routeDesc,
+            para
+          })
+        })
+      })
+
+      console.log(
+        'PCMToTrend - MAIN_ROUTE_DESC 종류:',
+        routes
+      )
+      console.log(
+        'PCMToTrend - PARA 종류:',
+        paras
+      )
+      console.log(
+        'PCMToTrend - MAIN_ROUTE_DESC/PARA 그룹 조합 수:',
+        entries.length
+      )
+      console.log('PCMToTrend - 전체 데이터 개수:', normalizedData.value.length)
+      console.log('PCMToTrend - 첫 번째 데이터 샘플:', normalizedData.value[0])
+
+      const hasRouteCount = normalizedData.value.filter(
+        row => extractRouteDesc(row) !== undefined && extractRouteDesc(row) !== null && extractRouteDesc(row) !== ''
+      ).length
+      const hasParaCount = normalizedData.value.filter(
+        row => extractPara(row) !== undefined && extractPara(row) !== null && extractPara(row) !== ''
+      ).length
+      console.log(`PCMToTrend - MAIN_ROUTE_DESC 컬럼이 있는 데이터: ${hasRouteCount}/${normalizedData.value.length}`)
+      console.log(`PCMToTrend - PARA 컬럼이 있는 데이터: ${hasParaCount}/${normalizedData.value.length}`)
+
+      return entries
+    })
+
+    const formatGroupLabel = (group) => {
+      return `MAIN_ROUTE_DESC: ${group.routeDesc} / PARA: ${group.para}`
+    }
+
+    const getGroupData = (group) => {
+      if (!normalizedData.value || normalizedData.value.length === 0) {
+        return []
+      }
+      const routeDesc = normalizeRouteDesc(group.routeDesc)
+      const para = normalizePara(group.para)
+      const groupData = normalizedData.value.filter(
+        row => normalizeRouteDesc(row.MAIN_ROUTE_DESC ?? extractRouteDesc(row)) === routeDesc
+          && normalizePara(row.PARA ?? extractPara(row)) === para
+      )
+      console.log(`PCMToTrend: MAIN_ROUTE_DESC ${routeDesc} / PARA ${para} 데이터:`, groupData)
+      return groupData
     }
 
     const setChartRef = (el, index) => {
@@ -523,6 +677,11 @@ export default defineComponent({
         console.log('PCMToTrend: 차트 생성 시작 - 데이터 타입:', typeof props.data)
         console.log('PCMToTrend: 데이터 내용:', props.data)
 
+        if (!normalizedData.value || normalizedData.value.length === 0) {
+          console.log('PCMToTrend: 정규화된 데이터가 없어 차트 생성 중단')
+          return
+        }
+
         // 모든 기존 차트 정리 (더 안전한 방식)
         if (chartContainer.value) {
           try {
@@ -557,45 +716,37 @@ export default defineComponent({
 
         await nextTick()
 
-        if (paraTypes.value.length > 1) {
-          // 여러 PARA 타입이 있는 경우 각각 차트 생성
-          console.log(`PCMToTrend: ${paraTypes.value.length}개의 PARA 타입별 차트 생성`, paraTypes.value)
-          paraTypes.value.forEach((paraType, index) => {
-            const paraData = getParaData(paraType)
-            console.log(`PCMToTrend: PARA ${paraType} 데이터 개수: ${paraData.length}`)
-            
-            if (paraData.length === 0) {
-              console.warn(`PCMToTrend: PARA ${paraType}에 데이터가 없음`)
-              return
-            }
-            
+        if (groupEntries.value.length > 1) {
+          // 여러 MAIN_ROUTE_DESC-PARA 쌍이 있는 경우 각각 차트 생성
+          console.log(`PCMToTrend: ${groupEntries.value.length}개의 MAIN_ROUTE_DESC-PARA 쌍별 차트 생성`, groupEntries.value)
+          groupEntries.value.forEach((group, index) => {
+            const groupData = getGroupData(group)
+            console.log(`PCMToTrend: MAIN_ROUTE_DESC ${group.routeDesc} / PARA ${group.para} 데이터 개수: ${groupData.length}`)
+
             const container = chartRefs.value[index]
             if (container) {
-              createSingleChart(container, paraData, `${resultTypeName.value} - PARA: ${paraType}`)
+              if (groupData.length === 0) {
+                console.warn(`PCMToTrend: MAIN_ROUTE_DESC ${group.routeDesc} / PARA ${group.para}에 데이터가 없음`)
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">데이터가 없습니다.</div>'
+                return
+              }
+              createSingleChart(container, groupData, `${resultTypeName.value} - ${formatGroupLabel(group)}`)
             } else {
-              console.warn(`PCMToTrend: PARA ${paraType}의 차트 컨테이너를 찾을 수 없음`)
+              console.warn(`PCMToTrend: MAIN_ROUTE_DESC ${group.routeDesc} / PARA ${group.para}의 차트 컨테이너를 찾을 수 없음`)
             }
           })
         } else {
-          // 단일 PARA 또는 PARA 컬럼이 없는 경우
-          console.log('PCMToTrend: 단일 차트 생성, PARA 타입:', paraTypes.value)
+          // 단일 MAIN_ROUTE_DESC-PARA 쌍 또는 컬럼이 없는 경우
+          console.log('PCMToTrend: 단일 차트 생성, MAIN_ROUTE_DESC-PARA 그룹:', groupEntries.value)
           if (chartContainer.value) {
             let dataToUse
-            if (Array.isArray(props.data)) {
-              dataToUse = props.data
-            } else if (typeof props.data === 'object' && props.data !== null) {
-              // 객체 형태인 경우 첫 번째 PARA 데이터 사용
-              const firstParaType = paraTypes.value[0]
-              if (firstParaType) {
-                dataToUse = props.data[firstParaType] || []
-                console.log(`PCMToTrend: 첫 번째 PARA 타입 ${firstParaType}의 데이터 사용:`, dataToUse.length)
-              } else {
-                dataToUse = []
-                console.warn('PCMToTrend: PARA 타입을 찾을 수 없음')
-              }
+            if (groupEntries.value.length === 1) {
+              const firstGroup = groupEntries.value[0]
+              dataToUse = getGroupData(firstGroup)
+              console.log(`PCMToTrend: MAIN_ROUTE_DESC ${firstGroup.routeDesc} / PARA ${firstGroup.para}의 데이터 사용:`, dataToUse.length)
             } else {
-              dataToUse = []
-              console.warn('PCMToTrend: 지원되지 않는 데이터 타입:', typeof props.data)
+              dataToUse = normalizedData.value
+              console.log('PCMToTrend: 전체 데이터 사용:', dataToUse.length)
             }
             
             if (dataToUse.length > 0) {
@@ -670,7 +821,7 @@ export default defineComponent({
 
     onMounted(() => {
       console.log('PCMToTrend 마운트됨 - 기본 데이터:', props.data)
-      console.log('PCMToTrend 마운트됨 - PARA 타입들:', paraTypes.value)
+      console.log('PCMToTrend 마운트됨 - MAIN_ROUTE_DESC/PARA 그룹들:', groupEntries.value)
       createCharts()
     })
 
@@ -683,9 +834,11 @@ export default defineComponent({
     return {
       chartContainer,
       chartRefs,
-      paraTypes,
+      normalizedData,
+      groupEntries,
       resultTypeName,
-      getParaData,
+      formatGroupLabel,
+      getGroupData,
       setChartRef
     }
   }
