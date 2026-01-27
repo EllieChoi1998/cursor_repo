@@ -94,6 +94,7 @@ export default defineComponent({
         data.forEach((item) => {
           const type = (item.type || '').toUpperCase()
           const graphData = item.graph_data || []
+          const sortCriteria = normalizeSortCriteria(item.sort_criteria || item.sortCriteria)
           
           if (type === 'IQC' && graphData.length > 0) {
             // IQC의 경우: FOR_KEY별로 차트를 분할
@@ -127,7 +128,8 @@ export default defineComponent({
                 forKey,
                 usl,
                 lsl,
-                tgt
+                tgt,
+                sort_criteria: sortCriteria
               })
             })
           } else if (type === 'EQC') {
@@ -155,14 +157,16 @@ export default defineComponent({
               title,
               index: chartIndex++,
               usl,
-              lsl
+              lsl,
+              sort_criteria: sortCriteria
             })
           } else {
             // 기타 타입
             chartList.push({
               ...item,
               title: `${type} Trend Chart ${chartIndex}`,
-              index: chartIndex++
+              index: chartIndex++,
+              sort_criteria: sortCriteria
             })
           }
         })
@@ -182,15 +186,52 @@ export default defineComponent({
       '#8C564B', '#E377C2', '#7F7F7F', '#BCBD22', '#17BECF'
     ])
 
+    const normalizeSortCriteria = (value) => {
+      if (!value) return 'TIMELY'
+      const upper = String(value).toUpperCase()
+      return upper === 'EQ' ? 'EQ' : 'TIMELY'
+    }
+
+    const hasFieldValue = (rows, field) => rows.some(row => (
+      row && row[field] !== undefined && row[field] !== null && row[field] !== ''
+    ))
+
+    const resolveSortFields = (rows, sortCriteria) => {
+      if (sortCriteria === 'EQ') {
+        return { sortValueField: 'MAIN_EQ', sortColorField: 'MAIN_EQ' }
+      }
+      const sortValueField = hasFieldValue(rows, 'TRANS_DATE')
+        ? 'TRANS_DATE'
+        : (hasFieldValue(rows, 'EQMNT_DATE') ? 'EQMNT_DATE' : 'TRANS_DATE')
+      const sortColorField = hasFieldValue(rows, 'DEVICE') ? 'DEVICE' : 'MAIN_EQ'
+      return { sortValueField, sortColorField }
+    }
+
+    const resolveMainEq = (row) => {
+      if (!row) return undefined
+      let mainEq = row.MAIN_EQ
+      if (!mainEq && row['EQUIP ID']) {
+        mainEq = row['EQUIP ID'] + (row['SUB EQUIP ID'] ? `+${row['SUB EQUIP ID']}` : '')
+      }
+      return mainEq
+    }
+
     // IQC 차트 생성 (FOR_KEY로 이미 필터링된 데이터)
     const createIQCChart = (item, containerEl) => {
       try {
         const graphData = item.graph_data || []
+        const sortCriteria = normalizeSortCriteria(item?.sort_criteria || item?.sortCriteria)
 
         if (graphData.length === 0 || !containerEl) return
 
-        // key 생성: TRANS_DATE + WAFER_ID (Python 코드와 동일)
+        // key 생성: TIMELY는 TRANS_DATE + WAFER_ID, EQ는 MAIN_EQ
         const dataWithKeys = graphData.map(row => {
+          const mainEq = resolveMainEq(row)
+          if (sortCriteria === 'EQ') {
+            const key = mainEq ?? row.MAIN_EQ ?? row.key ?? ''
+            return { ...row, MAIN_EQ: mainEq ?? row.MAIN_EQ, key }
+          }
+
           // 기존 key가 있어도 무시하고 무조건 새로 생성
           if (row.TRANS_DATE && row.WAFER_ID) {
             // TRANS_DATE 포맷 변환
@@ -225,18 +266,26 @@ export default defineComponent({
               dateStr = `${year}-${month}-${day}`
             }
             
-            return { ...row, key: `${dateStr}-${row.WAFER_ID}` }
+            return { ...row, MAIN_EQ: mainEq ?? row.MAIN_EQ, key: `${dateStr}-${row.WAFER_ID}` }
           }
           // TRANS_DATE나 WAFER_ID가 없으면 원본 반환
-          return row
+          return { ...row, MAIN_EQ: mainEq ?? row.MAIN_EQ }
         })
 
-        // Python과 동일한 정렬: ['TRANS_DATE', 'WAFER_ID', 'USL', 'TGT', 'LSL']
+        const { sortValueField, sortColorField } = resolveSortFields(dataWithKeys, sortCriteria)
+
+        // Python과 동일한 정렬: TIMELY => TRANS_DATE, EQ => MAIN_EQ
         const sortedData = [...dataWithKeys].sort((a, b) => {
-          // 1. TRANS_DATE 비교
-          const dateA = String(a.TRANS_DATE || '')
-          const dateB = String(b.TRANS_DATE || '')
-          if (dateA !== dateB) return dateA.localeCompare(dateB)
+          // 1. sort_value 비교
+          if (sortValueField === 'MAIN_EQ') {
+            const eqA = String(a.MAIN_EQ || '')
+            const eqB = String(b.MAIN_EQ || '')
+            if (eqA !== eqB) return eqA.localeCompare(eqB, undefined, { numeric: true, sensitivity: 'base' })
+          } else {
+            const dateA = String(a[sortValueField] || '')
+            const dateB = String(b[sortValueField] || '')
+            if (dateA !== dateB) return dateA.localeCompare(dateB)
+          }
           
           // 2. WAFER_ID 비교
           const waferA = String(a.WAFER_ID || '')
@@ -262,8 +311,9 @@ export default defineComponent({
         // x축 카테고리 (key 값들)
         const keys = [...new Set(sortedData.map(r => String(r.key || '')))]
 
-        // DEVICE 값들 추출
-        const devices = [...new Set(sortedData.map(r => r.DEVICE))].filter(v => v !== null && v !== undefined)
+        // 정렬/색상 기준별 그룹 값들 추출
+        const groupValues = [...new Set(sortedData.map(r => r?.[sortColorField]))]
+          .filter(v => v !== null && v !== undefined)
         
         // NO_VAL 컬럼들 찾기
         const noValColumns = []
@@ -282,47 +332,48 @@ export default defineComponent({
         }
 
         console.log('📊 IQC Chart Info:')
+        console.log('  - Sort criteria:', sortCriteria, `(${sortValueField}/${sortColorField})`)
         console.log('  - Keys count:', keys.length, keys)
-        console.log('  - Devices:', devices)
+        console.log('  - Groups:', groupValues)
         console.log('  - NO_VAL columns:', noValColumns)
         console.log('  - Total rows:', sortedData.length)
         console.log('  - Sample row (first):', sortedData[0])
         console.log('  - Has key field?', sortedData[0]?.key)
-        console.log('  - Has DEVICE field?', sortedData[0]?.DEVICE)
+        console.log('  - Has sort color field?', sortedData[0]?.[sortColorField])
         console.log('  - Sample NO_VAL1:', sortedData[0]?.NO_VAL1)
 
         const traces = []
         const palette = getColorPalette()
 
-        // px.box(y=[col1, col2, ...], color='DEVICE')와 동일하게 동작하도록
-        // 각 key 위치에서 DEVICE별로 하나의 박스플롯 생성
-        devices.forEach((device, idx) => {
+        // px.box(y=[col1, col2, ...], color=sort_color)와 동일하게 동작하도록
+        // 각 key 위치에서 그룹별로 하나의 박스플롯 생성
+        groupValues.forEach((groupValue, idx) => {
           const color = palette[idx % palette.length]
           const x = []
           const y = []
           
-          console.log(`\n🔍 Processing device: "${device}"`)
+          console.log(`\n🔍 Processing group: "${groupValue}"`)
           
           // 각 x 위치(key)별로 데이터 수집
           keys.forEach((keyValue, keyIdx) => {
             // 해당 key와 device를 가진 행들 찾기
             const matchingRows = sortedData.filter(r => 
-              String(r.key) === keyValue && r.DEVICE === device
+              String(r.key) === keyValue && r?.[sortColorField] === groupValue
             )
             
             if (keyIdx === 0) {
               // 첫 번째 키에서만 자세히 로깅
-              console.log(`  Testing key "${keyValue}" with device "${device}":`)
+              console.log(`  Testing key "${keyValue}" with group "${groupValue}":`)
               console.log(`    - Matching rows: ${matchingRows.length}`)
               if (matchingRows.length === 0) {
                 // 매칭 실패 원인 파악
                 const sameKeyRows = sortedData.filter(r => String(r.key) === keyValue)
-                const sameDeviceRows = sortedData.filter(r => r.DEVICE === device)
+                const sameGroupRows = sortedData.filter(r => r?.[sortColorField] === groupValue)
                 console.log(`    - Rows with same key: ${sameKeyRows.length}`)
-                console.log(`    - Rows with same device: ${sameDeviceRows.length}`)
+                console.log(`    - Rows with same group: ${sameGroupRows.length}`)
                 if (sameKeyRows.length > 0) {
-                  console.log(`    - Sample row's DEVICE:`, sameKeyRows[0].DEVICE, `(type: ${typeof sameKeyRows[0].DEVICE})`)
-                  console.log(`    - Looking for DEVICE:`, device, `(type: ${typeof device})`)
+                  console.log(`    - Sample row's group:`, sameKeyRows[0]?.[sortColorField], `(type: ${typeof sameKeyRows[0]?.[sortColorField]})`)
+                  console.log(`    - Looking for group:`, groupValue, `(type: ${typeof groupValue})`)
                 }
               }
             }
@@ -339,7 +390,7 @@ export default defineComponent({
             })
           })
 
-          console.log(`  ✅ Total data points for ${device}: ${y.length}`)
+          console.log(`  ✅ Total data points for ${groupValue}: ${y.length}`)
           console.log(`  Sample y values:`, y.slice(0, 5))
 
           if (y.length > 0) {
@@ -347,21 +398,21 @@ export default defineComponent({
               type: 'box',
               x,
               y,
-              name: String(device),
+              name: String(groupValue),
               boxpoints: false,
               marker: { color },
               line: { color },
               fillcolor: color,
               opacity: 0.7,
               showlegend: true,
-              legendgroup: String(device),
+              legendgroup: String(groupValue),
               boxmean: false,
               notched: false,
               hoverinfo: 'all',
               hoveron: 'boxes'
             })
           } else {
-            console.warn(`  ⚠️ No data points for device ${device}`)
+            console.warn(`  ⚠️ No data points for group ${groupValue}`)
           }
         })
         
@@ -394,7 +445,7 @@ export default defineComponent({
 
         const layout = {
           xaxis: {
-            title: { text: 'Date-Wafer', font: { size: 12 } },
+            title: { text: sortValueField === 'MAIN_EQ' ? 'MAIN_EQ' : 'Date-Wafer', font: { size: 12 } },
             type: 'category',
             showgrid: true,
             gridcolor: '#f0f0f0',
@@ -449,24 +500,29 @@ export default defineComponent({
     const createEQCChart = (item, containerEl) => {
       try {
         const graphData = item.graph_data || []
+        const sortCriteria = normalizeSortCriteria(item?.sort_criteria || item?.sortCriteria)
         const selectedRow = Array.isArray(item.selected_row_data) && item.selected_row_data.length > 0 
           ? item.selected_row_data[0] 
           : {}
 
         if (graphData.length === 0 || !containerEl) return
 
-        // key 생성: EQMNT_DATE + MAIN_EQ (Python 코드와 동일)
+        // key 생성: TIMELY는 EQMNT_DATE + MAIN_EQ, EQ는 MAIN_EQ
         const dataWithKeys = graphData.map(row => {
           // 기존 key가 있어도 무시하고 무조건 새로 생성
-          if (row.EQMNT_DATE) {
+          const mainEq = resolveMainEq(row)
+          if (sortCriteria === 'EQ') {
+            const key = mainEq ?? row.MAIN_EQ ?? row.key ?? ''
+            return { ...row, key, MAIN_EQ: mainEq ?? row.MAIN_EQ }
+          }
+
+          const dateSource = row.EQMNT_DATE ?? row.TRANS_DATE
+          if (dateSource) {
             // MAIN_EQ 생성 (백엔드에서 없을 경우)
-            let mainEq = row.MAIN_EQ
-            if (!mainEq && row['EQUIP ID']) {
-              mainEq = row['EQUIP ID'] + (row['SUB EQUIP ID'] ? '+' + row['SUB EQUIP ID'] : '')
-            }
+            const resolvedMainEq = mainEq ?? row.MAIN_EQ
             
             // EQMNT_DATE 포맷 변환
-            let dateStr = row.EQMNT_DATE
+            let dateStr = dateSource
             let dateObj = null
             
             // 1. 숫자(timestamp)인 경우 - Unix timestamp (밀리초)
@@ -496,24 +552,33 @@ export default defineComponent({
               dateStr = `${year}-${month}-${day}`
             }
             
-            return { ...row, key: `${dateStr}-${mainEq || ''}`, MAIN_EQ: mainEq }
+            return { ...row, key: `${dateStr}-${resolvedMainEq || ''}`, MAIN_EQ: resolvedMainEq }
           }
           // EQMNT_DATE가 없으면 원본 반환
-          return row
+          return { ...row, MAIN_EQ: mainEq ?? row.MAIN_EQ }
         })
 
-        // EQMNT_DATE 기준으로 정렬
+        const { sortValueField, sortColorField } = resolveSortFields(dataWithKeys, sortCriteria)
+
+        // 정렬 기준
         const sortedData = [...dataWithKeys].sort((a, b) => {
-          const dateA = String(a.EQMNT_DATE || '')
-          const dateB = String(b.EQMNT_DATE || '')
+          if (sortValueField === 'MAIN_EQ') {
+            const eqA = String(a.MAIN_EQ || '')
+            const eqB = String(b.MAIN_EQ || '')
+            if (eqA !== eqB) return eqA.localeCompare(eqB, undefined, { numeric: true, sensitivity: 'base' })
+          }
+          const dateField = sortValueField === 'TRANS_DATE' ? 'TRANS_DATE' : 'EQMNT_DATE'
+          const dateA = String(a[dateField] || '')
+          const dateB = String(b[dateField] || '')
           return dateA.localeCompare(dateB)
         })
 
         // x축 카테고리 (key 값들)
         const keys = [...new Set(sortedData.map(r => String(r.key || '')))]
 
-        // MAIN_EQ 값들 추출
-        const mainEqs = [...new Set(sortedData.map(r => r.MAIN_EQ))].filter(v => v !== null && v !== undefined)
+        // 정렬/색상 기준별 그룹 값들 추출
+        const groupValues = [...new Set(sortedData.map(r => r?.[sortColorField]))]
+          .filter(v => v !== null && v !== undefined)
         
         // NO_VAL 컬럼들 찾기
         const noValColumns = []
@@ -530,10 +595,10 @@ export default defineComponent({
         const traces = []
         const palette = getColorPalette()
 
-        // MAIN_EQ별 박스플롯 생성
-        mainEqs.forEach((mainEq, idx) => {
+        // 그룹별 박스플롯 생성
+        groupValues.forEach((groupValue, idx) => {
           const color = palette[idx % palette.length]
-          const eqRows = sortedData.filter(r => r.MAIN_EQ === mainEq)
+          const eqRows = sortedData.filter(r => r?.[sortColorField] === groupValue)
           
           const x = []
           const y = []
@@ -561,14 +626,14 @@ export default defineComponent({
               type: 'box',
               x,
               y,
-              name: String(mainEq),
+              name: String(groupValue),
               boxpoints: false,
               marker: { color },
               line: { color },
               fillcolor: color,
               opacity: 0.7,
               showlegend: true,
-              legendgroup: String(mainEq),
+              legendgroup: String(groupValue),
               boxmean: false,
               notched: false,
               hoverinfo: 'all',
@@ -603,7 +668,7 @@ export default defineComponent({
 
         const layout = {
           xaxis: {
-            title: { text: 'EQMNT_DATE-MAIN_EQ', font: { size: 12 } },
+            title: { text: sortValueField === 'MAIN_EQ' ? 'MAIN_EQ' : 'EQMNT_DATE-MAIN_EQ', font: { size: 12 } },
             type: 'category',
             showgrid: true,
             gridcolor: '#f0f0f0',
